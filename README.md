@@ -1,1 +1,0 @@
-# L-dica-Kids-MOBILE
