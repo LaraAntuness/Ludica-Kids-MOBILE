@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#E2F2FF">
+
+
+    <ImageView
+        android:id="@+id/fundoJogos"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:src="@drawable/planofundopcoesgeral"
+        android:scaleType="fitXY"
+        android:contentDescription="Fundo dos jogos" />
+
+
+    <ImageButton
+        android:id="@+id/botaoVoltar"
+        android:layout_width="50dp"
+        android:layout_height="50dp"
+        android:layout_marginStart="18dp"
+        android:layout_marginTop="18dp"
+        android:background="@android:color/transparent"
+        android:src="@drawable/botaoretornoazulclaro"
+        android:scaleType="fitCenter"
+        android:contentDescription="Voltar"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <ImageView
+        android:id="@+id/tituloJogos"
+        android:layout_width="230dp"
+        android:layout_height="150dp"
+        android:layout_marginTop="32dp"
+        android:src="@drawable/tituloopcoes3"
+        android:scaleType="fitCenter"
+        android:contentDescription="Lúdica Kids"
+        app:layout_constraintHorizontal_bias="0.22"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+
+    <ImageView
+        android:id="@+id/girafaSuperior"
+        android:layout_width="60dp"
+        android:layout_height="65dp"
+        android:layout_marginEnd="28dp"
+        android:layout_marginTop="15dp"
+        android:src="@drawable/botaogirafasuperior"
+        android:scaleType="fitCenter"
+        android:contentDescription="Girafa superior"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/guiaBotoes"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        app:layout_constraintGuide_percent="0.36" />
+
+
+    <androidx.appcompat.widget.AppCompatButton
+        android:id="@+id/botaoEmocoes"
+        android:layout_width="300dp"
+        android:layout_height="90dp"
+        android:background="@drawable/botaoembranco"
+        android:backgroundTint="@null"
+        android:elevation="5dp"
+        android:text="IDENTIFICANDO AS EMOÇÕES"
+        android:textColor="#F4BE70"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:fontFamily="sans-serif-condensed"
+        android:gravity="center"
+        android:padding="4dp"
+        app:layout_constraintHorizontal_bias="0.53"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="@id/guiaBotoes" />
+
+
+    <androidx.appcompat.widget.AppCompatButton
+        android:id="@+id/botaoDragao"
+        android:layout_width="300dp"
+        android:layout_height="68dp"
+        android:layout_marginTop="6dp"
+        android:background="@drawable/botaoembranco"
+        android:backgroundTint="@null"
+        android:elevation="5dp"
+        android:text="RESPIRANDO COM O DRAGÃO"
+        android:textColor="#9DC9F8"
+        android:textSize="17sp"
+        android:textStyle="bold"
+        android:fontFamily="sans-serif-condensed"
+        android:gravity="center"
+        android:padding="4dp"
+        app:layout_constraintHorizontal_bias="0.53"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/botaoEmocoes" />
+
+
+    <androidx.appcompat.widget.AppCompatButton
+        android:id="@+id/botaoSentidos"
+        android:layout_width="300dp"
+        android:layout_height="68dp"
+        android:layout_marginTop="6dp"
+        android:background="@drawable/botaoembranco"
+        android:backgroundTint="@null"
+        android:elevation="5dp"
+        android:text="CINCO SENTIDOS MÁGICOS 🔒"
+        android:textColor="#F4ABAF"
+        android:textSize="17sp"
+        android:textStyle="bold"
+        android:fontFamily="sans-serif-condensed"
+        android:gravity="center"
+        android:padding="4dp"
+        android:enabled="false"
+        app:layout_constraintHorizontal_bias="0.53"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/botaoDragao" />
+
+
+    <ImageView
+        android:id="@+id/girafaPrincipal"
+        android:layout_width="115dp"
+        android:layout_height="125dp"
+        android:translationY="12dp"
+        android:elevation="10dp"
+        android:src="@drawable/girafaopcoes3"
+        android:scaleType="fitCenter"
+        android:contentDescription="Girafa principal"
+        app:layout_constraintHorizontal_bias="0.53"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/botaoEmocoes" />
+    <ImageView
+        android:id="@+id/logoInferior"
+        android:layout_width="65dp"
+        android:layout_height="45dp"
+        android:layout_marginEnd="28dp"
+        android:layout_marginBottom="8dp"
+        android:src="@drawable/logoinferior"
+        android:scaleType="fitCenter"
+        android:contentDescription="Logo inferior"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>
