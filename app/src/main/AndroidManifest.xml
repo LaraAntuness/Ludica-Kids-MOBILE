@@ -23,12 +23,6 @@
         </activity>
 
 
-        <activity
-            android:name=".TelaInicialJogosGeral"
-            android:exported="true"
-            android:screenOrientation="landscape" />
-
-
 
         <activity
             android:name=".MaoszinhasMagicasActivity"
@@ -70,6 +64,11 @@
         <activity
             android:name=".IdentificandoEmocoesActivity"
             android:exported="true" />
+
+        <activity
+            android:name=".TelaInicialJogosGeral"
+            android:exported="true"
+            android:screenOrientation="landscape" />
 
 
 
