@@ -70,7 +70,10 @@
             android:exported="true"
             android:screenOrientation="landscape" />
 
-
+        <activity
+            android:name=".TelaInicialCincoSentidosPago"
+            android:exported="true"
+            android:screenOrientation="landscape" />
 
 
     </application>

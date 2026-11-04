@@ -1,0 +1,179 @@
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#E2F2FF"
+    tools:context=".TelaInicialCincoSentidosPago">
+
+    <!-- FUNDO DA TELA -->
+    <ImageView
+        android:id="@+id/fundoTela"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:src="@drawable/planofundopcoesgeral"
+        android:scaleType="fitXY"
+        android:contentDescription="Fundo da tela" />
+
+    <!-- BOTÃO VOLTAR -->
+    <ImageButton
+        android:id="@+id/botaoVoltar"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_marginStart="18dp"
+        android:layout_marginTop="18dp"
+        android:background="@android:color/transparent"
+        android:src="@drawable/botaoretornoazulclaro"
+        android:scaleType="fitCenter"
+        android:contentDescription="Voltar"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <!-- TÍTULO LÚDICA KIDS -->
+    <ImageView
+        android:id="@+id/tituloLudicaKids"
+        android:layout_width="190dp"
+        android:layout_height="95dp"
+        android:layout_marginTop="30dp"
+        android:src="@drawable/tituloopcoes3"
+        android:scaleType="fitCenter"
+        android:contentDescription="Lúdica Kids"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.22"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <!-- GIRAFA SUPERIOR DIREITA -->
+    <ImageView
+        android:id="@+id/girafaSuperiorDireita"
+        android:layout_width="55dp"
+        android:layout_height="65dp"
+        android:layout_marginTop="16dp"
+        android:layout_marginEnd="28dp"
+        android:src="@drawable/botaogirafasuperior"
+        android:scaleType="fitCenter"
+        android:contentDescription="Girafa superior"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- GUIA PARA POSICIONAR O CARD -->
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/guiaCard"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        app:layout_constraintGuide_percent="0.51" />
+
+    <!-- CARD BRANCO CENTRAL -->
+    <androidx.cardview.widget.CardView
+        android:id="@+id/cardCentral"
+        android:layout_width="250dp"
+        android:layout_height="158dp"
+        app:cardCornerRadius="26dp"
+        app:cardElevation="0dp"
+        app:cardBackgroundColor="#FFFAFA"
+        app:layout_constraintTop_toTopOf="@id/guiaCard"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+            <!-- TÍTULO DO JOGO -->
+            <TextView
+                android:id="@+id/textoTituloJogo"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="23dp"
+                android:text="CINCO SENTIDOS&#10;MÁGICOS"
+                android:textAlignment="center"
+                android:textColor="#F1AEB6"
+                android:textStyle="bold"
+                android:fontFamily="sans-serif-condensed"
+                android:textSize="17sp"
+                android:lineSpacingExtra="-2dp"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintHorizontal_bias="0.39"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <!-- CADEADO -->
+            <TextView
+                android:id="@+id/textoCadeado"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:text="🔒"
+                android:textSize="25sp"
+                app:layout_constraintStart_toEndOf="@id/textoTituloJogo"
+                app:layout_constraintTop_toTopOf="@id/textoTituloJogo"
+                app:layout_constraintBottom_toBottomOf="@id/textoTituloJogo" />
+
+            <!-- MENSAGEM -->
+            <TextView
+                android:id="@+id/textoMensagem"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:text="Você está acessando um jogo&#10;pago!"
+                android:textAlignment="center"
+                android:textColor="#171717"
+                android:textStyle="bold"
+                android:textSize="13sp"
+                app:layout_constraintTop_toBottomOf="@id/textoTituloJogo"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent" />
+
+            <!-- BOTÃO VAMOS LÁ -->
+            <androidx.appcompat.widget.AppCompatButton
+                android:id="@+id/botaoVamosLa"
+                android:layout_width="105dp"
+                android:layout_height="32dp"
+                android:layout_marginBottom="12dp"
+                android:background="@drawable/botao_vamos_la"
+                android:backgroundTint="@null"
+                android:text="Vamos lá!  →"
+                android:textAllCaps="false"
+                android:textColor="#FFFFFF"
+                android:textStyle="bold"
+                android:textSize="12sp"
+                android:gravity="center"
+                android:padding="0dp"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+    </androidx.cardview.widget.CardView>
+
+    <!-- GIRAFA PRINCIPAL APOIADA NO CARD -->
+    <ImageView
+        android:id="@+id/girafaPrincipal"
+        android:layout_width="110dp"
+        android:layout_height="125dp"
+        android:translationY="10dp"
+        android:elevation="10dp"
+        android:src="@drawable/girafaopcoes3"
+        android:scaleType="fitCenter"
+        android:contentDescription="Girafa principal"
+        app:layout_constraintBottom_toTopOf="@id/cardCentral"
+        app:layout_constraintStart_toStartOf="@id/cardCentral"
+        app:layout_constraintEnd_toEndOf="@id/cardCentral" />
+
+    <!-- LOGO INFERIOR -->
+    <ImageView
+        android:id="@+id/logoInferior"
+        android:layout_width="65dp"
+        android:layout_height="45dp"
+        android:layout_marginEnd="28dp"
+        android:layout_marginBottom="8dp"
+        android:src="@drawable/logoinferior"
+        android:scaleType="fitCenter"
+        android:contentDescription="Logo inferior"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>
