@@ -1,0 +1,334 @@
+[
+    {
+        "merged": "com.example.mobilejogos.app-debug-40:/mipmap-hdpi_ic_launcher.webp.flat",
+        "source": "com.example.mobilejogos.app-main-42:/mipmap-hdpi/ic_launcher.webp"
+    },
+    {
+        "merged": "com.example.mobilejogos.app-debug-40:/raw_som_brinquedos.mp3.flat",
+        "source": "com.example.mobilejogos.app-main-42:/raw/som_brinquedos.mp3"
+    },
+    {
+        "merged": "com.example.mobilejogos.app-debug-40:/mipmap-xxxhdpi_ic_launcher.webp.flat",
+        "source": "com.example.mobilejogos.app-main-42:/mipmap-xxxhdpi/ic_launcher.webp"
+    },
+    {
+        "merged": "com.example.mobilejogos.app-debug-40:/layout_activity_biblioteca_sonora.xml.flat",
+        "source": "com.example.mobilejogos.app-main-42:/layout/activity_biblioteca_sonora.xml"
+    },
+    {
+        "merged": "com.example.mobilejogos.app-debug-40:/drawable_nuvemtriste.png.flat",
+        "source": "com.example.mobilejogos.app-main-42:/drawable/nuvemtriste.png"
+    },
+    {
+        "merged": "com.example.mobilejogos.app-debug-40:/drawable_milkshake.png.flat",
+        "source": "com.example.mobilejogos.app-main-42:/drawable/milkshake.png"
+    },
+    {
+        "merged": "com.example.mobilejogos.app-debug-40:/drawable_balaopergunta.png.flat",
+        "source": "com.example.mobilejogos.app-main-42:/drawable/balaopergunta.png"
+    },
+    {
+        "merged": "com.example.mobilejogos.app-debug-40:/drawable_botaoretornorosa.png.flat",
+        "source": "com.example.mobilejogos.app-main-42:/drawable/botaoretornorosa.png"
+    },
+    {
+        "merged": "com.example.mobilejogos.app-debug-40:/drawable_girafa.png.flat",
+        "source": "com.example.mobilejogos.app-main-42:/drawable/girafa.png"
+    },
+    {
+        "merged": "com.example.mobilejogos.app-debug-40:/drawable_agua.png.flat",
+        "source": "com.example.mobilejogos.app-main-42:/drawable/agua.png"
+    },
+    {
+        "merged": "com.example.mobilejogos.app-debug-40:/mipmap-mdpi_ic_launcher_round.webp.flat",
+        "source": "com.example.mobilejogos.app-main-42:/mipmap-mdpi/ic_launcher_round.webp"
+    },
+    {
+        "merged": "com.example.mobilejogos.app-debug-40:/drawable_botaoretornoazul.png.flat",
+        "source": "com.example.mobilejogos.app-main-42:/drawable/botaoretornoazul.png"
+    },
+    {
+        "merged": "com.example.mobilejogos.app-debug-40:/layout_activity_main.xml.flat",
+        "source": "com.example.mobilejogos.app-main-42:/layout/activity_main.xml"
+    },
+    {
+        "merged": "com.example.mobilejogos.app-debug-40:/layout_activity_maoszinhas_magicas.xml.flat",
+        "source": "com.example.mobilejogos.app-main-42:/layout/activity_maoszinhas_magicas.xml"
+    },
+    {
+        "merged": "com.example.mobilejogos.app-debug-40:/drawable_titulorespirandocomodragao.png.flat",
+        "source": "com.example.mobilejogos.app-main-42:/drawable/titulorespirandocomodragao.png"
+    },
+    {
+        "merged": "com.example.mobilejogos.app-debug-40:/drawable_pizza.png.flat",
+        "source": "com.example.mobilejogos.app-main-42:/drawable/pizza.png"
+    },
+    {
+        "merged": "com.example.mobilejogos.app-debug-40:/mipmap-xhdpi_ic_launcher.webp.flat",
+        "source": "com.example.mobilejogos.app-main-42:/mipmap-xhdpi/ic_launcher.webp"
+    },
+    {
+        "merged": "com.example.mobilejogos.app-debug-40:/xml_data_extraction_rules.xml.flat",
+        "source": "com.example.mobilejogos.app-main-42:/xml/data_extraction_rules.xml"
+    },
+    {
+        "merged": "com.example.mobilejogos.app-debug-40:/drawable_girafafeliz.png.flat",
+        "source": "com.example.mobilejogos.app-main-42:/drawable/girafafeliz.png"
+    },
+    {
+        "merged": "com.example.mobilejogos.app-debug-40:/layout_activity_descubra_o_cheiro.xml.flat",
+        "source": "com.example.mobilejogos.app-main-42:/layout/activity_descubra_o_cheiro.xml"
+    },
+    {
+        "merged": "com.example.mobilejogos.app-debug-40:/drawable_borboleta2.png.flat",
+        "source": "com.example.mobilejogos.app-main-42:/drawable/borboleta2.png"
+    },
+    {
+        "merged": "com.example.mobilejogos.app-debug-40:/drawable_morango.png.flat",
+        "source": "com.example.mobilejogos.app-main-42:/drawable/morango.png"
+    },
+    {
+        "merged": "com.example.mobilejogos.app-debug-40:/drawable_cavalinho.png.flat",
+        "source": "com.example.mobilejogos.app-main-42:/drawable/cavalinho.png"
+    },
+    {
+        "merged": "com.example.mobilejogos.app-debug-40:/drawable_fundo_toque_nos_animais.png.flat",
+        "source": "com.example.mobilejogos.app-main-42:/drawable/fundo_toque_nos_animais.png"
+    },
+    {
+        "merged": "com.example.mobilejogos.app-debug-40:/drawable_menino.png.flat",
+        "source": "com.example.mobilejogos.app-main-42:/drawable/menino.png"
+    },
+    {
+        "merged": "com.example.mobilejogos.app-debug-40:/drawable_girafamedo.png.flat",
+        "source": "com.example.mobilejogos.app-main-42:/drawable/girafamedo.png"
+    },
+    {
+        "merged": "com.example.mobilejogos.app-debug-40:/drawable_onca.png.flat",
+        "source": "com.example.mobilejogos.app-main-42:/drawable/onca.png"
+    },
+    {
+        "merged": "com.example.mobilejogos.app-debug-40:/drawable_capivara.png.flat",
+        "source": "com.example.mobilejogos.app-main-42:/drawable/capivara.png"
+    },
+    {
+        "merged": "com.example.mobilejogos.app-debug-40:/mipmap-hdpi_ic_launcher_round.webp.flat",
+        "source": "com.example.mobilejogos.app-main-42:/mipmap-hdpi/ic_launcher_round.webp"
+    },
+    {
+        "merged": "com.example.mobilejogos.app-debug-40:/raw_som_bola.mp3.flat",
+        "source": "com.example.mobilejogos.app-main-42:/raw/som_bola.mp3"
+    },
+    {
+        "merged": "com.example.mobilejogos.app-debug-40:/drawable_girafaduvida.png.flat",
+        "source": "com.example.mobilejogos.app-main-42:/drawable/girafaduvida.png"
+    },
+    {
+        "merged": "com.example.mobilejogos.app-debug-40:/drawable_ic_launcher_foreground.xml.flat",
+        "source": "com.example.mobilejogos.app-main-42:/drawable/ic_launcher_foreground.xml"
+    },
+    {
+        "merged": "com.example.mobilejogos.app-debug-40:/mipmap-xxxhdpi_ic_launcher_round.webp.flat",
+        "source": "com.example.mobilejogos.app-main-42:/mipmap-xxxhdpi/ic_launcher_round.webp"
+    },
+    {
+        "merged": "com.example.mobilejogos.app-debug-40:/drawable_coelho.png.flat",
+        "source": "com.example.mobilejogos.app-main-42:/drawable/coelho.png"
+    },
+    {
+        "merged": "com.example.mobilejogos.app-debug-40:/drawable_refrigerante.png.flat",
+        "source": "com.example.mobilejogos.app-main-42:/drawable/refrigerante.png"
+    },
+    {
+        "merged": "com.example.mobilejogos.app-debug-40:/drawable_meninadeverde.png.flat",
+        "source": "com.example.mobilejogos.app-main-42:/drawable/meninadeverde.png"
+    },
+    {
+        "merged": "com.example.mobilejogos.app-debug-40:/drawable_macarrao.png.flat",
+        "source": "com.example.mobilejogos.app-main-42:/drawable/macarrao.png"
+    },
+    {
+        "merged": "com.example.mobilejogos.app-debug-40:/drawable_nuvemconfusa.png.flat",
+        "source": "com.example.mobilejogos.app-main-42:/drawable/nuvemconfusa.png"
+    },
+    {
+        "merged": "com.example.mobilejogos.app-debug-40:/drawable_planofundobibliotecasonora.png.flat",
+        "source": "com.example.mobilejogos.app-main-42:/drawable/planofundobibliotecasonora.png"
+    },
+    {
+        "merged": "com.example.mobilejogos.app-debug-40:/drawable_dinossauro.png.flat",
+        "source": "com.example.mobilejogos.app-main-42:/drawable/dinossauro.png"
+    },
+    {
+        "merged": "com.example.mobilejogos.app-debug-40:/drawable_botaoretornocinza.png.flat",
+        "source": "com.example.mobilejogos.app-main-42:/drawable/botaoretornocinza.png"
+    },
+    {
+        "merged": "com.example.mobilejogos.app-debug-40:/drawable_urso.png.flat",
+        "source": "com.example.mobilejogos.app-main-42:/drawable/urso.png"
+    },
+    {
+        "merged": "com.example.mobilejogos.app-debug-40:/drawable_ic_launcher_background.xml.flat",
+        "source": "com.example.mobilejogos.app-main-42:/drawable/ic_launcher_background.xml"
+    },
+    {
+        "merged": "com.example.mobilejogos.app-debug-40:/layout_activity_prove_na_imaginacao.xml.flat",
+        "source": "com.example.mobilejogos.app-main-42:/layout/activity_prove_na_imaginacao.xml"
+    },
+    {
+        "merged": "com.example.mobilejogos.app-debug-40:/drawable_titulobibliotecasonora.png.flat",
+        "source": "com.example.mobilejogos.app-main-42:/drawable/titulobibliotecasonora.png"
+    },
+    {
+        "merged": "com.example.mobilejogos.app-debug-40:/drawable_titulobebidafavorita.png.flat",
+        "source": "com.example.mobilejogos.app-main-42:/drawable/titulobebidafavorita.png"
+    },
+    {
+        "merged": "com.example.mobilejogos.app-debug-40:/drawable_nuvembrava.png.flat",
+        "source": "com.example.mobilejogos.app-main-42:/drawable/nuvembrava.png"
+    },
+    {
+        "merged": "com.example.mobilejogos.app-debug-40:/drawable_botaoretornoamarelo.png.flat",
+        "source": "com.example.mobilejogos.app-main-42:/drawable/botaoretornoamarelo.png"
+    },
+    {
+        "merged": "com.example.mobilejogos.app-debug-40:/drawable_brinquedos.png.flat",
+        "source": "com.example.mobilejogos.app-main-42:/drawable/brinquedos.png"
+    },
+    {
+        "merged": "com.example.mobilejogos.app-debug-40:/mipmap-anydpi-v26_ic_launcher.xml.flat",
+        "source": "com.example.mobilejogos.app-main-42:/mipmap-anydpi-v26/ic_launcher.xml"
+    },
+    {
+        "merged": "com.example.mobilejogos.app-debug-40:/raw_som_aviao.mp3.flat",
+        "source": "com.example.mobilejogos.app-main-42:/raw/som_aviao.mp3"
+    },
+    {
+        "merged": "com.example.mobilejogos.app-debug-40:/layout_activity_emocoes.xml.flat",
+        "source": "com.example.mobilejogos.app-main-42:/layout/activity_emocoes.xml"
+    },
+    {
+        "merged": "com.example.mobilejogos.app-debug-40:/drawable_planomaoszinhasmagicas.png.flat",
+        "source": "com.example.mobilejogos.app-main-42:/drawable/planomaoszinhasmagicas.png"
+    },
+    {
+        "merged": "com.example.mobilejogos.app-debug-40:/drawable_titulodescubracomocheiro.png.flat",
+        "source": "com.example.mobilejogos.app-main-42:/drawable/titulodescubracomocheiro.png"
+    },
+    {
+        "merged": "com.example.mobilejogos.app-debug-40:/drawable_nuvemfeliz.png.flat",
+        "source": "com.example.mobilejogos.app-main-42:/drawable/nuvemfeliz.png"
+    },
+    {
+        "merged": "com.example.mobilejogos.app-debug-40:/mipmap-xxhdpi_ic_launcher_round.webp.flat",
+        "source": "com.example.mobilejogos.app-main-42:/mipmap-xxhdpi/ic_launcher_round.webp"
+    },
+    {
+        "merged": "com.example.mobilejogos.app-debug-40:/drawable_passaro.png.flat",
+        "source": "com.example.mobilejogos.app-main-42:/drawable/passaro.png"
+    },
+    {
+        "merged": "com.example.mobilejogos.app-debug-40:/drawable_meninocomaviao.png.flat",
+        "source": "com.example.mobilejogos.app-main-42:/drawable/meninocomaviao.png"
+    },
+    {
+        "merged": "com.example.mobilejogos.app-debug-40:/drawable_botaoiniciar.png.flat",
+        "source": "com.example.mobilejogos.app-main-42:/drawable/botaoiniciar.png"
+    },
+    {
+        "merged": "com.example.mobilejogos.app-debug-40:/drawable_bola.png.flat",
+        "source": "com.example.mobilejogos.app-main-42:/drawable/bola.png"
+    },
+    {
+        "merged": "com.example.mobilejogos.app-debug-40:/layout_activity_cinco_opcoes_dos_jogos.xml.flat",
+        "source": "com.example.mobilejogos.app-main-42:/layout/activity_cinco_opcoes_dos_jogos.xml"
+    },
+    {
+        "merged": "com.example.mobilejogos.app-debug-40:/drawable_titulo_toquenosanimais.png.flat",
+        "source": "com.example.mobilejogos.app-main-42:/drawable/titulo_toquenosanimais.png"
+    },
+    {
+        "merged": "com.example.mobilejogos.app-debug-40:/raw_som_urso.mp3.flat",
+        "source": "com.example.mobilejogos.app-main-42:/raw/som_urso.mp3"
+    },
+    {
+        "merged": "com.example.mobilejogos.app-debug-40:/layout_activity_inicial_respirando_com_o_dragao.xml.flat",
+        "source": "com.example.mobilejogos.app-main-42:/layout/activity_inicial_respirando_com_o_dragao.xml"
+    },
+    {
+        "merged": "com.example.mobilejogos.app-debug-40:/drawable_planorespirandocomodragao.png.flat",
+        "source": "com.example.mobilejogos.app-main-42:/drawable/planorespirandocomodragao.png"
+    },
+    {
+        "merged": "com.example.mobilejogos.app-debug-40:/drawable_girafatriste.png.flat",
+        "source": "com.example.mobilejogos.app-main-42:/drawable/girafatriste.png"
+    },
+    {
+        "merged": "com.example.mobilejogos.app-debug-40:/drawable_nuvemassustada.png.flat",
+        "source": "com.example.mobilejogos.app-main-42:/drawable/nuvemassustada.png"
+    },
+    {
+        "merged": "com.example.mobilejogos.app-debug-40:/drawable_girafabrava.png.flat",
+        "source": "com.example.mobilejogos.app-main-42:/drawable/girafabrava.png"
+    },
+    {
+        "merged": "com.example.mobilejogos.app-debug-40:/drawable_crianca.png.flat",
+        "source": "com.example.mobilejogos.app-main-42:/drawable/crianca.png"
+    },
+    {
+        "merged": "com.example.mobilejogos.app-debug-40:/drawable_botao_retorno.png.flat",
+        "source": "com.example.mobilejogos.app-main-42:/drawable/botao_retorno.png"
+    },
+    {
+        "merged": "com.example.mobilejogos.app-debug-40:/drawable_burrinho.png.flat",
+        "source": "com.example.mobilejogos.app-main-42:/drawable/burrinho.png"
+    },
+    {
+        "merged": "com.example.mobilejogos.app-debug-40:/raw_som_cavalinho.wav.flat",
+        "source": "com.example.mobilejogos.app-main-42:/raw/som_cavalinho.wav"
+    },
+    {
+        "merged": "com.example.mobilejogos.app-debug-40:/mipmap-anydpi-v26_ic_launcher_round.xml.flat",
+        "source": "com.example.mobilejogos.app-main-42:/mipmap-anydpi-v26/ic_launcher_round.xml"
+    },
+    {
+        "merged": "com.example.mobilejogos.app-debug-40:/mipmap-mdpi_ic_launcher.webp.flat",
+        "source": "com.example.mobilejogos.app-main-42:/mipmap-mdpi/ic_launcher.webp"
+    },
+    {
+        "merged": "com.example.mobilejogos.app-debug-40:/mipmap-xhdpi_ic_launcher_round.webp.flat",
+        "source": "com.example.mobilejogos.app-main-42:/mipmap-xhdpi/ic_launcher_round.webp"
+    },
+    {
+        "merged": "com.example.mobilejogos.app-debug-40:/mipmap-xxhdpi_ic_launcher.webp.flat",
+        "source": "com.example.mobilejogos.app-main-42:/mipmap-xxhdpi/ic_launcher.webp"
+    },
+    {
+        "merged": "com.example.mobilejogos.app-debug-40:/drawable_titulodescubracomotoque.png.flat",
+        "source": "com.example.mobilejogos.app-main-42:/drawable/titulodescubracomotoque.png"
+    },
+    {
+        "merged": "com.example.mobilejogos.app-debug-40:/drawable_borboleta.png.flat",
+        "source": "com.example.mobilejogos.app-main-42:/drawable/borboleta.png"
+    },
+    {
+        "merged": "com.example.mobilejogos.app-debug-40:/drawable_titulocincosentidos.png.flat",
+        "source": "com.example.mobilejogos.app-main-42:/drawable/titulocincosentidos.png"
+    },
+    {
+        "merged": "com.example.mobilejogos.app-debug-40:/drawable_planoemocoes.png.flat",
+        "source": "com.example.mobilejogos.app-main-42:/drawable/planoemocoes.png"
+    },
+    {
+        "merged": "com.example.mobilejogos.app-debug-40:/xml_backup_rules.xml.flat",
+        "source": "com.example.mobilejogos.app-main-42:/xml/backup_rules.xml"
+    },
+    {
+        "merged": "com.example.mobilejogos.app-debug-40:/drawable_brocolis.png.flat",
+        "source": "com.example.mobilejogos.app-main-42:/drawable/brocolis.png"
+    },
+    {
+        "merged": "com.example.mobilejogos.app-debug-40:/drawable_suco.png.flat",
+        "source": "com.example.mobilejogos.app-main-42:/drawable/suco.png"
+    }
+]
