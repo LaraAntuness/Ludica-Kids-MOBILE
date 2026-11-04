@@ -112,8 +112,8 @@ class BibliotecaSonoraActivity : Activity() {
             "Dinossauro",
             438, 78, 168, 190, sx, sy
         )
-        configurarToque(meninoAviao, audio
-                noAviao)
+        configurarToque(meninoAviao, audioMeninoAviao)
+
         val brinquedos = adicionarImagem(
             "brinquedos",
             490, 288, 174, 96, sx, sy
