@@ -9,6 +9,7 @@ import android.view.WindowManager
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.Toast
+
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.resource.gif.GifDrawable
 import com.bumptech.glide.request.target.CustomTarget
@@ -27,40 +28,76 @@ class MaoszinhasMagicasActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        // =====================================
+        // ORIENTAÇÃO HORIZONTAL
+        // =====================================
+
         requestedOrientation =
             ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+
+        // =====================================
+        // TELA CHEIA
+        // =====================================
 
         window.setFlags(
             WindowManager.LayoutParams.FLAG_FULLSCREEN,
             WindowManager.LayoutParams.FLAG_FULLSCREEN
         )
 
-        setContentView(R.layout.activity_maoszinhas_magicas)
+        setContentView(
+            R.layout.activity_maoszinhas_magicas
+        )
 
-        root = findViewById(R.id.telaMaoszinhasMagicas)
+        root = findViewById(
+            R.id.telaMaoszinhasMagicas
+        )
 
         root.post {
             montarJogo()
         }
     }
 
+    // =========================================
+    // MONTAR TELA DO JOGO
+    // =========================================
+
     private fun montarJogo() {
+
         root.removeAllViews()
         alvosGif.clear()
 
         val sx = root.width.toFloat() / larguraBase
         val sy = root.height.toFloat() / alturaBase
 
+        // =====================================
+        // FUNDO PREENCHENDO TODA A TELA
+        // =====================================
 
-        adicionarImagem(
-            "planomaoszinhasmagicas",
-            0, 0, 922, 363, sx, sy
+        val fundo = ImageView(this).apply {
+
+            setImageResource(
+                R.drawable.planomaoszinhasmagicas
+            )
+
+            // Preenche toda a área disponível
+            scaleType = ImageView.ScaleType.FIT_XY
+        }
+
+        val parametrosFundo = FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.MATCH_PARENT,
+            FrameLayout.LayoutParams.MATCH_PARENT
         )
 
+        // Adiciona o fundo atrás dos demais elementos
+        root.addView(fundo, 0, parametrosFundo)
+
+        // =====================================
+        // BOTÃO VOLTAR
+        // =====================================
 
         val voltar = adicionarImagem(
             "botaoretornocinza",
-            18, 18, 42, 42, sx, sy
+            19, 25, 40, 40, sx, sy
         )
 
         voltar.contentDescription = "Voltar"
@@ -70,33 +107,55 @@ class MaoszinhasMagicasActivity : Activity() {
             finish()
         }
 
+        // =====================================
+        // TÍTULO
+        // =====================================
 
         adicionarImagem(
             "titulodescubracomotoque",
-            235, 8, 452, 55, sx, sy
+            205, 2, 490, 85, sx, sy
         )
 
+        // =====================================
+        // LOBO
+        // =====================================
 
         adicionarAnimal(
             "lobo.gif",
             77, 40, 210, 180, sx, sy
         )
 
+        // =====================================
+        // SAPO
+        // =====================================
+
         adicionarAnimal(
             "sapo.gif",
             420, 185, 210, 180, sx, sy
         )
+
+        // =====================================
+        // CASTOR
+        // =====================================
 
         adicionarAnimal(
             "castor.gif",
             285, 210, 210, 180, sx, sy
         )
 
+        // =====================================
+        // MACACO
+        // =====================================
+
         adicionarAnimal(
             "macaco.gif",
             600, 100, 300, 250, sx, sy
         )
     }
+
+    // =========================================
+    // ADICIONAR IMAGENS
+    // =========================================
 
     private fun adicionarImagem(
         nome: String,
@@ -117,9 +176,19 @@ class MaoszinhasMagicasActivity : Activity() {
         )
 
         if (id != 0) {
+
             imagem.setImageResource(id)
+
+        } else {
+
+            Toast.makeText(
+                this,
+                "Imagem não encontrada: $nome",
+                Toast.LENGTH_SHORT
+            ).show()
         }
 
+        // Preserva as proporções dos elementos
         imagem.scaleType =
             ImageView.ScaleType.FIT_CENTER
 
@@ -130,6 +199,10 @@ class MaoszinhasMagicasActivity : Activity() {
 
         return imagem
     }
+
+    // =========================================
+    // ADICIONAR ANIMAIS COM GIF
+    // =========================================
 
     private fun adicionarAnimal(
         arquivo: String,
@@ -159,12 +232,17 @@ class MaoszinhasMagicasActivity : Activity() {
                 resource: GifDrawable,
                 transition: Transition<in GifDrawable>?
             ) {
+
+                // GIF começa parado
                 resource.stop()
+
                 resource.setVisible(true, false)
 
                 animal.setImageDrawable(resource)
 
+                // GIF é reproduzido quando a criança toca
                 animal.setOnClickListener {
+
                     val gif =
                         animal.drawable as? GifDrawable
 
@@ -175,12 +253,14 @@ class MaoszinhasMagicasActivity : Activity() {
             override fun onLoadCleared(
                 placeholder: Drawable?
             ) {
+
                 animal.setImageDrawable(null)
             }
 
             override fun onLoadFailed(
                 errorDrawable: Drawable?
             ) {
+
                 super.onLoadFailed(errorDrawable)
 
                 Toast.makeText(
@@ -199,6 +279,10 @@ class MaoszinhasMagicasActivity : Activity() {
             .into(alvo)
     }
 
+    // =========================================
+    // POSICIONAR ELEMENTOS
+    // =========================================
+
     private fun adicionarView(
         view: View,
         x: Int,
@@ -214,18 +298,29 @@ class MaoszinhasMagicasActivity : Activity() {
             (altura * sy).toInt().coerceAtLeast(1)
         )
 
+        // Posição horizontal
         parametros.leftMargin =
             (x * sx).toInt()
 
+        // Posição vertical
         parametros.topMargin =
             (y * sy).toInt()
 
         root.addView(view, parametros)
     }
 
+    // =========================================
+    // LIBERAR RECURSOS
+    // =========================================
+
     override fun onDestroy() {
-        Glide.with(this).clear(root)
+
+        for (alvo in alvosGif) {
+            Glide.with(this).clear(alvo)
+        }
+
         alvosGif.clear()
+
         super.onDestroy()
     }
 }
