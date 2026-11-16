@@ -59,13 +59,12 @@ class BibliotecaSonoraActivity : Activity() {
 
         adicionarImagem(
             "planofundobibliotecasonora",
-            0, 0, 900, 393, sx, sy
+            0, 0, 930, 450, sx, sy
         )
-
 
         val voltar = adicionarImagem(
             "botaoretornorosa",
-            18, 25, 60, 60, sx, sy
+            19, 25, 40, 40, sx, sy
         )
 
         voltar.contentDescription = "Voltar"
@@ -77,13 +76,13 @@ class BibliotecaSonoraActivity : Activity() {
 
         adicionarImagem(
             "titulobibliotecasonora",
-            202, 7, 480, 50, sx, sy
+            205, 2, 490, 85, sx, sy
         )
 
 
         val urso = adicionarImagem(
             "urso",
-            78, 172, 112, 145, sx, sy
+            40, 172, 140, 180, sx, sy
         )
         configurarToque(urso, audioUrso)
 
@@ -97,26 +96,26 @@ class BibliotecaSonoraActivity : Activity() {
 
         val cavalinho = adicionarImagem(
             "cavalinho",
-            258, 111, 175, 170, sx, sy
+            258, 135, 175, 170, sx, sy
         )
         configurarToque(cavalinho, audioCavalinho)
 
 
         val meninoAviao = adicionarImagem(
             "meninocomaviao",
-            438, 78, 168, 190, sx, sy
+            450, 78, 180, 200, sx, sy
         )
         configurarToque(meninoAviao, audioMeninoAviao)
 
         val Dinossauro = adicionarImagem(
-            "Dinossauro",
-            438, 78, 168, 190, sx, sy
+            "dinossauro",
+            680, 95, 200, 220, sx, sy
         )
         configurarToque(meninoAviao, audioMeninoAviao)
 
         val brinquedos = adicionarImagem(
             "brinquedos",
-            490, 288, 174, 96, sx, sy
+            490, 280, 185, 110, sx, sy
         )
         configurarToque(brinquedos, audioBrinquedos)
     }

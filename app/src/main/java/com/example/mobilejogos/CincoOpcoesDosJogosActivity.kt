@@ -54,7 +54,7 @@ class CincoOpcoesDosJogosActivity : Activity() {
         // Botão de voltar
         val voltar = adicionarImagem(
             "botaoretornoamarelo",
-            18, 25, 40, 40, sx, sy
+            19, 25, 40, 40, sx, sy
         )
 
         voltar.contentDescription = "Voltar"
@@ -66,13 +66,13 @@ class CincoOpcoesDosJogosActivity : Activity() {
         // Título
         adicionarImagem(
             "titulocincosentidos",
-            202, 27, 480, 48, sx, sy
+            205, 2, 490, 85, sx, sy
         )
 
         // Borboleta superior esquerda
         adicionarImagem(
             "borboleta",
-            123, 76, 80, 75, sx, sy
+            180, 76, 100, 90, sx, sy
         )
 
         // Girafa
