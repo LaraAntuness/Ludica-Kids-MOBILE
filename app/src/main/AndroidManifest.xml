@@ -75,6 +75,38 @@
             android:exported="true"
             android:screenOrientation="landscape" />
 
+        <!-- TELA QUEM VAI JOGAR -->
+        <activity
+            android:name=".QuemVaiJogarActivity"
+            android:exported="true"
+            android:screenOrientation="landscape" />
+
+        <!-- OLHINHOS CURIOSOS - NÍVEL 2 -->
+        <activity
+            android:name=".OlhinhosCuriosos2Activity"
+            android:screenOrientation="landscape"
+            android:exported="true" />
+
+        <!-- OLHINHOS CURIOSOS - NÍVEL 3 -->
+        <activity
+            android:name=".OlhinhosCuriosos3Activity"
+            android:screenOrientation="landscape"
+            android:exported="true" />
+
+        <!-- DESCUBRA O CHEIRO - NÍVEL 2 -->
+        <activity
+            android:name=".DescubraOCheiro2Activity"
+            android:screenOrientation="landscape"
+            android:exported="true" />
+
+        <!-- DESCUBRA O CHEIRO - NÍVEL 3 -->
+        <activity
+            android:name=".DescubraOCheiro3Activity"
+            android:screenOrientation="landscape"
+            android:exported="true" />
+
+
+
 
     </application>
 
