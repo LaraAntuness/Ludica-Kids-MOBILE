@@ -105,7 +105,11 @@
             android:screenOrientation="landscape"
             android:exported="true" />
 
-
+        <!-- PAGINA DO RESPONSÁVEL  -->
+        <activity
+            android:name=".TelaResponsavelActivity"
+            android:screenOrientation="landscape"
+            android:exported="true" />
 
 
     </application>
