@@ -6,6 +6,7 @@
         <option name="selectionMode" value="DROPDOWN" />
         <DialogSelection />
       </SelectionState>
+<<<<<<< Updated upstream
       <SelectionState runConfigName="QuemVaiJogarActivity (2)">
         <option name="selectionMode" value="DROPDOWN" />
         <DialogSelection />
@@ -19,10 +20,28 @@
         <DialogSelection />
       </SelectionState>
       <SelectionState runConfigName="QuemVaiJogarActivity (5)">
+=======
+      <SelectionState runConfigName="ProveNaImaginacaoActivity">
+        <option name="selectionMode" value="DROPDOWN" />
+        <DialogSelection />
+      </SelectionState>
+      <SelectionState runConfigName="TelaInicialCincoSentidosPago">
+        <option name="selectionMode" value="DROPDOWN" />
+        <DialogSelection />
+      </SelectionState>
+      <SelectionState runConfigName="TelaInicialJogosGeral">
+>>>>>>> Stashed changes
         <option name="selectionMode" value="DROPDOWN" />
         <DialogSelection />
       </SelectionState>
       <SelectionState runConfigName="QuemVaiJogarActivity">
+<<<<<<< Updated upstream
+=======
+        <option name="selectionMode" value="DROPDOWN" />
+        <DialogSelection />
+      </SelectionState>
+      <SelectionState runConfigName="QuemVaiJogarActivity (1)">
+>>>>>>> Stashed changes
         <option name="selectionMode" value="DROPDOWN" />
         <DialogSelection />
       </SelectionState>
