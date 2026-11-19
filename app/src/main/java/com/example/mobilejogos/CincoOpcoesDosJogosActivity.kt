@@ -22,33 +22,34 @@ class CincoOpcoesDosJogosActivity : Activity() {
     private lateinit var tela: FrameLayout
 
     private val larguraBase = 874f
-    private val alturaBase = 393f
+    private val alturaBase = 402f
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Tela na horizontal
+        // TELA HORIZONTAL
         requestedOrientation =
             ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
 
-        // Tela cheia
+        // TELA CHEIA
         window.setFlags(
             WindowManager.LayoutParams.FLAG_FULLSCREEN,
             WindowManager.LayoutParams.FLAG_FULLSCREEN
         )
 
+        // MANTER O XML ORIGINAL
         setContentView(R.layout.activity_cinco_opcoes_dos_jogos)
 
         tela = findViewById(R.id.telaCincoOpcoes)
-
-        tela.setBackgroundColor(
-            Color.parseColor("#CBE0ED")
-        )
 
         tela.post {
             montarTela()
         }
     }
+
+    // =====================================================
+    // MONTAR TELA
+    // =====================================================
 
     private fun montarTela() {
 
@@ -57,130 +58,129 @@ class CincoOpcoesDosJogosActivity : Activity() {
         val sx = tela.width.toFloat() / larguraBase
         val sy = tela.height.toFloat() / alturaBase
 
-        tela.setBackgroundColor(
-            Color.parseColor("#CBE0ED")
+        // =====================================================
+        // PLANO DE FUNDO
+        // =====================================================
+
+        val fundo = ImageView(this).apply {
+
+            setImageResource(
+                R.drawable.planofundo5sentidos
+            )
+
+            scaleType = ImageView.ScaleType.FIT_XY
+        }
+
+        tela.addView(
+            fundo,
+            FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+            )
         )
 
-        // =====================================
-        // BOTÃO VOLTAR
-        // =====================================
+        // =====================================================
+        // BOTÃO RETORNO AZUL
+        // =====================================================
 
         val voltar = adicionarImagem(
-            "botaoretornoamarelo",
-            19, 25, 40, 40, sx, sy
+            "botaoretornoazul",
+            19, 25, 40, 40,
+            sx, sy
         )
 
         voltar.contentDescription = "Voltar"
+
         voltar.isClickable = true
 
         voltar.setOnClickListener {
             finish()
         }
 
-        // =====================================
-        // TÍTULO
-        // =====================================
+        // =====================================================
+        // TÍTULO CINCO SENTIDOS MÁGICOS
+        // =====================================================
 
         adicionarImagem(
-            "titulocincosentidos",
-            205, 2, 490, 85, sx, sy
+            "cincosentidosmagicosazul",
+            190, 7, 490, 65,
+            sx, sy
         )
 
-        // =====================================
-        // BORBOLETA SUPERIOR ESQUERDA
-        // =====================================
-
-        adicionarImagem(
-            "borboleta",
-            180, 76, 100, 90, sx, sy
-        )
-
-        // =====================================
-        // GIRAFA
-        // =====================================
-
-        adicionarImagem(
-            "girafa",
-            53, 193, 180, 200, sx, sy
-        )
-
-        // =====================================
-        // CRIANÇAS
-        // =====================================
-
-        adicionarImagem(
-            "crianca",
-            710, 90, 220, 350, sx, sy
-        )
-
-        // =====================================
-        // BORBOLETA SUPERIOR DIREITA
-        // =====================================
-
-        adicionarImagem(
-            "borboleta2",
-            664, 25, 40, 30, sx, sy
-        )
-
-        // =====================================
+        // =====================================================
         // BOTÃO 1 - OLHINHOS CURIOSOS
-        // =====================================
+        // =====================================================
 
         criarBotao(
             "OLHINHOS CURIOSOS",
-            290, 94, 310, 48, sx, sy
+            290, 72, 300, 50,
+            sx, sy
         ) {
+
+            // CAMINHO ORIGINAL
             abrirTela(MainActivity::class.java)
         }
 
-        // =====================================
+        // =====================================================
         // BOTÃO 2 - MÃOZINHAS MÁGICAS
-        // =====================================
+        // =====================================================
 
         criarBotao(
             "MÃOZINHAS MÁGICAS",
-            290, 149, 310, 48, sx, sy
+            290, 131, 300, 50,
+            sx, sy
         ) {
+
+            // CAMINHO ORIGINAL
             abrirTela(MaoszinhasMagicasActivity::class.java)
         }
 
-        // =====================================
+        // =====================================================
         // BOTÃO 3 - ESCUTE E DESCUBRA
-        // =====================================
+        // =====================================================
 
         criarBotao(
             "ESCUTE E DESCUBRA",
-            290, 204, 310, 48, sx, sy
+            290, 190, 300, 50,
+            sx, sy
         ) {
+
+            // CAMINHO ORIGINAL
             abrirTela(BibliotecaSonoraActivity::class.java)
         }
 
-        // =====================================
+        // =====================================================
         // BOTÃO 4 - O NARIZ DETETIVE
-        // =====================================
+        // =====================================================
 
         criarBotao(
             "O NARIZ DETETIVE",
-            290, 259, 310, 48, sx, sy
+            290, 249, 300, 50,
+            sx, sy
         ) {
+
+            // CAMINHO ORIGINAL
             abrirTelaPorNome("DescubraOCheiroActivity")
         }
 
-        // =====================================
+        // =====================================================
         // BOTÃO 5 - PROVE NA IMAGINAÇÃO
-        // =====================================
+        // =====================================================
 
         criarBotao(
             "PROVE NA IMAGINAÇÃO",
-            290, 314, 310, 48, sx, sy
+            290, 308, 300, 50,
+            sx, sy
         ) {
+
+            // CAMINHO ORIGINAL
             abrirTelaPorNome("ProveNaImaginacaoActivity")
         }
     }
 
-    // =========================================
-    // FUNÇÃO PARA ADICIONAR IMAGENS
-    // =========================================
+    // =====================================================
+    // ADICIONAR IMAGEM
+    // =====================================================
 
     private fun adicionarImagem(
         nome: String,
@@ -213,24 +213,31 @@ class CincoOpcoesDosJogosActivity : Activity() {
             ).show()
         }
 
-        imagem.scaleType = ImageView.ScaleType.FIT_CENTER
+        imagem.scaleType =
+            ImageView.ScaleType.FIT_CENTER
 
         val parametros = FrameLayout.LayoutParams(
             (largura * sx).toInt().coerceAtLeast(1),
             (altura * sy).toInt().coerceAtLeast(1)
         )
 
-        parametros.leftMargin = (x * sx).toInt()
-        parametros.topMargin = (y * sy).toInt()
+        parametros.leftMargin =
+            (x * sx).toInt()
 
-        tela.addView(imagem, parametros)
+        parametros.topMargin =
+            (y * sy).toInt()
+
+        tela.addView(
+            imagem,
+            parametros
+        )
 
         return imagem
     }
 
-    // =========================================
-    // BOTÕES AMARELOS COM CONTORNO E SOMBRA
-    // =========================================
+    // =====================================================
+    // CRIAR BOTÕES AMARELOS
+    // =====================================================
 
     private fun criarBotao(
         texto: String,
@@ -243,11 +250,49 @@ class CincoOpcoesDosJogosActivity : Activity() {
         acao: () -> Unit
     ) {
 
-        val botao = TextView(this)
+        // =====================================================
+        // SOMBRA AMARELA
+        // =====================================================
 
-        // =====================================
-        // CONFIGURAÇÃO DO TEXTO
-        // =====================================
+        val sombra = GradientDrawable().apply {
+
+            shape = GradientDrawable.RECTANGLE
+
+            cornerRadius = 22f * minOf(sx, sy)
+
+            setColor(
+                Color.rgb(255, 216, 125)
+            )
+        }
+
+        val sombraView = android.view.View(this).apply {
+
+            background = sombra
+
+            isClickable = false
+        }
+
+        val parametrosSombra = FrameLayout.LayoutParams(
+            (largura * sx).toInt(),
+            ((altura - 3) * sy).toInt()
+        )
+
+        parametrosSombra.leftMargin =
+            (x * sx).toInt()
+
+        parametrosSombra.topMargin =
+            ((y + 7) * sy).toInt()
+
+        tela.addView(
+            sombraView,
+            parametrosSombra
+        )
+
+        // =====================================================
+        // BOTÃO PRINCIPAL
+        // =====================================================
+
+        val botao = TextView(this)
 
         botao.text = texto
 
@@ -255,81 +300,63 @@ class CincoOpcoesDosJogosActivity : Activity() {
 
         botao.includeFontPadding = false
 
-        // Azul forte
+        // TEXTO LARANJA
         botao.setTextColor(
-            Color.parseColor("#1451AF")
+            Color.rgb(255, 165, 76)
         )
 
-        // Tamanho do texto
         botao.setTextSize(
             TypedValue.COMPLEX_UNIT_PX,
-            20f * sy
+            19f * minOf(sx, sy)
         )
 
-        // Fonte arredondada
         botao.typeface = Typeface.create(
-            "sans-serif-rounded",
+            "sans-serif-condensed",
             Typeface.BOLD
         )
 
         botao.maxLines = 1
 
         botao.setPadding(
-            (12 * sx).toInt(),
+            (10 * sx).toInt(),
             0,
-            (12 * sx).toInt(),
+            (10 * sx).toInt(),
             0
         )
 
-        // =====================================
-        // FORMATO ARREDONDADO
-        // =====================================
-
-        val arredondamento = 30f * sy
-
-        // =====================================
-        // APARÊNCIA NORMAL
-        // =====================================
+        // =====================================================
+        // FUNDO NORMAL
+        // =====================================================
 
         val fundoNormal = GradientDrawable().apply {
 
-            // Amarelo-claro
+            shape = GradientDrawable.RECTANGLE
+
+            cornerRadius = 22f * minOf(sx, sy)
+
             setColor(
-                Color.parseColor("#FFFFB5")
-            )
-
-            // Cantos arredondados
-            cornerRadius = arredondamento
-
-            // Contorno dourado
-            setStroke(
-                (2.5f * sy).toInt().coerceAtLeast(1),
-                Color.parseColor("#F5B800")
+                Color.rgb(255, 255, 181)
             )
         }
 
-        // =====================================
-        // APARÊNCIA QUANDO PRESSIONADO
-        // =====================================
+        // =====================================================
+        // FUNDO AO PRESSIONAR
+        // =====================================================
 
         val fundoPressionado = GradientDrawable().apply {
 
-            // Amarelo um pouco mais intenso
+            shape = GradientDrawable.RECTANGLE
+
+            cornerRadius = 22f * minOf(sx, sy)
+
             setColor(
-                Color.parseColor("#FFE878")
-            )
-
-            cornerRadius = arredondamento
-
-            setStroke(
-                (2.5f * sy).toInt().coerceAtLeast(1),
-                Color.parseColor("#E5A000")
+                Color.rgb(255, 239, 149)
             )
         }
 
-        // =====================================
-        // ALTERNAR COR AO PRESSIONAR
-        // =====================================
+        // =====================================================
+        // ESTADOS DO BOTÃO
+        // =====================================================
 
         val estados = StateListDrawable().apply {
 
@@ -346,37 +373,36 @@ class CincoOpcoesDosJogosActivity : Activity() {
 
         botao.background = estados
 
-        // =====================================
-        // SOMBRA SUAVE
-        // =====================================
-
-        botao.elevation =
-            5f * resources.displayMetrics.density
-
-        // =====================================
+        // =====================================================
         // INTERAÇÃO
-        // =====================================
+        // =====================================================
 
         botao.isClickable = true
         botao.isFocusable = true
 
-        // =====================================
+        // =====================================================
         // POSICIONAMENTO
-        // =====================================
+        // =====================================================
 
         val parametros = FrameLayout.LayoutParams(
             (largura * sx).toInt(),
-            (altura * sy).toInt()
+            ((altura - 7) * sy).toInt()
         )
 
-        parametros.leftMargin = (x * sx).toInt()
-        parametros.topMargin = (y * sy).toInt()
+        parametros.leftMargin =
+            (x * sx).toInt()
 
-        tela.addView(botao, parametros)
+        parametros.topMargin =
+            (y * sy).toInt()
 
-        // =====================================
-        // ANIMAÇÃO DE CLIQUE
-        // =====================================
+        tela.addView(
+            botao,
+            parametros
+        )
+
+        // =====================================================
+        // ANIMAÇÃO AO CLICAR
+        // =====================================================
 
         botao.setOnTouchListener { view, evento ->
 
@@ -402,22 +428,22 @@ class CincoOpcoesDosJogosActivity : Activity() {
                 }
             }
 
-            // Permite executar o clique normalmente
+            // MANTER O CLIQUE FUNCIONANDO
             false
         }
 
-        // =====================================
-        // ABRIR A TELA CORRESPONDENTE
-        // =====================================
+        // =====================================================
+        // NAVEGAÇÃO ORIGINAL
+        // =====================================================
 
         botao.setOnClickListener {
             acao()
         }
     }
 
-    // =========================================
+    // =====================================================
     // ABRIR ACTIVITY
-    // =========================================
+    // =====================================================
 
     private fun abrirTela(
         classe: Class<out Activity>
@@ -439,9 +465,9 @@ class CincoOpcoesDosJogosActivity : Activity() {
         }
     }
 
-    // =========================================
+    // =====================================================
     // ABRIR ACTIVITY PELO NOME
-    // =========================================
+    // =====================================================
 
     private fun abrirTelaPorNome(
         nomeClasse: String

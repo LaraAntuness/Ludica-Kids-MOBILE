@@ -27,7 +27,8 @@ class MainActivity : Activity() {
     private val handler = Handler(Looper.getMainLooper())
 
     // Nome da Activity do próximo nível
-    private val proximaFaseActivity = "ProximaFaseActivity"
+    // Nome da Activity do próximo nível
+    private val proximaFaseActivity = "OlhinhosCuriosos2Activity"
 
     private val animais = listOf(
         Animal("coelho", "coelho", 650, 205, 95, 115),

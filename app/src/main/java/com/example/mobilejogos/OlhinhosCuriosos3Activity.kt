@@ -1,8 +1,6 @@
 package com.example.mobilejogos
 
 import android.app.Activity
-import android.content.ActivityNotFoundException
-import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.graphics.Color
 import android.graphics.Typeface
@@ -19,16 +17,13 @@ import android.view.animation.OvershootInterpolator
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.TextView
-import android.widget.Toast
+import android.content.Intent
 
 class OlhinhosCuriosos3Activity : Activity() {
 
     private lateinit var root: FrameLayout
 
     private val handler = Handler(Looper.getMainLooper())
-
-    // PRÓXIMO NÍVEL
-    private val proximaFaseActivity = "OlhinhosCuriosos4Activity"
 
     // =====================================================
     // ANIMAIS DO NÍVEL 3
@@ -813,7 +808,7 @@ class OlhinhosCuriosos3Activity : Activity() {
         }
 
         // =====================================================
-        // BOTÃO VOLTAR
+        // BOTÃO VOLTAR CENTRALIZADO
         // =====================================================
 
         val botaoVoltar = criarBotao(
@@ -825,77 +820,39 @@ class OlhinhosCuriosos3Activity : Activity() {
 
         colocar(
             botaoVoltar,
-            55, 190, 195, 52
+            170, 190, 200, 52
         )
 
         botaoVoltar.setOnClickListener {
+
+            val intent = Intent(
+                this@OlhinhosCuriosos3Activity,
+                CincoOpcoesDosJogosActivity::class.java
+            )
+
+            intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                    Intent.FLAG_ACTIVITY_SINGLE_TOP
+
+            startActivity(intent)
             finish()
         }
 
-        // =====================================================
-        // BOTÃO PRÓXIMO NÍVEL
-        // =====================================================
+        // ANIMAÇÃO SUAVE DO BOTÃO
 
-        val botaoProximo = criarBotao(
-            "Próximo nível →",
-            Color.rgb(205, 242, 210),
-            Color.rgb(175, 225, 185),
-            Color.rgb(145, 205, 160)
-        )
-
-        colocar(
-            botaoProximo,
-            275, 190, 210, 52
-        )
-
-        botaoProximo.setOnClickListener {
-            abrirProximoNivel()
-        }
-
-        // ANIMAÇÃO DO BOTÃO
-
-        botaoProximo.animate()
+        botaoVoltar.animate()
             .scaleX(1.03f)
             .scaleY(1.03f)
             .setStartDelay(750)
             .setDuration(450)
             .withEndAction {
 
-                botaoProximo.animate()
+                botaoVoltar.animate()
                     .scaleX(1f)
                     .scaleY(1f)
                     .setDuration(400)
                     .start()
             }
             .start()
-    }
-
-    // =====================================================
-    // ABRIR PRÓXIMO NÍVEL
-    // =====================================================
-
-    private fun abrirProximoNivel() {
-
-        try {
-
-            val intent = Intent().apply {
-
-                setClassName(
-                    this@OlhinhosCuriosos3Activity,
-                    "$packageName.$proximaFaseActivity"
-                )
-            }
-
-            startActivity(intent)
-
-        } catch (e: ActivityNotFoundException) {
-
-            Toast.makeText(
-                this,
-                "Próximo nível em breve!",
-                Toast.LENGTH_SHORT
-            ).show()
-        }
     }
 
     // =====================================================
