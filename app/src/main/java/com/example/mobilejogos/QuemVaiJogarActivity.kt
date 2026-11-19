@@ -12,6 +12,7 @@ import android.os.Bundle
 import android.view.Gravity
 import android.view.View
 import android.view.WindowManager
+import android.view.animation.DecelerateInterpolator
 import android.widget.FrameLayout
 import android.widget.HorizontalScrollView
 import android.widget.ImageView
@@ -19,13 +20,29 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import org.json.JSONArray
 import org.json.JSONObject
+import kotlin.math.cos
+import kotlin.math.sin
+import kotlin.random.Random
 
 class QuemVaiJogarActivity : Activity() {
 
     private lateinit var root: FrameLayout
 
+    // CORES DO LÚDICA KIDS
+
     private val azul = Color.rgb(95, 145, 207)
+    private val azulEscuro = Color.rgb(49, 91, 151)
+    private val azulClaro = Color.rgb(230, 242, 255)
     private val fundo = Color.rgb(233, 233, 233)
+    private val amareloPastel = Color.rgb(255, 221, 139)
+
+    private val coresEstrelas = listOf(
+        Color.rgb(255, 199, 70),
+        Color.rgb(255, 225, 116),
+        Color.rgb(113, 170, 233),
+        Color.rgb(255, 156, 176),
+        Color.rgb(174, 207, 255)
+    )
 
     data class Crianca(
         val id: String,
@@ -54,15 +71,46 @@ class QuemVaiJogarActivity : Activity() {
         return (valor * resources.displayMetrics.density).toInt()
     }
 
+    // FUNÇÃO PARA CRIAR FUNDOS ARREDONDADOS
+
+    private fun fundoArredondado(
+        cor: Int,
+        raio: Int,
+        corBorda: Int? = null,
+        larguraBorda: Int = 0
+    ): GradientDrawable {
+
+        return GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            setColor(cor)
+            cornerRadius = dp(raio).toFloat()
+
+            if (corBorda != null) {
+                setStroke(dp(larguraBorda), corBorda)
+            }
+        }
+    }
+
+    // ==========================================
+    // MONTAGEM DA TELA PRINCIPAL
+    // ==========================================
+
     private fun montarTela() {
 
         root.setBackgroundColor(fundo)
 
-        // CONTEÚDO PRINCIPAL
+        root.clipChildren = false
+        root.clipToPadding = false
 
         val conteudo = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
+
+            gravity =
+                Gravity.TOP or Gravity.CENTER_HORIZONTAL
+
+            // Permite mostrar a animação fora dos limites
+            clipChildren = false
+            clipToPadding = false
 
             setPadding(
                 dp(20),
@@ -80,12 +128,12 @@ class QuemVaiJogarActivity : Activity() {
             )
         )
 
-        // TÍTULO
+        // TÍTULO "QUEM VAI JOGAR?"
 
         val titulo = ImageView(this).apply {
             setImageResource(R.drawable.quemvaijogar)
+
             scaleType = ImageView.ScaleType.FIT_CENTER
-            contentDescription = "Quem vai jogar?"
         }
 
         conteudo.addView(
@@ -106,22 +154,35 @@ class QuemVaiJogarActivity : Activity() {
             )
         )
 
-        // LISTA HORIZONTAL
+        // ======================================
+        // LISTA HORIZONTAL DOS PERFIS
+        // ======================================
 
         val scroll = HorizontalScrollView(this).apply {
             isHorizontalScrollBarEnabled = false
             isFillViewport = true
+
+            // CORREÇÃO:
+            // Não corta os perfis quando aumentam
+            clipChildren = false
+            clipToPadding = false
         }
 
         val lista = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
 
+            // CORREÇÃO:
+            // Permite que os círculos cresçam livremente
+            clipChildren = false
+            clipToPadding = false
+
+            // Espaço extra para a animação
             setPadding(
-                dp(15),
-                dp(5),
-                dp(15),
-                dp(10)
+                dp(20),
+                dp(18),
+                dp(20),
+                dp(18)
             )
         }
 
@@ -142,7 +203,7 @@ class QuemVaiJogarActivity : Activity() {
             )
         )
 
-        // PERFIS
+        // CARREGAR CRIANÇAS
 
         val criancas = carregarCriancas()
 
@@ -150,11 +211,15 @@ class QuemVaiJogarActivity : Activity() {
             adicionarCrianca(lista, crianca)
         }
 
-        // BOTÃO VOLTAR
+        // ======================================
+        // BOTÃO DE VOLTAR
+        // ======================================
 
         val botaoVoltar = ImageView(this).apply {
             setImageResource(R.drawable.botaoazul)
+
             scaleType = ImageView.ScaleType.FIT_CENTER
+
             contentDescription = "Voltar"
 
             setOnClickListener {
@@ -167,14 +232,20 @@ class QuemVaiJogarActivity : Activity() {
             dp(46)
         ).apply {
             gravity = Gravity.TOP or Gravity.START
+
             leftMargin = dp(12)
             topMargin = dp(12)
         }
 
-        root.addView(botaoVoltar, parametrosVoltar)
+        root.addView(
+            botaoVoltar,
+            parametrosVoltar
+        )
     }
 
-    // PERFIL DA CRIANÇA
+    // ==========================================
+    // CARD DE CADA CRIANÇA
+    // ==========================================
 
     private fun adicionarCrianca(
         lista: LinearLayout,
@@ -183,8 +254,15 @@ class QuemVaiJogarActivity : Activity() {
 
         val card = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
+
             gravity = Gravity.CENTER_HORIZONTAL
+
             isClickable = true
+
+            // CORREÇÃO:
+            // Evita cortar a bolinha durante o zoom
+            clipChildren = false
+            clipToPadding = false
         }
 
         val parametrosCard = LinearLayout.LayoutParams(
@@ -195,9 +273,14 @@ class QuemVaiJogarActivity : Activity() {
             marginEnd = dp(12)
         }
 
-        lista.addView(card, parametrosCard)
+        lista.addView(
+            card,
+            parametrosCard
+        )
 
+        // ======================================
         // CÍRCULO AZUL
+        // ======================================
 
         val circulo = FrameLayout(this).apply {
 
@@ -206,6 +289,7 @@ class QuemVaiJogarActivity : Activity() {
                 setColor(azul)
             }
 
+            // Mantém a girafinha dentro do círculo
             clipToOutline = true
         }
 
@@ -217,12 +301,17 @@ class QuemVaiJogarActivity : Activity() {
             )
         )
 
+        // ======================================
         // GIRAFINHA
+        // ======================================
 
         val girafa = ImageView(this).apply {
             setImageResource(R.drawable.girafapescoco)
+
             scaleType = ImageView.ScaleType.FIT_CENTER
-            contentDescription = "Perfil de ${crianca.nome}"
+
+            contentDescription =
+                "Perfil de ${crianca.nome}"
         }
 
         val parametrosGirafa = FrameLayout.LayoutParams(
@@ -232,12 +321,18 @@ class QuemVaiJogarActivity : Activity() {
             gravity = Gravity.CENTER
         }
 
-        circulo.addView(girafa, parametrosGirafa)
+        circulo.addView(
+            girafa,
+            parametrosGirafa
+        )
 
-        // NOME
+        // ======================================
+        // NOME DA CRIANÇA
+        // ======================================
 
         val nome = TextView(this).apply {
             text = crianca.nome
+
             textSize = 19f
 
             setTextColor(Color.BLACK)
@@ -257,41 +352,148 @@ class QuemVaiJogarActivity : Activity() {
             topMargin = dp(15)
         }
 
-        card.addView(nome, parametrosNome)
+        card.addView(
+            nome,
+            parametrosNome
+        )
 
-        // ANIMAÇÃO AO TOCAR
-
-        card.setOnTouchListener { view, event ->
-
-            when (event.action) {
-
-                android.view.MotionEvent.ACTION_DOWN -> {
-                    view.animate()
-                        .scaleX(1.05f)
-                        .scaleY(1.05f)
-                        .setDuration(120)
-                        .start()
-                }
-
-                android.view.MotionEvent.ACTION_UP,
-                android.view.MotionEvent.ACTION_CANCEL -> {
-                    view.animate()
-                        .scaleX(1f)
-                        .scaleY(1f)
-                        .setDuration(120)
-                        .start()
-                }
-            }
-
-            false
-        }
+        // ======================================
+        // CLIQUE NO PERFIL + ESTRELINHAS
+        // ======================================
 
         card.setOnClickListener {
-            selecionarCrianca(crianca)
+
+            card.isEnabled = false
+
+            // Girafinha dá um pulinho
+            circulo.animate()
+                .scaleX(1.12f)
+                .scaleY(1.12f)
+                .setDuration(180)
+                .withEndAction {
+
+                    circulo.animate()
+                        .scaleX(1f)
+                        .scaleY(1f)
+                        .setDuration(220)
+                        .start()
+                }
+                .start()
+
+            // Explosão de estrelinhas
+            animarEstrelinhas(circulo)
+
+            // Mostra o pop-up após a animação
+            root.postDelayed({
+
+                selecionarCrianca(crianca)
+
+                card.isEnabled = true
+
+            }, 650)
         }
     }
 
-    // CARREGAR CRIANÇAS
+    // ==========================================
+    // ANIMAÇÃO DAS ESTRELINHAS
+    // ==========================================
+
+    private fun animarEstrelinhas(perfil: View) {
+
+        val posicaoPerfil = IntArray(2)
+        perfil.getLocationOnScreen(posicaoPerfil)
+
+        val posicaoRoot = IntArray(2)
+        root.getLocationOnScreen(posicaoRoot)
+
+        val centroX =
+            posicaoPerfil[0] -
+                    posicaoRoot[0] +
+                    perfil.width / 2f
+
+        val centroY =
+            posicaoPerfil[1] -
+                    posicaoRoot[1] +
+                    perfil.height / 2f
+
+        // Cria 22 estrelinhas
+        repeat(22) { indice ->
+
+            val estrela = TextView(this).apply {
+
+                text = "★"
+
+                textSize = Random.nextInt(17, 30).toFloat()
+
+                setTextColor(
+                    coresEstrelas.random()
+                )
+
+                gravity = Gravity.CENTER
+
+                elevation = dp(15).toFloat()
+            }
+
+            val tamanho = dp(36)
+
+            val parametros = FrameLayout.LayoutParams(
+                tamanho,
+                tamanho
+            )
+
+            parametros.leftMargin =
+                (centroX - tamanho / 2f).toInt()
+
+            parametros.topMargin =
+                (centroY - tamanho / 2f).toInt()
+
+            root.addView(
+                estrela,
+                parametros
+            )
+
+            val angulo =
+                (2.0 * Math.PI * indice / 22.0) +
+                        Random.nextDouble(-0.25, 0.25)
+
+            val distancia =
+                dp(Random.nextInt(95, 210)).toDouble()
+
+            val movimentoX =
+                (cos(angulo) * distancia).toFloat()
+
+            val movimentoY =
+                (sin(angulo) * distancia).toFloat()
+
+            estrela.scaleX = 0.2f
+            estrela.scaleY = 0.2f
+            estrela.alpha = 1f
+
+            val duracao =
+                Random.nextLong(650, 1050)
+
+            estrela.animate()
+                .translationX(movimentoX)
+                .translationY(movimentoY)
+                .rotation(Random.nextFloat() * 360f)
+                .scaleX(1.3f)
+                .scaleY(1.3f)
+                .alpha(0f)
+                .setDuration(duracao)
+                .setInterpolator(
+                    DecelerateInterpolator()
+                )
+                .withEndAction {
+
+                    root.removeView(estrela)
+                }
+                .start()
+        }
+    }
+
+    // ==========================================
+    // CARREGAR CRIANÇAS CADASTRADAS
+    // ==========================================
 
     private fun carregarCriancas(): List<Crianca> {
 
@@ -305,7 +507,9 @@ class QuemVaiJogarActivity : Activity() {
             null
         )
 
+        // Crianças de demonstração
         if (dados.isNullOrBlank()) {
+
             return listOf(
                 Crianca("1", "Criança 1"),
                 Crianca("2", "Criança 2"),
@@ -316,6 +520,7 @@ class QuemVaiJogarActivity : Activity() {
         return try {
 
             val array = JSONArray(dados)
+
             val criancas = mutableListOf<Crianca>()
 
             for (i in 0 until array.length()) {
@@ -324,29 +529,38 @@ class QuemVaiJogarActivity : Activity() {
 
                 val id = objeto.optString(
                     "_id",
-                    objeto.optString("id", i.toString())
+                    objeto.optString(
+                        "id",
+                        i.toString()
+                    )
                 )
 
                 val nome = objeto.optString(
                     "nomeUsuario"
                 ).ifBlank {
+
                     objeto.optString(
                         "nomeCompleto",
                         "Criança"
                     )
                 }
 
-                criancas.add(Crianca(id, nome))
+                criancas.add(
+                    Crianca(id, nome)
+                )
             }
 
             criancas
 
         } catch (e: Exception) {
+
             emptyList()
         }
     }
 
+    // ==========================================
     // SELECIONAR CRIANÇA
+    // ==========================================
 
     private fun selecionarCrianca(crianca: Crianca) {
 
@@ -370,63 +584,208 @@ class QuemVaiJogarActivity : Activity() {
         mostrarPopup(crianca.nome)
     }
 
-    // POP-UP INFANTIL PERSONALIZADO
+    // ==========================================
+    // POP-UP INFANTIL
+    // ==========================================
 
     private fun mostrarPopup(nomeCrianca: String) {
 
         val dialog = Dialog(this)
 
-        val azulEscuro = Color.rgb(45, 91, 150)
-        val azulPastel = Color.rgb(235, 245, 255)
-        val azulBotao = Color.rgb(92, 144, 209)
+        val container = FrameLayout(this).apply {
+            clipChildren = false
+            clipToPadding = false
+        }
 
-        // CARD PRINCIPAL
+        // ======================================
+        // CARTÃO DO POP-UP
+        // ======================================
 
-        val card = LinearLayout(this).apply {
+        val cartao = LinearLayout(this).apply {
+
             orientation = LinearLayout.VERTICAL
+
             gravity = Gravity.CENTER_HORIZONTAL
 
             setPadding(
-                dp(24),
-                dp(12),
-                dp(24),
-                dp(20)
+                dp(26),
+                dp(65),
+                dp(26),
+                dp(23)
             )
 
-            background = GradientDrawable().apply {
+            background = GradientDrawable(
+                GradientDrawable.Orientation.TOP_BOTTOM,
+                intArrayOf(
+                    Color.WHITE,
+                    azulClaro
+                )
+            ).apply {
+
                 cornerRadius = dp(30).toFloat()
-                setColor(azulPastel)
 
                 setStroke(
                     dp(2),
-                    Color.rgb(190, 216, 241)
+                    Color.rgb(188, 214, 244)
                 )
             }
 
-            elevation = dp(10).toFloat()
+            elevation = dp(8).toFloat()
         }
 
-        // GIRAFINHA SUPERIOR
+        val parametrosCartao = FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.MATCH_PARENT,
+            FrameLayout.LayoutParams.WRAP_CONTENT
+        ).apply {
 
-        val girafa = ImageView(this).apply {
-            setImageResource(R.drawable.girafapescoco)
-            scaleType = ImageView.ScaleType.FIT_CENTER
-            contentDescription = "Girafinha do Lúdica Kids"
+            topMargin = dp(52)
+
+            leftMargin = dp(8)
+            rightMargin = dp(8)
+            bottomMargin = dp(10)
         }
 
-        card.addView(
-            girafa,
-            LinearLayout.LayoutParams(
-                dp(85),
-                dp(85)
-            )
+        container.addView(
+            cartao,
+            parametrosCartao
         )
 
-        // TÍTULO
+        // ======================================
+        // ESTRELINHAS DECORATIVAS
+        // ======================================
 
-        val titulo = TextView(this).apply {
-            text = "Oba! Você está pronto para brincar!"
-            textSize = 20f
+        val estrelaEsquerda = TextView(this).apply {
+
+            text = "✦"
+
+            textSize = 30f
+
+            setTextColor(amareloPastel)
+
+            gravity = Gravity.CENTER
+
+            elevation = dp(18).toFloat()
+        }
+
+        val parametrosEstrelaEsquerda =
+            FrameLayout.LayoutParams(
+                dp(45),
+                dp(45)
+            ).apply {
+
+                gravity = Gravity.TOP or Gravity.START
+
+                topMargin = dp(70)
+                leftMargin = dp(35)
+            }
+
+        container.addView(
+            estrelaEsquerda,
+            parametrosEstrelaEsquerda
+        )
+
+        val estrelaDireita = TextView(this).apply {
+
+            text = "✦"
+
+            textSize = 25f
+
+            setTextColor(azul)
+
+            gravity = Gravity.CENTER
+
+            elevation = dp(18).toFloat()
+        }
+
+        val parametrosEstrelaDireita =
+            FrameLayout.LayoutParams(
+                dp(40),
+                dp(40)
+            ).apply {
+
+                gravity = Gravity.TOP or Gravity.END
+
+                topMargin = dp(80)
+                rightMargin = dp(35)
+            }
+
+        container.addView(
+            estrelaDireita,
+            parametrosEstrelaDireita
+        )
+
+        // ======================================
+        // GIRAFINHA NO TOPO
+        // ======================================
+
+        val fundoGirafa = FrameLayout(this).apply {
+
+            background = GradientDrawable().apply {
+
+                shape = GradientDrawable.OVAL
+
+                setColor(
+                    Color.rgb(255, 244, 211)
+                )
+
+                setStroke(
+                    dp(4),
+                    Color.WHITE
+                )
+            }
+
+            elevation = dp(20).toFloat()
+        }
+
+        val parametrosFundoGirafa =
+            FrameLayout.LayoutParams(
+                dp(112),
+                dp(112)
+            ).apply {
+
+                gravity =
+                    Gravity.TOP or Gravity.CENTER_HORIZONTAL
+            }
+
+        container.addView(
+            fundoGirafa,
+            parametrosFundoGirafa
+        )
+
+        val imagemGirafa = ImageView(this).apply {
+
+            setImageResource(
+                R.drawable.girafapescoco
+            )
+
+            scaleType = ImageView.ScaleType.FIT_CENTER
+        }
+
+        val parametrosImagemGirafa =
+            FrameLayout.LayoutParams(
+                dp(94),
+                dp(100)
+            ).apply {
+
+                gravity = Gravity.CENTER
+            }
+
+        fundoGirafa.addView(
+            imagemGirafa,
+            parametrosImagemGirafa
+        )
+
+        fundoGirafa.bringToFront()
+
+        // ======================================
+        // TÍTULO DO POP-UP
+        // ======================================
+
+        val tituloPopup = TextView(this).apply {
+
+            text = "Oba! Vamos brincar?"
+
+            textSize = 24f
 
             setTextColor(azulEscuro)
 
@@ -438,39 +797,53 @@ class QuemVaiJogarActivity : Activity() {
             gravity = Gravity.CENTER
         }
 
-        val parametrosTitulo = LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT
-        ).apply {
-            topMargin = dp(8)
-        }
+        cartao.addView(
+            tituloPopup,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        )
 
-        card.addView(titulo, parametrosTitulo)
-
+        // ======================================
         // SUBTÍTULO
+        // ======================================
 
         val subtitulo = TextView(this).apply {
-            text = "Que bom ter você aqui!"
-            textSize = 14f
 
-            setTextColor(Color.rgb(105, 124, 147))
+            text = "Que alegria ter você aqui!"
+
+            textSize = 15f
+
+            setTextColor(
+                Color.rgb(106, 119, 137)
+            )
 
             gravity = Gravity.CENTER
         }
 
-        val parametrosSubtitulo = LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT
-        ).apply {
-            topMargin = dp(6)
-        }
+        val parametrosSubtitulo =
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
 
-        card.addView(subtitulo, parametrosSubtitulo)
+                topMargin = dp(7)
+            }
 
+        cartao.addView(
+            subtitulo,
+            parametrosSubtitulo
+        )
+
+        // ======================================
         // NOME DA CRIANÇA
+        // ======================================
 
         val nome = TextView(this).apply {
+
             text = nomeCrianca
+
             textSize = 19f
 
             setTextColor(azulEscuro)
@@ -483,32 +856,43 @@ class QuemVaiJogarActivity : Activity() {
             gravity = Gravity.CENTER
 
             setPadding(
-                dp(16),
-                dp(8),
-                dp(16),
-                dp(8)
+                dp(28),
+                dp(10),
+                dp(28),
+                dp(10)
             )
 
-            background = GradientDrawable().apply {
-                cornerRadius = dp(18).toFloat()
-                setColor(Color.WHITE)
+            background = fundoArredondado(
+                Color.WHITE,
+                25,
+                Color.rgb(205, 226, 248),
+                1
+            )
+        }
+
+        val parametrosNome =
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+
+                topMargin = dp(16)
             }
-        }
 
-        val parametrosNome = LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.WRAP_CONTENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT
-        ).apply {
-            topMargin = dp(12)
-        }
+        cartao.addView(
+            nome,
+            parametrosNome
+        )
 
-        card.addView(nome, parametrosNome)
-
-        // BOTÃO VAMOS BRINCAR
+        // ======================================
+        // BOTÃO "VAMOS BRINCAR!"
+        // ======================================
 
         val botaoBrincar = TextView(this).apply {
+
             text = "Vamos brincar!"
-            textSize = 17f
+
+            textSize = 18f
 
             setTextColor(Color.WHITE)
 
@@ -519,38 +903,66 @@ class QuemVaiJogarActivity : Activity() {
 
             gravity = Gravity.CENTER
 
-            background = GradientDrawable().apply {
-                cornerRadius = dp(24).toFloat()
-                setColor(azulBotao)
+            background = GradientDrawable(
+                GradientDrawable.Orientation.TOP_BOTTOM,
+                intArrayOf(
+                    Color.rgb(111, 166, 228),
+                    Color.rgb(70, 126, 197)
+                )
+            ).apply {
+
+                cornerRadius = dp(25).toFloat()
             }
 
-            elevation = dp(4).toFloat()
+            elevation = dp(5).toFloat()
 
             isClickable = true
-            isFocusable = true
 
             setOnClickListener {
-                dialog.dismiss()
 
-                // Aqui conectaremos a tela inicial
-                // dos joguinhos futuramente.
+                animate()
+                    .scaleX(0.94f)
+                    .scaleY(0.94f)
+                    .setDuration(100)
+                    .withEndAction {
+
+                        dialog.dismiss()
+
+                        // Futuramente colocaremos aqui
+                        // a navegação para o perfil infantil
+                    }
+                    .start()
             }
         }
 
-        val parametrosBotao = LinearLayout.LayoutParams(
-            dp(210),
-            dp(46)
-        ).apply {
-            topMargin = dp(16)
-        }
+        val parametrosBotao =
+            LinearLayout.LayoutParams(
+                dp(225),
+                dp(49)
+            ).apply {
 
-        card.addView(botaoBrincar, parametrosBotao)
+                topMargin = dp(19)
+            }
 
-        // CONFIGURAR DIALOG
+        cartao.addView(
+            botaoBrincar,
+            parametrosBotao
+        )
 
-        dialog.setContentView(card)
+        // ======================================
+        // CONFIGURAÇÕES DO POP-UP
+        // ======================================
+
+        dialog.setContentView(container)
+
+        dialog.window?.setBackgroundDrawable(
+            ColorDrawable(Color.TRANSPARENT)
+        )
+
+        dialog.show()
 
         dialog.window?.apply {
+
             setBackgroundDrawable(
                 ColorDrawable(Color.TRANSPARENT)
             )
@@ -559,53 +971,73 @@ class QuemVaiJogarActivity : Activity() {
                 WindowManager.LayoutParams.FLAG_DIM_BEHIND
             )
 
-            setDimAmount(0.45f)
-        }
+            val parametros = attributes
 
-        dialog.setCancelable(true)
-
-        dialog.show()
-
-        dialog.window?.apply {
-            setBackgroundDrawable(
-                ColorDrawable(Color.TRANSPARENT)
+            parametros.width = minOf(
+                dp(465),
+                (resources.displayMetrics.widthPixels * 0.85f).toInt()
             )
 
-            val larguraTela =
-                resources.displayMetrics.widthPixels
-
-            val larguraPopup =
-                minOf(dp(430), (larguraTela * 0.85f).toInt())
-
-            setLayout(
-                larguraPopup,
+            parametros.height =
                 WindowManager.LayoutParams.WRAP_CONTENT
-            )
 
-            setGravity(Gravity.CENTER)
-            setDimAmount(0.45f)
+            parametros.gravity = Gravity.CENTER
+
+            parametros.dimAmount = 0.48f
+
+            attributes = parametros
         }
 
-        // ANIMAÇÃO SUAVE DE ENTRADA
+        // ======================================
+        // ANIMAÇÃO DE ENTRADA DO POP-UP
+        // ======================================
 
-        card.scaleX = 0.88f
-        card.scaleY = 0.88f
-        card.alpha = 0f
+        container.scaleX = 0.85f
+        container.scaleY = 0.85f
+        container.alpha = 0f
 
-        card.animate()
+        container.animate()
             .scaleX(1f)
             .scaleY(1f)
             .alpha(1f)
-            .setDuration(280)
+            .setDuration(300)
+            .setInterpolator(
+                DecelerateInterpolator()
+            )
             .start()
 
         // ANIMAÇÃO DA GIRAFINHA
 
-        girafa.translationY = dp(12).toFloat()
+        fundoGirafa.translationY = dp(10).toFloat()
+        fundoGirafa.alpha = 0f
 
-        girafa.animate()
+        fundoGirafa.animate()
             .translationY(0f)
-            .setDuration(450)
+            .alpha(1f)
+            .setDuration(500)
+            .setStartDelay(100)
+            .start()
+
+        // ANIMAÇÃO DAS ESTRELINHAS DO POP-UP
+
+        estrelaEsquerda.alpha = 0f
+        estrelaEsquerda.rotation = -45f
+
+        estrelaEsquerda.animate()
+            .alpha(1f)
+            .rotation(0f)
+            .setDuration(600)
+            .setStartDelay(180)
+            .start()
+
+        estrelaDireita.alpha = 0f
+        estrelaDireita.rotation = 45f
+
+        estrelaDireita.animate()
+            .alpha(1f)
+            .rotation(0f)
+            .setDuration(600)
+            .setStartDelay(250)
             .start()
     }
 }
