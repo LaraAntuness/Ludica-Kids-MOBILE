@@ -1,7 +1,6 @@
 package com.example.mobilejogos
 
 import android.app.Activity
-import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.graphics.Color
 import android.graphics.PorterDuff
@@ -101,7 +100,9 @@ class DescubraOCheiro3Activity : Activity() {
 
                 if (event.actionMasked == MotionEvent.ACTION_UP) {
 
-                    if (mochila) {
+                    // LIXO É A RESPOSTA CORRETA
+
+                    if (lixo) {
                         mostrarResposta(true)
                     } else {
                         mostrarResposta(false)
@@ -150,7 +151,9 @@ class DescubraOCheiro3Activity : Activity() {
 
         val fundo = ImageView(this)
 
-        fundo.setImageResource(R.drawable.planodescubracomocheiro)
+        fundo.setImageResource(
+            R.drawable.planodescubracomocheiro
+        )
 
         fundo.scaleType = ImageView.ScaleType.FIT_XY
 
@@ -228,7 +231,7 @@ class DescubraOCheiro3Activity : Activity() {
         )
 
         // =================================================
-        // LIXO - INCORRETO
+        // LIXO - CORRETO
         // =================================================
 
         criarOpcao(
@@ -238,7 +241,7 @@ class DescubraOCheiro3Activity : Activity() {
         )
 
         // =================================================
-        // MOCHILA - CORRETO
+        // MOCHILA - INCORRETO
         // =================================================
 
         criarOpcao(
@@ -262,8 +265,6 @@ class DescubraOCheiro3Activity : Activity() {
             85, 80, 340, 135,
             sx, sy
         )
-
-        // COR AMARELO-CLARO
 
         balao.setColorFilter(
             Color.parseColor("#FFE49A"),
@@ -403,7 +404,9 @@ class DescubraOCheiro3Activity : Activity() {
             parametrosImagem
         )
 
+        // =================================================
         // CLIQUE NO CARTÃO
+        // =================================================
 
         cartao.isClickable = true
 
@@ -412,7 +415,7 @@ class DescubraOCheiro3Activity : Activity() {
             if (!jogoFinalizado && !popupAberto) {
 
                 mostrarResposta(
-                    nomeImagem == "mochila"
+                    nomeImagem == "lixo"
                 )
             }
         }
@@ -461,7 +464,9 @@ class DescubraOCheiro3Activity : Activity() {
         val sx = tela.width.toFloat() / larguraBase
         val sy = tela.height.toFloat() / alturaBase
 
+        // =================================================
         // FUNDO ESCURECIDO
+        // =================================================
 
         val camadaEscura = FrameLayout(this)
 
@@ -479,7 +484,9 @@ class DescubraOCheiro3Activity : Activity() {
             )
         )
 
+        // =================================================
         // CAIXA DO POP-UP
+        // =================================================
 
         val popup = FrameLayout(this)
 
@@ -512,7 +519,9 @@ class DescubraOCheiro3Activity : Activity() {
             parametrosPopup
         )
 
+        // =================================================
         // ANIMAÇÃO DE ENTRADA
+        // =================================================
 
         popup.scaleX = 0.5f
         popup.scaleY = 0.5f
@@ -616,7 +625,7 @@ class DescubraOCheiro3Activity : Activity() {
 
         val mensagem = TextView(this).apply {
 
-            text = "Você descobriu a mochila\ncom cheirinho ruim!"
+            text = "Você descobriu o lixo\ncom cheirinho ruim!"
 
             gravity = Gravity.CENTER
 
@@ -654,33 +663,18 @@ class DescubraOCheiro3Activity : Activity() {
             .start()
 
         // =================================================
-        // BOTÃO VOLTAR
+        // BOTÃO VOLTAR - ÚNICO E CENTRALIZADO
         // =================================================
 
         criarBotaoPopup(
             popup,
             "← Voltar",
-            48, 195, 195, 52,
+            170, 195, 200, 52,
             "#83BDEB",
             sx, sy
         ) {
 
             finish()
-        }
-
-        // =================================================
-        // BOTÃO PRÓXIMA FASE
-        // =================================================
-
-        criarBotaoPopup(
-            popup,
-            "Próxima fase →",
-            265, 195, 225, 52,
-            "#8ACF8B",
-            sx, sy
-        ) {
-
-            abrirProximaFase()
         }
     }
 
@@ -738,43 +732,6 @@ class DescubraOCheiro3Activity : Activity() {
             x, y, largura, altura,
             sx, sy
         )
-    }
-
-    // =====================================================
-    // ABRIR NÍVEL 4
-    // =====================================================
-
-    private fun abrirProximaFase() {
-
-        try {
-
-            val classeProximaFase = Class.forName(
-                "$packageName.DescubraOCheiro4Activity"
-            )
-
-            val intent = Intent(
-                this,
-                classeProximaFase
-            )
-
-            startActivity(intent)
-
-            finish()
-
-        } catch (erro: Exception) {
-
-            Log.e(
-                "DescubraOCheiro3",
-                "Erro ao abrir nível 4",
-                erro
-            )
-
-            Toast.makeText(
-                this,
-                "A próxima fase ainda não está disponível!",
-                Toast.LENGTH_LONG
-            ).show()
-        }
     }
 
     // =====================================================

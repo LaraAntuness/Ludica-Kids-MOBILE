@@ -1,12 +1,13 @@
-
 package com.example.mobilejogos
 
 import android.app.Activity
+import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
+import android.util.Log
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
@@ -23,6 +24,8 @@ class ProveNaImaginacaoActivity : Activity() {
     private val larguraBase = 874f
     private val alturaBase = 393f
 
+    private var popupAberto = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -38,50 +41,92 @@ class ProveNaImaginacaoActivity : Activity() {
 
         tela = findViewById(R.id.telaProveNaImaginacao)
 
-        tela.setBackgroundColor(Color.parseColor("#E8F4FC"))
-
         tela.post {
             montarTela()
         }
     }
 
+    // =====================================================
+    // MONTAR TELA
+    // =====================================================
+
     private fun montarTela() {
+
         tela.removeAllViews()
+
+        popupAberto = false
 
         val sx = tela.width.toFloat() / larguraBase
         val sy = tela.height.toFloat() / alturaBase
 
-        tela.setBackgroundColor(Color.parseColor("#E8F4FC"))
+        // =================================================
+        // NOVO PLANO DE FUNDO - FUNDOSABOR
+        // =================================================
 
-        // Botão de voltar
-        val voltar = adicionarImagem(
-            "botaoretornoazul",
-            18, 25, 40, 39, sx, sy
+        val fundo = ImageView(this)
+
+        fundo.setImageResource(
+            R.drawable.fundosabor
         )
 
+        fundo.scaleType = ImageView.ScaleType.FIT_XY
 
+        fundo.isClickable = false
+
+        tela.addView(
+            fundo,
+            FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+            )
+        )
+
+        // =================================================
+        // BOTÃO DE VOLTAR
+        // =================================================
+
+        val voltar = adicionarImagem(
+            "botaoretornoazul",
+            18, 25, 40, 39,
+            sx, sy
+        )
+
+        voltar.isClickable = true
         voltar.contentDescription = "Voltar"
 
         voltar.setOnClickListener {
             finish()
         }
 
-        // Título
+        // =================================================
+        // TÍTULO
+        // =================================================
+
         adicionarImagem(
             "titulobebidafavorita",
-            207, 10, 600, 90, sx, sy
+            207, 10, 600, 90,
+            sx, sy
         )
 
-        // Balão com a pergunta
+        // =================================================
+        // BALÃO COM A PERGUNTA
+        // =================================================
+
         adicionarImagem(
             "balaopergunta",
-            85, 80, 340, 135, sx, sy
+            85, 80, 340, 135,
+            sx, sy
         )
 
         val pergunta = TextView(this).apply {
+
             text = "Qual dessas bebidas\nvocê mais gosta?"
+
             gravity = Gravity.CENTER
-            setTextColor(Color.parseColor("#303030"))
+
+            setTextColor(
+                Color.parseColor("#303030")
+            )
 
             setTextSize(
                 TypedValue.COMPLEX_UNIT_PX,
@@ -93,43 +138,68 @@ class ProveNaImaginacaoActivity : Activity() {
 
         adicionarView(
             pergunta,
-            125, 108, 235, 48, sx, sy
+            125, 108, 235, 48,
+            sx, sy
         )
 
-        // Menino abaixo do balão
+        // =================================================
+        // MENINO ABAIXO DO BALÃO
+        // =================================================
+
         adicionarImagem(
             "menino",
-            55, 190, 150, 210, sx, sy
+            55, 190, 150, 210,
+            sx, sy
         )
 
-        // Água - superior esquerdo
+        // =================================================
+        // ÁGUA
+        // =================================================
+
         criarOpcao(
             "agua",
             "Água",
-            395, 105, sx, sy
+            395, 105,
+            sx, sy
         )
 
-        // Suco - superior direito
+        // =================================================
+        // SUCO
+        // =================================================
+
         criarOpcao(
             "suco",
             "Suco",
-            600, 105, sx, sy
+            600, 105,
+            sx, sy
         )
 
-        // Milkshake - inferior esquerdo
+        // =================================================
+        // MILKSHAKE
+        // =================================================
+
         criarOpcao(
             "milkshake",
             "Milkshake",
-            395, 245, sx, sy
+            395, 245,
+            sx, sy
         )
 
-        // Refrigerante - inferior direito
+        // =================================================
+        // REFRIGERANTE
+        // =================================================
+
         criarOpcao(
             "refrigerante",
             "Refrigerante",
-            600, 245, sx, sy
+            600, 245,
+            sx, sy
         )
     }
+
+    // =====================================================
+    // CRIAR CARTÕES DAS BEBIDAS
+    // =====================================================
 
     private fun criarOpcao(
         nomeImagem: String,
@@ -139,24 +209,44 @@ class ProveNaImaginacaoActivity : Activity() {
         sx: Float,
         sy: Float
     ) {
-        // Sombra do cartão
+
+        // =================================================
+        // SOMBRA DO CARTÃO
+        // =================================================
+
         val sombra = View(this)
 
         sombra.background = GradientDrawable().apply {
-            setColor(Color.parseColor("#E8E7E7"))
+
+            setColor(
+                Color.parseColor("#E8E7E7")
+            )
+
             cornerRadius = 17f * sx
         }
 
         adicionarView(
             sombra,
-            x + 13, y + 13, 155, 100, sx, sy
+            x + 13,
+            y + 13,
+            155,
+            100,
+            sx,
+            sy
         )
 
-        // Cartão azul
+        // =================================================
+        // CARTÃO AZUL
+        // =================================================
+
         val cartao = FrameLayout(this)
 
         cartao.background = GradientDrawable().apply {
-            setColor(Color.parseColor("#96CBEB"))
+
+            setColor(
+                Color.parseColor("#96CBEB")
+            )
+
             cornerRadius = 17f * sx
         }
 
@@ -171,9 +261,15 @@ class ProveNaImaginacaoActivity : Activity() {
         parametros.leftMargin = (x * sx).toInt()
         parametros.topMargin = (y * sy).toInt()
 
-        tela.addView(cartao, parametros)
+        tela.addView(
+            cartao,
+            parametros
+        )
 
-        // Imagem da bebida
+        // =================================================
+        // IMAGEM DA BEBIDA
+        // =================================================
+
         val alimento = ImageView(this)
 
         val id = resources.getIdentifier(
@@ -183,8 +279,11 @@ class ProveNaImaginacaoActivity : Activity() {
         )
 
         if (id != 0) {
+
             alimento.setImageResource(id)
+
         } else {
+
             Toast.makeText(
                 this,
                 "Imagem não encontrada: $nomeImagem",
@@ -192,7 +291,9 @@ class ProveNaImaginacaoActivity : Activity() {
             ).show()
         }
 
-        alimento.scaleType = ImageView.ScaleType.FIT_CENTER
+        alimento.scaleType =
+            ImageView.ScaleType.FIT_CENTER
+
         alimento.contentDescription = nomeBebida
 
         val parametrosImagem = FrameLayout.LayoutParams(
@@ -201,19 +302,27 @@ class ProveNaImaginacaoActivity : Activity() {
             Gravity.TOP or Gravity.CENTER_HORIZONTAL
         )
 
-        parametrosImagem.topMargin = (3 * sy).toInt()
+        parametrosImagem.topMargin =
+            (3 * sy).toInt()
 
         cartao.addView(
             alimento,
             parametrosImagem
         )
 
-        // Nome da bebida
+        // =================================================
+        // NOME DA BEBIDA
+        // =================================================
+
         val texto = TextView(this)
 
         texto.text = nomeBebida
+
         texto.gravity = Gravity.CENTER
-        texto.setTextColor(Color.parseColor("#24549B"))
+
+        texto.setTextColor(
+            Color.parseColor("#24549B")
+        )
 
         texto.setTextSize(
             TypedValue.COMPLEX_UNIT_PX,
@@ -233,16 +342,27 @@ class ProveNaImaginacaoActivity : Activity() {
             parametrosTexto
         )
 
-        // Todas as bebidas podem ser escolhidas
+        // =================================================
+        // CLIQUE NA BEBIDA
+        // =================================================
+
         cartao.setOnClickListener {
-            mostrarBebidaPreferida(
-                nomeImagem,
-                nomeBebida,
-                sx,
-                sy
-            )
+
+            if (!popupAberto) {
+
+                mostrarBebidaPreferida(
+                    nomeImagem,
+                    nomeBebida,
+                    sx,
+                    sy
+                )
+            }
         }
     }
+
+    // =====================================================
+    // POP-UP DA BEBIDA PREFERIDA
+    // =====================================================
 
     private fun mostrarBebidaPreferida(
         nomeImagem: String,
@@ -250,7 +370,17 @@ class ProveNaImaginacaoActivity : Activity() {
         sx: Float,
         sy: Float
     ) {
-        // Sobreposição escura sobre a tela
+
+        if (popupAberto) {
+            return
+        }
+
+        popupAberto = true
+
+        // =================================================
+        // FUNDO ESCURECIDO
+        // =================================================
+
         val sobreposicao = FrameLayout(this)
 
         sobreposicao.setBackgroundColor(
@@ -267,10 +397,14 @@ class ProveNaImaginacaoActivity : Activity() {
             )
         )
 
-        // Painel central
+        // =================================================
+        // PAINEL CENTRAL
+        // =================================================
+
         val painel = FrameLayout(this)
 
         painel.background = GradientDrawable().apply {
+
             setColor(Color.WHITE)
 
             cornerRadius = 25f * sx
@@ -281,9 +415,13 @@ class ProveNaImaginacaoActivity : Activity() {
             )
         }
 
+        painel.elevation = 12f * sx
+
+        painel.isClickable = true
+
         val parametrosPainel = FrameLayout.LayoutParams(
-            (350 * sx).toInt(),
-            (285 * sy).toInt(),
+            (430 * sx).toInt(),
+            (300 * sy).toInt(),
             Gravity.CENTER
         )
 
@@ -292,10 +430,14 @@ class ProveNaImaginacaoActivity : Activity() {
             parametrosPainel
         )
 
-        // Mensagem principal
+        // =================================================
+        // TÍTULO DO POP-UP
+        // =================================================
+
         val titulo = TextView(this)
 
         titulo.text = "Sua bebida preferida é:"
+
         titulo.gravity = Gravity.CENTER
 
         titulo.setTextColor(
@@ -311,17 +453,21 @@ class ProveNaImaginacaoActivity : Activity() {
 
         val parametrosTitulo = FrameLayout.LayoutParams(
             FrameLayout.LayoutParams.MATCH_PARENT,
-            (65 * sy).toInt()
+            (55 * sy).toInt()
         )
 
-        parametrosTitulo.topMargin = (15 * sy).toInt()
+        parametrosTitulo.topMargin =
+            (10 * sy).toInt()
 
         painel.addView(
             titulo,
             parametrosTitulo
         )
 
-        // Imagem da bebida selecionada
+        // =================================================
+        // IMAGEM DA BEBIDA ESCOLHIDA
+        // =================================================
+
         val imagem = ImageView(this)
 
         val id = resources.getIdentifier(
@@ -331,29 +477,37 @@ class ProveNaImaginacaoActivity : Activity() {
         )
 
         if (id != 0) {
+
             imagem.setImageResource(id)
         }
 
-        imagem.scaleType = ImageView.ScaleType.FIT_CENTER
+        imagem.scaleType =
+            ImageView.ScaleType.FIT_CENTER
+
         imagem.contentDescription = nomeBebida
 
         val parametrosImagem = FrameLayout.LayoutParams(
-            (150 * sx).toInt(),
-            (135 * sy).toInt(),
+            (145 * sx).toInt(),
+            (105 * sy).toInt(),
             Gravity.TOP or Gravity.CENTER_HORIZONTAL
         )
 
-        parametrosImagem.topMargin = (80 * sy).toInt()
+        parametrosImagem.topMargin =
+            (65 * sy).toInt()
 
         painel.addView(
             imagem,
             parametrosImagem
         )
 
-        // Nome da bebida escolhida
+        // =================================================
+        // NOME DA BEBIDA ESCOLHIDA
+        // =================================================
+
         val nome = TextView(this)
 
         nome.text = nomeBebida
+
         nome.gravity = Gravity.CENTER
 
         nome.setTextColor(
@@ -362,29 +516,184 @@ class ProveNaImaginacaoActivity : Activity() {
 
         nome.setTextSize(
             TypedValue.COMPLEX_UNIT_PX,
-            25f * sy
+            24f * sy
         )
 
         nome.typeface = Typeface.DEFAULT_BOLD
 
         val parametrosNome = FrameLayout.LayoutParams(
             FrameLayout.LayoutParams.MATCH_PARENT,
-            (45 * sy).toInt(),
-            Gravity.BOTTOM
+            (40 * sy).toInt()
         )
 
-        parametrosNome.bottomMargin = (15 * sy).toInt()
+        parametrosNome.topMargin =
+            (170 * sy).toInt()
 
         painel.addView(
             nome,
             parametrosNome
         )
 
-        // Tocar fora do painel fecha a mensagem
+        // =================================================
+        // BOTÃO VOLTAR - AZUL
+        // =================================================
+
+        criarBotaoPopup(
+            painel,
+            "← Voltar",
+            25,
+            230,
+            175,
+            48,
+            "#83BDEB",
+            sx,
+            sy
+        ) {
+
+            popupAberto = false
+            tela.removeView(sobreposicao)
+        }
+
+        // =================================================
+        // BOTÃO PRÓXIMO NÍVEL - VERDE
+        // =================================================
+
+        criarBotaoPopup(
+            painel,
+            "Próximo nível →",
+            220,
+            230,
+            185,
+            48,
+            "#8ACF8B",
+            sx,
+            sy
+        ) {
+
+            abrirProximoNivel()
+        }
+
+        // =================================================
+        // TOCAR FORA FECHA O POP-UP
+        // =================================================
+
         sobreposicao.setOnClickListener {
+
+            popupAberto = false
+
             tela.removeView(sobreposicao)
         }
     }
+
+    // =====================================================
+    // CRIAR BOTÕES DO POP-UP
+    // =====================================================
+
+    private fun criarBotaoPopup(
+        painel: FrameLayout,
+        texto: String,
+        x: Int,
+        y: Int,
+        largura: Int,
+        altura: Int,
+        cor: String,
+        sx: Float,
+        sy: Float,
+        acao: () -> Unit
+    ) {
+
+        val botao = TextView(this)
+
+        botao.text = texto
+
+        botao.gravity = Gravity.CENTER
+
+        botao.setTextColor(Color.WHITE)
+
+        botao.setTextSize(
+            TypedValue.COMPLEX_UNIT_PX,
+            18f * sy
+        )
+
+        botao.typeface = Typeface.create(
+            "sans-serif",
+            Typeface.BOLD
+        )
+
+        botao.background = GradientDrawable().apply {
+
+            setColor(
+                Color.parseColor(cor)
+            )
+
+            cornerRadius = 17f * sx
+        }
+
+        botao.elevation = 3f * sx
+
+        botao.isClickable = true
+
+        botao.setOnClickListener {
+            acao()
+        }
+
+        val parametros = FrameLayout.LayoutParams(
+            (largura * sx).toInt().coerceAtLeast(1),
+            (altura * sy).toInt().coerceAtLeast(1)
+        )
+
+        parametros.leftMargin =
+            (x * sx).toInt()
+
+        parametros.topMargin =
+            (y * sy).toInt()
+
+        painel.addView(
+            botao,
+            parametros
+        )
+    }
+
+    // =====================================================
+    // ABRIR PRÓXIMO NÍVEL
+    // =====================================================
+
+    private fun abrirProximoNivel() {
+
+        try {
+
+            val classeProximoNivel = Class.forName(
+                "$packageName.ProveNaImaginacao2Activity"
+            )
+
+            val intent = Intent(
+                this,
+                classeProximoNivel
+            )
+
+            startActivity(intent)
+
+            finish()
+
+        } catch (erro: Exception) {
+
+            Log.e(
+                "ProveNaImaginacao",
+                "Erro ao abrir próximo nível",
+                erro
+            )
+
+            Toast.makeText(
+                this,
+                "O próximo nível ainda não está disponível!",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+    }
+
+    // =====================================================
+    // ADICIONAR IMAGEM
+    // =====================================================
 
     private fun adicionarImagem(
         nome: String,
@@ -405,29 +714,42 @@ class ProveNaImaginacaoActivity : Activity() {
         )
 
         if (id != 0) {
+
             imagem.setImageResource(id)
+
         } else {
+
             Toast.makeText(
                 this,
                 "Imagem não encontrada: $nome",
                 Toast.LENGTH_LONG
             ).show()
 
-            android.util.Log.e(
+            Log.e(
                 "ProveNaImaginacao",
                 "Imagem não encontrada: $nome"
             )
         }
 
-        imagem.scaleType = ImageView.ScaleType.FIT_CENTER
+        imagem.scaleType =
+            ImageView.ScaleType.FIT_CENTER
 
         adicionarView(
             imagem,
-            x, y, largura, altura, sx, sy
+            x,
+            y,
+            largura,
+            altura,
+            sx,
+            sy
         )
 
         return imagem
     }
+
+    // =====================================================
+    // ADICIONAR ELEMENTOS NA TELA
+    // =====================================================
 
     private fun adicionarView(
         view: View,
@@ -438,13 +760,17 @@ class ProveNaImaginacaoActivity : Activity() {
         sx: Float,
         sy: Float
     ) {
+
         val parametros = FrameLayout.LayoutParams(
             (largura * sx).toInt().coerceAtLeast(1),
             (altura * sy).toInt().coerceAtLeast(1)
         )
 
-        parametros.leftMargin = (x * sx).toInt()
-        parametros.topMargin = (y * sy).toInt()
+        parametros.leftMargin =
+            (x * sx).toInt()
+
+        parametros.topMargin =
+            (y * sy).toInt()
 
         tela.addView(
             view,
