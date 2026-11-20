@@ -2,6 +2,7 @@
 <project version="4">
   <component name="deploymentTargetSelector">
     <selectionStates>
+<<<<<<< Updated upstream
       <SelectionState runConfigName="app">
         <option name="selectionMode" value="DROPDOWN" />
         <DialogSelection />
@@ -23,6 +24,9 @@
         <DialogSelection />
       </SelectionState>
       <SelectionState runConfigName="ProveNaImaginacao3Activity">
+=======
+      <SelectionState runConfigName="QuemVaiJogarActivity">
+>>>>>>> Stashed changes
         <option name="selectionMode" value="DROPDOWN" />
         <DialogSelection />
       </SelectionState>
