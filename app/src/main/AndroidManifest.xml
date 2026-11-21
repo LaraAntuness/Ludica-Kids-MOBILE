@@ -8,8 +8,13 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.MOBILEJOGOS">
+
+        <!-- ====================================== -->
+        <!-- TELA INICIAL DO LÚDICA KIDS -->
+        <!-- ====================================== -->
+
         <activity
-            android:name=".MainActivity"
+            android:name=".TelaInicialActivity"
             android:exported="true"
             android:screenOrientation="landscape">
             <intent-filter>
@@ -18,97 +23,173 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- ====================================== -->
+        <!-- JOGO ORIGINAL DA MAIN ACTIVITY -->
+        <!-- ====================================== -->
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:screenOrientation="landscape" />
+
+        <!-- ====================================== -->
+        <!-- MÃOZINHAS MÁGICAS -->
+        <!-- ====================================== -->
+
         <activity
             android:name=".MaoszinhasMagicasActivity"
             android:exported="true"
             android:screenOrientation="landscape"
             android:windowSoftInputMode="adjustResize" />
+
+        <!-- ====================================== -->
+        <!-- BIBLIOTECA SONORA -->
+        <!-- ====================================== -->
+
         <activity
             android:name=".BibliotecaSonoraActivity"
             android:exported="true"
             android:screenOrientation="landscape" />
+
+        <!-- ====================================== -->
+        <!-- CINCO OPÇÕES DOS JOGOS -->
+        <!-- ====================================== -->
+
         <activity
             android:name=".CincoOpcoesDosJogosActivity"
             android:exported="true"
             android:screenOrientation="landscape" />
+
+        <!-- ====================================== -->
+        <!-- DESCUBRA O CHEIRO - NÍVEL 1 -->
+        <!-- ====================================== -->
+
         <activity
             android:name=".DescubraOCheiroActivity"
             android:exported="true"
             android:screenOrientation="landscape" />
-        <activity
-            android:name=".ProveNaImaginacaoActivity"
-            android:exported="true"
-            android:screenOrientation="landscape" />
-        <activity
-            android:name=".InicialRespirandoComODragaoActivy"
-            android:exported="true"
-            android:screenOrientation="landscape" />
-        <activity
-            android:name=".IdentificandoEmocoesActivity"
-            android:exported="true" />
-        <activity
-            android:name=".TelaInicialJogosGeral"
-            android:exported="true"
-            android:screenOrientation="landscape" />
-        <activity
-            android:name=".TelaInicialCincoSentidosPago"
-            android:exported="true"
-            android:screenOrientation="landscape" />
 
-        <!-- TELA QUEM VAI JOGAR -->
-        <activity
-            android:name=".QuemVaiJogarActivity"
-            android:exported="true"
-            android:screenOrientation="landscape" />
-
-        <!-- OLHINHOS CURIOSOS - NÍVEL 2 -->
-        <activity
-            android:name=".OlhinhosCuriosos2Activity"
-            android:exported="true"
-            android:screenOrientation="landscape" />
-
-        <!-- OLHINHOS CURIOSOS - NÍVEL 3 -->
-        <activity
-            android:name=".OlhinhosCuriosos3Activity"
-            android:exported="true"
-            android:screenOrientation="landscape" />
-
+        <!-- ====================================== -->
         <!-- DESCUBRA O CHEIRO - NÍVEL 2 -->
+        <!-- ====================================== -->
+
         <activity
             android:name=".DescubraOCheiro2Activity"
             android:exported="true"
             android:screenOrientation="landscape" />
 
+        <!-- ====================================== -->
         <!-- DESCUBRA O CHEIRO - NÍVEL 3 -->
+        <!-- ====================================== -->
+
         <activity
             android:name=".DescubraOCheiro3Activity"
             android:exported="true"
             android:screenOrientation="landscape" />
 
-        <!-- PAGINA DO RESPONSÁVEL -->
+        <!-- ====================================== -->
+        <!-- PROVE NA IMAGINAÇÃO - NÍVEL 1 -->
+        <!-- ====================================== -->
+
         <activity
-            android:name=".TelaResponsavelActivity"
-<<<<<<< Updated upstream
-            android:screenOrientation="landscape"
-            android:exported="true" />
+            android:name=".ProveNaImaginacaoActivity"
+            android:exported="true"
+            android:screenOrientation="landscape" />
+
+        <!-- ====================================== -->
+        <!-- PROVE NA IMAGINAÇÃO - NÍVEL 2 -->
+        <!-- ====================================== -->
 
         <activity
             android:name=".ProveNaImaginacao2Activity"
             android:exported="true"
             android:screenOrientation="landscape" />
+
+        <!-- ====================================== -->
+        <!-- PROVE NA IMAGINAÇÃO - NÍVEL 3 -->
+        <!-- ====================================== -->
+
         <activity
             android:name=".ProveNaImaginacao3Activity"
             android:exported="true"
             android:screenOrientation="landscape" />
 
-=======
+        <!-- ====================================== -->
+        <!-- RESPIRANDO COM O DRAGÃO -->
+        <!-- ====================================== -->
+
+        <activity
+            android:name=".InicialRespirandoComODragaoActivy"
+            android:exported="true"
+            android:screenOrientation="landscape" />
+
+        <!-- ====================================== -->
+        <!-- IDENTIFICANDO EMOÇÕES -->
+        <!-- ====================================== -->
+
+        <activity
+            android:name=".IdentificandoEmocoesActivity"
+            android:exported="true"
+            android:screenOrientation="landscape" />
+
+        <!-- ====================================== -->
+        <!-- TELA INICIAL DOS JOGOS -->
+        <!-- ====================================== -->
+
+        <activity
+            android:name=".TelaInicialJogosGeral"
+            android:exported="true"
+            android:screenOrientation="landscape" />
+
+        <!-- ====================================== -->
+        <!-- TELA DOS CINCO SENTIDOS -->
+        <!-- ====================================== -->
+
+        <activity
+            android:name=".TelaInicialCincoSentidosPago"
+            android:exported="true"
+            android:screenOrientation="landscape" />
+
+        <!-- ====================================== -->
+        <!-- QUEM VAI JOGAR -->
+        <!-- ====================================== -->
+
+        <activity
+            android:name=".QuemVaiJogarActivity"
+            android:exported="true"
+            android:screenOrientation="landscape" />
+
+        <!-- ====================================== -->
+        <!-- OLHINHOS CURIOSOS - NÍVEL 2 -->
+        <!-- ====================================== -->
+
+        <activity
+            android:name=".OlhinhosCuriosos2Activity"
+            android:exported="true"
+            android:screenOrientation="landscape" />
+
+        <!-- ====================================== -->
+        <!-- OLHINHOS CURIOSOS - NÍVEL 3 -->
+        <!-- ====================================== -->
+
+        <activity
+            android:name=".OlhinhosCuriosos3Activity"
+            android:exported="true"
+            android:screenOrientation="landscape" />
+
+        <!-- ====================================== -->
+        <!-- PÁGINA DO RESPONSÁVEL -->
+        <!-- ====================================== -->
+
+        <activity
+            android:name=".TelaResponsavelActivity"
             android:exported="true"
             android:screenOrientation="landscape" />
         <activity
-            android:name=".TelaInicialActivity"
+            android:name=".LoginActivity"
             android:exported="false"
             android:windowSoftInputMode="adjustResize" />
->>>>>>> Stashed changes
     </application>
 
 </manifest>

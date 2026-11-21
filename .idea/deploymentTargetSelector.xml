@@ -2,31 +2,15 @@
 <project version="4">
   <component name="deploymentTargetSelector">
     <selectionStates>
-<<<<<<< Updated upstream
-      <SelectionState runConfigName="app">
+      <SelectionState runConfigName="TelaInicialActivity">
         <option name="selectionMode" value="DROPDOWN" />
         <DialogSelection />
       </SelectionState>
-      <SelectionState runConfigName="ProveNaImaginacaoActivity">
+      <SelectionState runConfigName="TelaInicialActivity (1)">
         <option name="selectionMode" value="DROPDOWN" />
         <DialogSelection />
       </SelectionState>
-      <SelectionState runConfigName="ProveNaImaginacaoActivity (1)">
-        <option name="selectionMode" value="DROPDOWN" />
-        <DialogSelection />
-      </SelectionState>
-      <SelectionState runConfigName="ProveNaImaginacao2Activity">
-        <option name="selectionMode" value="DROPDOWN" />
-        <DialogSelection />
-      </SelectionState>
-      <SelectionState runConfigName="ProveNaImaginacao2Activity (1)">
-        <option name="selectionMode" value="DROPDOWN" />
-        <DialogSelection />
-      </SelectionState>
-      <SelectionState runConfigName="ProveNaImaginacao3Activity">
-=======
-      <SelectionState runConfigName="QuemVaiJogarActivity">
->>>>>>> Stashed changes
+      <SelectionState runConfigName="TelaInicialActivity (2)">
         <option name="selectionMode" value="DROPDOWN" />
         <DialogSelection />
       </SelectionState>
