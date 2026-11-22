@@ -6,22 +6,57 @@
     android:layout_height="match_parent"
     android:background="#E2F2FF">
 
+    <!-- ====================================== -->
+    <!-- PLANO DE FUNDO -->
+    <!-- ====================================== -->
 
     <ImageView
         android:id="@+id/fundoJogos"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
         android:src="@drawable/planofundopcoesgeral"
         android:scaleType="fitXY"
-        android:contentDescription="Fundo dos jogos" />
+        android:contentDescription="Fundo dos jogos"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
 
+    <!-- ====================================== -->
+    <!-- GUIAS DE POSICIONAMENTO -->
+    <!-- ====================================== -->
+
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/guiaBotao1"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        app:layout_constraintGuide_percent="0.34" />
+
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/guiaBotao2"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        app:layout_constraintGuide_percent="0.55" />
+
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/guiaBotao3"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        app:layout_constraintGuide_percent="0.76" />
+
+    <!-- ====================================== -->
+    <!-- BOTÃO VOLTAR -->
+    <!-- ====================================== -->
 
     <ImageButton
         android:id="@+id/botaoVoltar"
-        android:layout_width="50dp"
-        android:layout_height="50dp"
-        android:layout_marginStart="18dp"
-        android:layout_marginTop="18dp"
+        android:layout_width="44dp"
+        android:layout_height="44dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="14dp"
         android:background="@android:color/transparent"
         android:src="@drawable/botaoretornoazulclaro"
         android:scaleType="fitCenter"
@@ -29,123 +64,172 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
+    <!-- ====================================== -->
+    <!-- TÍTULO LÚDICA KIDS -->
+    <!-- ====================================== -->
+
     <ImageView
         android:id="@+id/tituloJogos"
-        android:layout_width="230dp"
-        android:layout_height="150dp"
-        android:layout_marginTop="32dp"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
         android:src="@drawable/tituloopcoes3"
         android:scaleType="fitCenter"
         android:contentDescription="Lúdica Kids"
-        app:layout_constraintHorizontal_bias="0.22"
+        app:layout_constraintWidth_percent="0.31"
+        app:layout_constraintHeight_percent="0.30"
+        app:layout_constraintHorizontal_bias="0.20"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
+    <!-- ====================================== -->
+    <!-- GIRAFINHA SUPERIOR DIREITA -->
+    <!-- ====================================== -->
 
     <ImageView
         android:id="@+id/girafaSuperior"
-        android:layout_width="60dp"
-        android:layout_height="65dp"
-        android:layout_marginEnd="28dp"
-        android:layout_marginTop="15dp"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginTop="12dp"
+        android:layout_marginEnd="20dp"
         android:src="@drawable/botaogirafasuperior"
         android:scaleType="fitCenter"
-        android:contentDescription="Girafa superior"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        android:contentDescription="Girafinha superior"
+        app:layout_constraintWidth_percent="0.07"
+        app:layout_constraintHeight_percent="0.16"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
 
-
-    <androidx.constraintlayout.widget.Guideline
-        android:id="@+id/guiaBotoes"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        app:layout_constraintGuide_percent="0.36" />
-
+    <!-- ====================================== -->
+    <!-- BOTÃO 1 - IDENTIFICANDO AS EMOÇÕES -->
+    <!-- ====================================== -->
 
     <androidx.appcompat.widget.AppCompatButton
         android:id="@+id/botaoEmocoes"
-        android:layout_width="300dp"
-        android:layout_height="90dp"
-        android:background="@drawable/botaoembranco"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:background="@drawable/botao"
         android:backgroundTint="@null"
-        android:elevation="5dp"
         android:text="IDENTIFICANDO AS EMOÇÕES"
-        android:textColor="#F4BE70"
-        android:textSize="20sp"
+        android:textColor="#E9B65D"
+        android:textSize="19sp"
         android:textStyle="bold"
         android:fontFamily="sans-serif-condensed"
         android:gravity="center"
-        android:padding="4dp"
-        app:layout_constraintHorizontal_bias="0.53"
+        android:includeFontPadding="false"
+        android:singleLine="true"
+        android:paddingStart="28dp"
+        android:paddingEnd="28dp"
+        android:minWidth="0dp"
+        android:minHeight="0dp"
+        app:autoSizeTextType="uniform"
+        app:autoSizeMinTextSize="11sp"
+        app:autoSizeMaxTextSize="19sp"
+        app:autoSizeStepGranularity="1sp"
+        app:layout_constraintWidth_percent="0.62"
+        app:layout_constraintHeight_percent="0.19"
+        app:layout_constraintHorizontal_bias="0.52"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="@id/guiaBotoes" />
+        app:layout_constraintTop_toTopOf="@id/guiaBotao1" />
 
+    <!-- ====================================== -->
+    <!-- BOTÃO 2 - RESPIRANDO COM O DRAGÃO -->
+    <!-- ====================================== -->
 
     <androidx.appcompat.widget.AppCompatButton
         android:id="@+id/botaoDragao"
-        android:layout_width="300dp"
-        android:layout_height="68dp"
-        android:layout_marginTop="6dp"
-        android:background="@drawable/botaoembranco"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:background="@drawable/botao"
         android:backgroundTint="@null"
-        android:elevation="5dp"
         android:text="RESPIRANDO COM O DRAGÃO"
-        android:textColor="#9DC9F8"
-        android:textSize="17sp"
+        android:textColor="#8CBFE7"
+        android:textSize="19sp"
         android:textStyle="bold"
         android:fontFamily="sans-serif-condensed"
         android:gravity="center"
-        android:padding="4dp"
-        app:layout_constraintHorizontal_bias="0.53"
+        android:includeFontPadding="false"
+        android:singleLine="true"
+        android:paddingStart="28dp"
+        android:paddingEnd="28dp"
+        android:minWidth="0dp"
+        android:minHeight="0dp"
+        app:autoSizeTextType="uniform"
+        app:autoSizeMinTextSize="11sp"
+        app:autoSizeMaxTextSize="19sp"
+        app:autoSizeStepGranularity="1sp"
+        app:layout_constraintWidth_percent="0.62"
+        app:layout_constraintHeight_percent="0.19"
+        app:layout_constraintHorizontal_bias="0.52"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/botaoEmocoes" />
+        app:layout_constraintTop_toTopOf="@id/guiaBotao2" />
 
+    <!-- ====================================== -->
+    <!-- BOTÃO 3 - CINCO SENTIDOS MÁGICOS -->
+    <!-- ====================================== -->
 
     <androidx.appcompat.widget.AppCompatButton
         android:id="@+id/botaoSentidos"
-        android:layout_width="300dp"
-        android:layout_height="68dp"
-        android:layout_marginTop="6dp"
-        android:background="@drawable/botaoembranco"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:background="@drawable/botao"
         android:backgroundTint="@null"
-        android:elevation="5dp"
         android:text="CINCO SENTIDOS MÁGICOS 🔒"
-        android:textColor="#F4ABAF"
-        android:textSize="17sp"
+        android:textColor="#E7A2B2"
+        android:textSize="19sp"
         android:textStyle="bold"
         android:fontFamily="sans-serif-condensed"
         android:gravity="center"
-        android:padding="4dp"
+        android:includeFontPadding="false"
+        android:singleLine="true"
+        android:paddingStart="28dp"
+        android:paddingEnd="28dp"
+        android:minWidth="0dp"
+        android:minHeight="0dp"
         android:enabled="false"
-        app:layout_constraintHorizontal_bias="0.53"
+        android:alpha="1"
+        app:autoSizeTextType="uniform"
+        app:autoSizeMinTextSize="11sp"
+        app:autoSizeMaxTextSize="19sp"
+        app:autoSizeStepGranularity="1sp"
+        app:layout_constraintWidth_percent="0.62"
+        app:layout_constraintHeight_percent="0.19"
+        app:layout_constraintHorizontal_bias="0.52"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/botaoDragao" />
+        app:layout_constraintTop_toTopOf="@id/guiaBotao3" />
 
+    <!-- ====================================== -->
+    <!-- GIRAFINHA PRINCIPAL -->
+    <!-- ====================================== -->
 
     <ImageView
         android:id="@+id/girafaPrincipal"
-        android:layout_width="115dp"
-        android:layout_height="125dp"
-        android:translationY="12dp"
-        android:elevation="10dp"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
         android:src="@drawable/girafaopcoes3"
         android:scaleType="fitCenter"
-        android:contentDescription="Girafa principal"
-        app:layout_constraintHorizontal_bias="0.53"
+        android:elevation="8dp"
+        android:contentDescription="Girafinha principal"
+        app:layout_constraintWidth_percent="0.13"
+        app:layout_constraintHeight_percent="0.26"
+        app:layout_constraintHorizontal_bias="0.52"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintBottom_toTopOf="@id/botaoEmocoes" />
+
+    <!-- ====================================== -->
+    <!-- LOGO INFERIOR DIREITA -->
+    <!-- ====================================== -->
+
     <ImageView
         android:id="@+id/logoInferior"
-        android:layout_width="65dp"
-        android:layout_height="45dp"
-        android:layout_marginEnd="28dp"
-        android:layout_marginBottom="8dp"
+        android:layout_width="62dp"
+        android:layout_height="44dp"
+        android:layout_marginEnd="18dp"
+        android:layout_marginBottom="10dp"
         android:src="@drawable/logoinferior"
         android:scaleType="fitCenter"
         android:contentDescription="Logo inferior"

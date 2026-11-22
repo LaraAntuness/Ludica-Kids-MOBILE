@@ -91,8 +91,8 @@ class ProveNaImaginacao3Activity : Activity() {
 
         val voltar = adicionarImagem(
             "botaoretornoverde",
-            18, 25, 40, 39,
-            sx, sy
+            19, 25, 40, 40, sx, sy
+
         )
 
         voltar.isClickable = true
@@ -108,8 +108,7 @@ class ProveNaImaginacao3Activity : Activity() {
 
         adicionarImagem(
             "titulomelhorsalgado",
-            207, 10, 465, 80,
-            sx, sy
+            205, 2, 490, 85, sx, sy
         )
 
         // =================================================

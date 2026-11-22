@@ -1,3 +1,4 @@
+
 package com.example.mobilejogos
 
 import android.app.Activity
@@ -60,14 +61,12 @@ class ProveNaImaginacaoActivity : Activity() {
         val sy = tela.height.toFloat() / alturaBase
 
         // =================================================
-        // NOVO PLANO DE FUNDO - FUNDOSABOR
+        // PLANO DE FUNDO - FUNDOSABOR
         // =================================================
 
         val fundo = ImageView(this)
 
-        fundo.setImageResource(
-            R.drawable.fundosabor
-        )
+        fundo.setImageResource(R.drawable.fundosabor)
 
         fundo.scaleType = ImageView.ScaleType.FIT_XY
 
@@ -82,13 +81,12 @@ class ProveNaImaginacaoActivity : Activity() {
         )
 
         // =================================================
-        // BOTÃO DE VOLTAR
+        // BOTÃO DE VOLTAR DA TELA
         // =================================================
 
         val voltar = adicionarImagem(
             "botaoretornoazul",
-            18, 25, 40, 39,
-            sx, sy
+            19, 25, 40, 40, sx, sy,
         )
 
         voltar.isClickable = true
@@ -104,8 +102,7 @@ class ProveNaImaginacaoActivity : Activity() {
 
         adicionarImagem(
             "titulobebidafavorita",
-            207, 10, 600, 90,
-            sx, sy
+            205, 2, 490, 85, sx, sy
         )
 
         // =================================================
@@ -124,9 +121,7 @@ class ProveNaImaginacaoActivity : Activity() {
 
             gravity = Gravity.CENTER
 
-            setTextColor(
-                Color.parseColor("#303030")
-            )
+            setTextColor(Color.parseColor("#303030"))
 
             setTextSize(
                 TypedValue.COMPLEX_UNIT_PX,
@@ -153,7 +148,7 @@ class ProveNaImaginacaoActivity : Activity() {
         )
 
         // =================================================
-        // ÁGUA
+        // OPÇÕES DE BEBIDAS
         // =================================================
 
         criarOpcao(
@@ -163,10 +158,6 @@ class ProveNaImaginacaoActivity : Activity() {
             sx, sy
         )
 
-        // =================================================
-        // SUCO
-        // =================================================
-
         criarOpcao(
             "suco",
             "Suco",
@@ -174,20 +165,12 @@ class ProveNaImaginacaoActivity : Activity() {
             sx, sy
         )
 
-        // =================================================
-        // MILKSHAKE
-        // =================================================
-
         criarOpcao(
             "milkshake",
             "Milkshake",
             395, 245,
             sx, sy
         )
-
-        // =================================================
-        // REFRIGERANTE
-        // =================================================
 
         criarOpcao(
             "refrigerante",
@@ -218,9 +201,7 @@ class ProveNaImaginacaoActivity : Activity() {
 
         sombra.background = GradientDrawable().apply {
 
-            setColor(
-                Color.parseColor("#E8E7E7")
-            )
+            setColor(Color.parseColor("#E8E7E7"))
 
             cornerRadius = 17f * sx
         }
@@ -243,9 +224,7 @@ class ProveNaImaginacaoActivity : Activity() {
 
         cartao.background = GradientDrawable().apply {
 
-            setColor(
-                Color.parseColor("#96CBEB")
-            )
+            setColor(Color.parseColor("#96CBEB"))
 
             cornerRadius = 17f * sx
         }
@@ -261,10 +240,7 @@ class ProveNaImaginacaoActivity : Activity() {
         parametros.leftMargin = (x * sx).toInt()
         parametros.topMargin = (y * sy).toInt()
 
-        tela.addView(
-            cartao,
-            parametros
-        )
+        tela.addView(cartao, parametros)
 
         // =================================================
         // IMAGEM DA BEBIDA
@@ -291,8 +267,7 @@ class ProveNaImaginacaoActivity : Activity() {
             ).show()
         }
 
-        alimento.scaleType =
-            ImageView.ScaleType.FIT_CENTER
+        alimento.scaleType = ImageView.ScaleType.FIT_CENTER
 
         alimento.contentDescription = nomeBebida
 
@@ -302,13 +277,9 @@ class ProveNaImaginacaoActivity : Activity() {
             Gravity.TOP or Gravity.CENTER_HORIZONTAL
         )
 
-        parametrosImagem.topMargin =
-            (3 * sy).toInt()
+        parametrosImagem.topMargin = (3 * sy).toInt()
 
-        cartao.addView(
-            alimento,
-            parametrosImagem
-        )
+        cartao.addView(alimento, parametrosImagem)
 
         // =================================================
         // NOME DA BEBIDA
@@ -320,9 +291,7 @@ class ProveNaImaginacaoActivity : Activity() {
 
         texto.gravity = Gravity.CENTER
 
-        texto.setTextColor(
-            Color.parseColor("#24549B")
-        )
+        texto.setTextColor(Color.parseColor("#24549B"))
 
         texto.setTextSize(
             TypedValue.COMPLEX_UNIT_PX,
@@ -337,10 +306,7 @@ class ProveNaImaginacaoActivity : Activity() {
             Gravity.BOTTOM
         )
 
-        cartao.addView(
-            texto,
-            parametrosTexto
-        )
+        cartao.addView(texto, parametrosTexto)
 
         // =================================================
         // CLIQUE NA BEBIDA
@@ -425,10 +391,7 @@ class ProveNaImaginacaoActivity : Activity() {
             Gravity.CENTER
         )
 
-        sobreposicao.addView(
-            painel,
-            parametrosPainel
-        )
+        sobreposicao.addView(painel, parametrosPainel)
 
         // =================================================
         // TÍTULO DO POP-UP
@@ -456,13 +419,9 @@ class ProveNaImaginacaoActivity : Activity() {
             (55 * sy).toInt()
         )
 
-        parametrosTitulo.topMargin =
-            (10 * sy).toInt()
+        parametrosTitulo.topMargin = (10 * sy).toInt()
 
-        painel.addView(
-            titulo,
-            parametrosTitulo
-        )
+        painel.addView(titulo, parametrosTitulo)
 
         // =================================================
         // IMAGEM DA BEBIDA ESCOLHIDA
@@ -477,12 +436,10 @@ class ProveNaImaginacaoActivity : Activity() {
         )
 
         if (id != 0) {
-
             imagem.setImageResource(id)
         }
 
-        imagem.scaleType =
-            ImageView.ScaleType.FIT_CENTER
+        imagem.scaleType = ImageView.ScaleType.FIT_CENTER
 
         imagem.contentDescription = nomeBebida
 
@@ -492,13 +449,9 @@ class ProveNaImaginacaoActivity : Activity() {
             Gravity.TOP or Gravity.CENTER_HORIZONTAL
         )
 
-        parametrosImagem.topMargin =
-            (65 * sy).toInt()
+        parametrosImagem.topMargin = (65 * sy).toInt()
 
-        painel.addView(
-            imagem,
-            parametrosImagem
-        )
+        painel.addView(imagem, parametrosImagem)
 
         // =================================================
         // NOME DA BEBIDA ESCOLHIDA
@@ -526,16 +479,12 @@ class ProveNaImaginacaoActivity : Activity() {
             (40 * sy).toInt()
         )
 
-        parametrosNome.topMargin =
-            (170 * sy).toInt()
+        parametrosNome.topMargin = (170 * sy).toInt()
 
-        painel.addView(
-            nome,
-            parametrosNome
-        )
+        painel.addView(nome, parametrosNome)
 
         // =================================================
-        // BOTÃO VOLTAR - AZUL
+        // BOTÃO VOLTAR - TELA INICIAL DOS 5 JOGOS
         // =================================================
 
         criarBotaoPopup(
@@ -551,7 +500,19 @@ class ProveNaImaginacaoActivity : Activity() {
         ) {
 
             popupAberto = false
-            tela.removeView(sobreposicao)
+
+            val intent = Intent(
+                this,
+                CincoOpcoesDosJogosActivity::class.java
+            )
+
+            intent.flags =
+                Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                        Intent.FLAG_ACTIVITY_SINGLE_TOP
+
+            startActivity(intent)
+
+            finish()
         }
 
         // =================================================
@@ -622,9 +583,7 @@ class ProveNaImaginacaoActivity : Activity() {
 
         botao.background = GradientDrawable().apply {
 
-            setColor(
-                Color.parseColor(cor)
-            )
+            setColor(Color.parseColor(cor))
 
             cornerRadius = 17f * sx
         }
@@ -642,16 +601,10 @@ class ProveNaImaginacaoActivity : Activity() {
             (altura * sy).toInt().coerceAtLeast(1)
         )
 
-        parametros.leftMargin =
-            (x * sx).toInt()
+        parametros.leftMargin = (x * sx).toInt()
+        parametros.topMargin = (y * sy).toInt()
 
-        parametros.topMargin =
-            (y * sy).toInt()
-
-        painel.addView(
-            botao,
-            parametros
-        )
+        painel.addView(botao, parametros)
     }
 
     // =====================================================
@@ -731,8 +684,7 @@ class ProveNaImaginacaoActivity : Activity() {
             )
         }
 
-        imagem.scaleType =
-            ImageView.ScaleType.FIT_CENTER
+        imagem.scaleType = ImageView.ScaleType.FIT_CENTER
 
         adicionarView(
             imagem,
@@ -766,15 +718,9 @@ class ProveNaImaginacaoActivity : Activity() {
             (altura * sy).toInt().coerceAtLeast(1)
         )
 
-        parametros.leftMargin =
-            (x * sx).toInt()
+        parametros.leftMargin = (x * sx).toInt()
+        parametros.topMargin = (y * sy).toInt()
 
-        parametros.topMargin =
-            (y * sy).toInt()
-
-        tela.addView(
-            view,
-            parametros
-        )
+        tela.addView(view, parametros)
     }
 }
