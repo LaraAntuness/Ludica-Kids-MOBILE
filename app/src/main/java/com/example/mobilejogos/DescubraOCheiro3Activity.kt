@@ -173,7 +173,7 @@ class DescubraOCheiro3Activity : Activity() {
 
         val voltar = adicionarImagem(
             "botaoretornoamarelo",
-            18, 25, 40, 39,
+            19, 25, 40, 40,
             sx, sy
         )
 
@@ -190,7 +190,7 @@ class DescubraOCheiro3Activity : Activity() {
 
         adicionarImagem(
             "descubracomocheiroamarelo",
-            207, 10, 465, 80,
+            205, 2, 490, 85,
             sx, sy
         )
 

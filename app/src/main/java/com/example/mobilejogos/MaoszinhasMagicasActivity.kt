@@ -51,7 +51,7 @@ class MaoszinhasMagicasActivity : Activity() {
 
     // ALTERE PARA A ACTIVITY DO PRÓXIMO JOGO
 
-    private val proximaFaseActivity = "ProximaFaseActivity"
+    private val proximaFaseActivity = "MaoszinhasMagicas2Activity"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -690,6 +690,16 @@ class MaoszinhasMagicasActivity : Activity() {
         )
 
         botaoVoltar.setOnClickListener {
+            val intent = Intent(
+                this,
+                CincoOpcoesDosJogosActivity::class.java
+            )
+
+            intent.flags =
+                Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                        Intent.FLAG_ACTIVITY_SINGLE_TOP
+
+            startActivity(intent)
             finish()
         }
 

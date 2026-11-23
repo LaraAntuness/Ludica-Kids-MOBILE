@@ -1,62 +1,72 @@
 
 package com.example.mobilejogos
 
+import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.os.Bundle
-import android.widget.Button
+import android.view.WindowManager
 import android.widget.ImageButton
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.AppCompatButton
 
 class TelaInicialJogosGeral : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Define a tela na horizontal
+        // TELA HORIZONTAL
         requestedOrientation =
             ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
 
-        // Abre o layout da tela dos jogos
+        // TELA CHEIA
+        window.setFlags(
+            WindowManager.LayoutParams.FLAG_FULLSCREEN,
+            WindowManager.LayoutParams.FLAG_FULLSCREEN
+        )
+
+        // CARREGAR O XML
         setContentView(R.layout.telainicialjogosgeral)
 
-        // Botões da tela
+        // IDENTIFICAR BOTÕES
         val botaoVoltar =
             findViewById<ImageButton>(R.id.botaoVoltar)
 
         val botaoEmocoes =
-            findViewById<Button>(R.id.botaoEmocoes)
+            findViewById<AppCompatButton>(R.id.botaoEmocoes)
 
         val botaoDragao =
-            findViewById<Button>(R.id.botaoDragao)
+            findViewById<AppCompatButton>(R.id.botaoDragao)
 
         val botaoSentidos =
-            findViewById<Button>(R.id.botaoSentidos)
+            findViewById<AppCompatButton>(R.id.botaoSentidos)
 
-        // Botão para voltar à tela anterior
+        // BOTÃO VOLTAR
         botaoVoltar.setOnClickListener {
             finish()
         }
 
-        // Jogo: Identificando as Emoções
+        // IDENTIFICANDO AS EMOÇÕES
         botaoEmocoes.setOnClickListener {
-            Toast.makeText(
-                this,
-                "Identificando as Emoções",
-                Toast.LENGTH_SHORT
-            ).show()
+            val intent = Intent(
+                this@TelaInicialJogosGeral,
+                IdentificandoEmocoesActivity::class.java
+            )
+
+            startActivity(intent)
         }
 
-        // Jogo: Respirando com o Dragão
+        // RESPIRANDO COM O DRAGÃO
         botaoDragao.setOnClickListener {
-            Toast.makeText(
-                this,
-                "Respirando com o Dragão",
-                Toast.LENGTH_SHORT
-            ).show()
+            val intent = Intent(
+                this@TelaInicialJogosGeral,
+                InicialRespirandoComODragaoActivy::class.java
+            )
+
+            startActivity(intent)
         }
 
-        // Jogo: Cinco Sentidos Mágicos
+        // CINCO SENTIDOS MÁGICOS
+        // MANTIDO BLOQUEADO COMO NO PROTÓTIPO
         botaoSentidos.isEnabled = false
     }
 }
