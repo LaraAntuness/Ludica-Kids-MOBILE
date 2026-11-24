@@ -6,13 +6,11 @@ import android.animation.AnimatorListenerAdapter
 import android.animation.ObjectAnimator
 import android.animation.ValueAnimator
 import android.app.Activity
-import android.app.Dialog
+import android.app.AlertDialog
 import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.graphics.Color
 import android.graphics.Typeface
-import android.graphics.drawable.ColorDrawable
-import android.graphics.drawable.GradientDrawable
 import android.media.MediaPlayer
 import android.os.Bundle
 import android.view.Gravity
@@ -22,8 +20,6 @@ import android.view.animation.AccelerateDecelerateInterpolator
 import android.view.animation.OvershootInterpolator
 import android.widget.FrameLayout
 import android.widget.ImageView
-import android.widget.LinearLayout
-import android.widget.ScrollView
 import android.widget.TextView
 import kotlin.math.cos
 import kotlin.math.sin
@@ -32,7 +28,7 @@ import kotlin.random.Random
 class TelaInicialActivity : Activity() {
 
     // ==========================================
-    // ELEMENTOS DA TELA
+    // ELEMENTOS PRINCIPAIS
     // ==========================================
 
     private lateinit var root: FrameLayout
@@ -45,14 +41,11 @@ class TelaInicialActivity : Activity() {
     private val larguraBase = 874f
     private val alturaBase = 393f
 
-    // ==========================================
-    // CORES DO LÚDICA KIDS
-    // ==========================================
+    private var popupAberto = false
 
-    private val azul = Color.rgb(95, 145, 207)
-    private val azulEscuro = Color.rgb(43, 84, 145)
-    private val azulClaro = Color.rgb(232, 244, 255)
-    private val amarelo = Color.rgb(255, 221, 139)
+    // ==========================================
+    // CORES DO GLITTER
+    // ==========================================
 
     private val coresEstrelas = listOf(
         Color.rgb(255, 211, 85),
@@ -63,13 +56,13 @@ class TelaInicialActivity : Activity() {
     )
 
     // ==========================================
-    // CONTROLE DE SOM E ANIMAÇÕES
+    // SONS E ANIMAÇÕES
     // ==========================================
 
     private val sonsAtivos = mutableListOf<MediaPlayer>()
-    private val animacoesContinuas = mutableListOf<ValueAnimator>()
 
-    private var popupAberto = false
+    private val animacoesContinuas =
+        mutableListOf<ValueAnimator>()
 
     // ==========================================
     // INICIAR TELA
@@ -99,6 +92,7 @@ class TelaInicialActivity : Activity() {
 
         root.post {
             if (!isFinishing && !isDestroyed) {
+
                 larguraTela = root.width
                 alturaTela = root.height
 
@@ -121,31 +115,13 @@ class TelaInicialActivity : Activity() {
     }
 
     private fun dp(valor: Int): Int {
-        return (valor * resources.displayMetrics.density).toInt()
+        return (
+                valor * resources.displayMetrics.density
+                ).toInt()
     }
 
     // ==========================================
-    // FUNDOS ARREDONDADOS
-    // ==========================================
-
-    private fun fundoArredondado(
-        cor: Int,
-        raio: Int,
-        borda: Int? = null
-    ): GradientDrawable {
-
-        return GradientDrawable().apply {
-            cornerRadius = dp(raio).toFloat()
-            setColor(cor)
-
-            if (borda != null) {
-                setStroke(dp(2), borda)
-            }
-        }
-    }
-
-    // ==========================================
-    // ADICIONAR IMAGEM
+    // ADICIONAR IMAGENS
     // ==========================================
 
     private fun adicionarImagem(
@@ -158,8 +134,11 @@ class TelaInicialActivity : Activity() {
     ): ImageView {
 
         val imagemView = ImageView(this).apply {
+
             setImageResource(imagem)
+
             scaleType = ImageView.ScaleType.FIT_CENTER
+
             contentDescription = descricao
         }
 
@@ -169,7 +148,9 @@ class TelaInicialActivity : Activity() {
                 x(largura),
                 y(altura)
             ).apply {
+
                 gravity = Gravity.TOP or Gravity.START
+
                 leftMargin = x(posX)
                 topMargin = y(posY)
             }
@@ -179,21 +160,25 @@ class TelaInicialActivity : Activity() {
     }
 
     // ==========================================
-    // REPRODUÇÃO DOS SONS
+    // SONS
     // ==========================================
 
     private fun tocarSom(
         recurso: Int,
-        volume: Float = 0.30f
+        volume: Float
     ) {
 
-        val player = MediaPlayer.create(this, recurso) ?: return
+        val player = MediaPlayer.create(
+            this,
+            recurso
+        ) ?: return
 
         sonsAtivos.add(player)
 
         player.setVolume(volume, volume)
 
         player.setOnCompletionListener {
+
             sonsAtivos.remove(it)
             it.release()
         }
@@ -201,48 +186,80 @@ class TelaInicialActivity : Activity() {
         player.start()
     }
 
-    // SOM DO SOL E DA GIRAFINHA
     private fun somClique() {
         tocarSom(R.raw.clique_suave, 0.45f)
     }
 
-    // SOM MÁGICO DO BOTÃO JOGAR
     private fun somMagico() {
         tocarSom(R.raw.sominicio, 0.50f)
     }
 
-    // SOM DA ENTRADA DA GIRAFINHA
     private fun somBrilho() {
         tocarSom(R.raw.brilho_suave, 0.25f)
     }
 
     // ==========================================
-    // VERIFICAÇÃO DE LOGIN
+    // AUTENTICAÇÃO
     // ==========================================
 
     private fun usuarioEstaLogado(): Boolean {
 
-        // Ainda não criamos o sistema de login.
-        // O acesso continuará bloqueado até
-        // implementarmos a autenticação real.
+        // Ainda falta conectar a autenticação JWT.
+        // Não liberamos acesso sem login real.
         return false
     }
 
+    // ==========================================
+    // NOVO POP-UP DE LOGIN E CADASTRO
+    // ==========================================
+
+    private fun abrirPopupLogin() {
+
+        if (popupAberto || isFinishing || isDestroyed) {
+            return
+        }
+
+        popupAberto = true
+
+        // ESCONDE SOMENTE O BOTÃO JOGAR
+        // A girafinha principal continua aparecendo.
+        botaoJogar.visibility = View.INVISIBLE
+
+        // ABRE O FORMULÁRIO QUE CRIAMOS
+        LoginDialog(this) {
+
+            // EXECUTA QUANDO O POP-UP FECHA
+
+            popupAberto = false
+
+            // RESTAURA O BOTÃO JOGAR
+            botaoJogar.visibility = View.VISIBLE
+
+        }.mostrar()
+    }
+
+    // ==========================================
+    // VERIFICAR ACESSO
+    // ==========================================
+
     private fun verificarAcesso(
-        acao: () -> Unit
+        aoEstarLogado: () -> Unit
     ) {
 
         if (popupAberto) return
 
         if (usuarioEstaLogado()) {
-            acao()
+
+            aoEstarLogado()
+
         } else {
-            mostrarPopupLogin()
+
+            abrirPopupLogin()
         }
     }
 
     // ==========================================
-    // NAVEGAÇÃO
+    // ABRIR QUEM VAI JOGAR
     // ==========================================
 
     private fun abrirQuemVaiJogar() {
@@ -256,7 +273,30 @@ class TelaInicialActivity : Activity() {
     }
 
     // ==========================================
-    // MONTAR TELA INICIAL
+    // ÁREA DOS PAIS
+    // ==========================================
+
+    private fun mostrarPopupCpf() {
+
+        AlertDialog.Builder(this)
+            .setTitle("Área dos responsáveis")
+            .setMessage(
+                "Em breve, vamos confirmar o CPF do responsável para liberar esta área!"
+            )
+            .setPositiveButton("ENTENDI") { dialog, _ ->
+
+                somClique()
+                dialog.dismiss()
+            }
+            .show()
+
+        // Futuramente abriremos a calculadora de CPF.
+        // Somente após uma confirmação segura
+        // navegaremos para TelaResponsavelActivity.
+    }
+
+    // ==========================================
+    // MONTAR CENÁRIO
     // ==========================================
 
     private fun montarTela() {
@@ -266,6 +306,7 @@ class TelaInicialActivity : Activity() {
         }
 
         animacoesContinuas.clear()
+
         root.removeAllViews()
 
         // ======================================
@@ -273,7 +314,11 @@ class TelaInicialActivity : Activity() {
         // ======================================
 
         val grama = ImageView(this).apply {
-            setImageResource(R.drawable.gramainicio)
+
+            setImageResource(
+                R.drawable.gramainicio
+            )
+
             scaleType = ImageView.ScaleType.FIT_XY
         }
 
@@ -283,6 +328,7 @@ class TelaInicialActivity : Activity() {
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 y(285f)
             ).apply {
+
                 gravity = Gravity.BOTTOM
             }
         )
@@ -310,7 +356,7 @@ class TelaInicialActivity : Activity() {
         )
 
         // ======================================
-        // BOTÃO SOL DOS PAIS
+        // SOL DOS PAIS
         // ======================================
 
         val botaoPais = adicionarImagem(
@@ -327,7 +373,7 @@ class TelaInicialActivity : Activity() {
 
             botaoPais.isEnabled = false
 
-            // SOM DE CLIQUE SUAVE
+            // SOM DE CLIQUE
             somClique()
 
             // GLITTER
@@ -338,7 +384,7 @@ class TelaInicialActivity : Activity() {
                 125
             )
 
-            // SOL GIRA NO PRÓPRIO EIXO
+            // GIRAR EM TORNO DO PRÓPRIO CENTRO
             botaoPais.pivotX = botaoPais.width / 2f
             botaoPais.pivotY = botaoPais.height / 2f
 
@@ -352,6 +398,7 @@ class TelaInicialActivity : Activity() {
             )
 
             giro.duration = 850L
+
             giro.interpolator =
                 AccelerateDecelerateInterpolator()
 
@@ -366,6 +413,7 @@ class TelaInicialActivity : Activity() {
                         botaoPais.isEnabled = true
 
                         if (!isFinishing && !isDestroyed) {
+
                             verificarAcesso {
                                 mostrarPopupCpf()
                             }
@@ -378,7 +426,7 @@ class TelaInicialActivity : Activity() {
         }
 
         // ======================================
-        // BOTÃO DA GIRAFINHA NO CANTO
+        // BOTÃO DA GIRAFINHA
         // ======================================
 
         val cabecaGirafa = adicionarImagem(
@@ -395,7 +443,7 @@ class TelaInicialActivity : Activity() {
 
             cabecaGirafa.isEnabled = false
 
-            // SOM DE CLIQUE SUAVE
+            // SOM SUAVE
             somClique()
 
             // BRILHINHOS
@@ -431,6 +479,7 @@ class TelaInicialActivity : Activity() {
 
                                     cabecaGirafa.isEnabled = true
 
+                                    // LOGIN OU QUEM VAI JOGAR
                                     verificarAcesso {
                                         abrirQuemVaiJogar()
                                     }
@@ -483,7 +532,7 @@ class TelaInicialActivity : Activity() {
                 175
             )
 
-            // ANIMAÇÃO DE CLIQUE
+            // BOTÃO APERTA E VOLTA
             botaoJogar.animate()
                 .scaleX(0.94f)
                 .scaleY(0.94f)
@@ -498,6 +547,7 @@ class TelaInicialActivity : Activity() {
 
                             botaoJogar.isEnabled = true
 
+                            // ABRE LOGIN QUANDO NECESSÁRIO
                             verificarAcesso {
                                 abrirQuemVaiJogar()
                             }
@@ -508,7 +558,7 @@ class TelaInicialActivity : Activity() {
         }
 
         // ======================================
-        // ANIMAÇÃO DAS NUVENS
+        // ANIMAR NUVENS
         // ======================================
 
         animarNuvem(
@@ -531,7 +581,7 @@ class TelaInicialActivity : Activity() {
     }
 
     // ==========================================
-    // ANIMAR NUVENS
+    // ANIMAÇÃO DAS NUVENS
     // ==========================================
 
     private fun animarNuvem(
@@ -550,6 +600,7 @@ class TelaInicialActivity : Activity() {
         ).apply {
 
             duration = duracao
+
             repeatCount = ValueAnimator.INFINITE
             repeatMode = ValueAnimator.REVERSE
 
@@ -575,7 +626,7 @@ class TelaInicialActivity : Activity() {
         girafa.alpha = 1f
         botaoJogar.alpha = 1f
 
-        // SOM DELICADO DA ENTRADA
+        // SOM DE BRILHO NA ENTRADA
         root.postDelayed({
 
             if (!isFinishing && !isDestroyed) {
@@ -584,7 +635,7 @@ class TelaInicialActivity : Activity() {
 
         }, 400)
 
-        // ANIMAÇÃO DA GIRAFINHA
+        // GIRAFINHA SOBE
         girafa.animate()
             .translationY(0f)
             .setDuration(1700)
@@ -594,6 +645,7 @@ class TelaInicialActivity : Activity() {
             )
             .withEndAction {
 
+                // GLITTER AO CHEGAR
                 animarEstrelinhas(
                     girafa,
                     24,
@@ -630,6 +682,7 @@ class TelaInicialActivity : Activity() {
         ).apply {
 
             duration = 1600L
+
             repeatCount = ValueAnimator.INFINITE
             repeatMode = ValueAnimator.REVERSE
 
@@ -642,7 +695,7 @@ class TelaInicialActivity : Activity() {
     }
 
     // ==========================================
-    // GLITTER E BRILHINHOS
+    // GLITTER
     // ==========================================
 
     private fun animarEstrelinhas(
@@ -740,543 +793,10 @@ class TelaInicialActivity : Activity() {
                     AccelerateDecelerateInterpolator()
                 )
                 .withEndAction {
+
                     root.removeView(estrela)
                 }
                 .start()
-        }
-    }
-
-    // ==========================================
-    // POP-UP INFANTIL DE LOGIN
-    // ==========================================
-
-    private fun mostrarPopupLogin() {
-
-        if (popupAberto) return
-
-        popupAberto = true
-
-        val dialog = Dialog(this)
-
-        val larguraTela =
-            resources.displayMetrics.widthPixels
-
-        val alturaTela =
-            resources.displayMetrics.heightPixels
-
-        val scroll = ScrollView(this).apply {
-            isVerticalScrollBarEnabled = false
-            isFillViewport = false
-            clipChildren = false
-            clipToPadding = false
-        }
-
-        val container = FrameLayout(this).apply {
-            clipChildren = false
-            clipToPadding = false
-        }
-
-        scroll.addView(
-            container,
-            FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.WRAP_CONTENT
-            )
-        )
-
-        // MOLDURA AZUL
-        val molduraAzul = LinearLayout(this).apply {
-
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER_HORIZONTAL
-
-            background = fundoArredondado(
-                azul,
-                30
-            )
-
-            setPadding(
-                dp(6),
-                dp(6),
-                dp(6),
-                dp(6)
-            )
-        }
-
-        container.addView(
-            molduraAzul,
-            FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.WRAP_CONTENT
-            ).apply {
-
-                leftMargin = dp(8)
-                rightMargin = dp(8)
-                topMargin = dp(45)
-                bottomMargin = dp(10)
-            }
-        )
-
-        // MOLDURA AMARELA
-        val molduraAmarela = LinearLayout(this).apply {
-
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER_HORIZONTAL
-
-            background = fundoArredondado(
-                amarelo,
-                27
-            )
-
-            setPadding(
-                dp(5),
-                dp(5),
-                dp(5),
-                dp(5)
-            )
-        }
-
-        molduraAzul.addView(
-            molduraAmarela,
-            LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            )
-        )
-
-        // INTERIOR
-        val conteudo = LinearLayout(this).apply {
-
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER_HORIZONTAL
-
-            setPadding(
-                dp(22),
-                dp(52),
-                dp(22),
-                dp(18)
-            )
-
-            background = GradientDrawable(
-                GradientDrawable.Orientation.TOP_BOTTOM,
-                intArrayOf(
-                    Color.WHITE,
-                    azulClaro
-                )
-            ).apply {
-                cornerRadius = dp(24).toFloat()
-            }
-        }
-
-        molduraAmarela.addView(
-            conteudo,
-            LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            )
-        )
-
-        // GIRAFINHA
-        val fundoGirafa = FrameLayout(this).apply {
-
-            background = GradientDrawable().apply {
-                shape = GradientDrawable.OVAL
-
-                setColor(
-                    Color.rgb(255, 245, 216)
-                )
-
-                setStroke(
-                    dp(3),
-                    Color.WHITE
-                )
-            }
-
-            elevation = dp(15).toFloat()
-        }
-
-        container.addView(
-            fundoGirafa,
-            FrameLayout.LayoutParams(
-                dp(105),
-                dp(105)
-            ).apply {
-                gravity =
-                    Gravity.TOP or Gravity.CENTER_HORIZONTAL
-            }
-        )
-
-        val imagemGirafa = ImageView(this).apply {
-
-            setImageResource(
-                R.drawable.girafapescoco
-            )
-
-            scaleType =
-                ImageView.ScaleType.FIT_CENTER
-        }
-
-        fundoGirafa.addView(
-            imagemGirafa,
-            FrameLayout.LayoutParams(
-                dp(88),
-                dp(94),
-                Gravity.CENTER
-            )
-        )
-
-        // ESTRELINHA ESQUERDA
-        val estrelaEsquerda = TextView(this).apply {
-            text = "✦"
-            textSize = 27f
-            setTextColor(amarelo)
-            gravity = Gravity.CENTER
-            elevation = dp(15).toFloat()
-        }
-
-        container.addView(
-            estrelaEsquerda,
-            FrameLayout.LayoutParams(
-                dp(40),
-                dp(40)
-            ).apply {
-                gravity = Gravity.TOP or Gravity.START
-                topMargin = dp(76)
-                leftMargin = dp(33)
-            }
-        )
-
-        // ESTRELINHA DIREITA
-        val estrelaDireita = TextView(this).apply {
-            text = "✦"
-            textSize = 25f
-            setTextColor(azul)
-            gravity = Gravity.CENTER
-            elevation = dp(15).toFloat()
-        }
-
-        container.addView(
-            estrelaDireita,
-            FrameLayout.LayoutParams(
-                dp(40),
-                dp(40)
-            ).apply {
-                gravity = Gravity.TOP or Gravity.END
-                topMargin = dp(82)
-                rightMargin = dp(33)
-            }
-        )
-
-        // TÍTULO
-        val titulo = TextView(this).apply {
-            text = "Obaaa! Vamos brincar?"
-            textSize = 22f
-            setTextColor(azulEscuro)
-
-            typeface = Typeface.create(
-                "sans-serif-rounded",
-                Typeface.BOLD
-            )
-
-            gravity = Gravity.CENTER
-        }
-
-        conteudo.addView(
-            titulo,
-            LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            )
-        )
-
-        // MENSAGEM
-        val mensagem = TextView(this).apply {
-
-            text =
-                "Antes de começar a aventura, peça para um responsável entrar ou criar uma conta!"
-
-            textSize = 14f
-
-            setTextColor(
-                Color.rgb(89, 110, 141)
-            )
-
-            gravity = Gravity.CENTER
-
-            setLineSpacing(
-                dp(2).toFloat(),
-                1f
-            )
-        }
-
-        conteudo.addView(
-            mensagem,
-            LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply {
-                topMargin = dp(9)
-            }
-        )
-
-        // PLAQUINHA
-        val plaquinha = TextView(this).apply {
-
-            text = "Uma aventura especial espera por você!"
-
-            textSize = 12f
-
-            setTextColor(azulEscuro)
-
-            gravity = Gravity.CENTER
-
-            setPadding(
-                dp(14),
-                dp(8),
-                dp(14),
-                dp(8)
-            )
-
-            background = fundoArredondado(
-                Color.rgb(255, 244, 211),
-                18
-            )
-        }
-
-        conteudo.addView(
-            plaquinha,
-            LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply {
-                topMargin = dp(13)
-            }
-        )
-
-        // BOTÃO ENTENDI
-        val botaoFechar = TextView(this).apply {
-
-            text = "ENTENDI!"
-
-            textSize = 17f
-            setTextColor(Color.WHITE)
-
-            typeface = Typeface.create(
-                "sans-serif-rounded",
-                Typeface.BOLD
-            )
-
-            gravity = Gravity.CENTER
-            elevation = dp(4).toFloat()
-
-            background = GradientDrawable(
-                GradientDrawable.Orientation.TOP_BOTTOM,
-                intArrayOf(
-                    Color.rgb(112, 175, 239),
-                    Color.rgb(70, 129, 208)
-                )
-            ).apply {
-                cornerRadius = dp(25).toFloat()
-            }
-
-            isClickable = true
-            isFocusable = true
-
-            setOnClickListener {
-                somClique()
-                dialog.dismiss()
-            }
-        }
-
-        conteudo.addView(
-            botaoFechar,
-            LinearLayout.LayoutParams(
-                dp(210),
-                dp(46)
-            ).apply {
-                topMargin = dp(17)
-            }
-        )
-
-        dialog.setContentView(scroll)
-
-        dialog.setOnDismissListener {
-            popupAberto = false
-        }
-
-        dialog.show()
-
-        dialog.window?.apply {
-
-            setBackgroundDrawable(
-                ColorDrawable(Color.TRANSPARENT)
-            )
-
-            addFlags(
-                WindowManager.LayoutParams.FLAG_DIM_BEHIND
-            )
-
-            setDimAmount(0.50f)
-            setGravity(Gravity.CENTER)
-
-            setLayout(
-                minOf(
-                    dp(460),
-                    (larguraTela * 0.88f).toInt()
-                ),
-                minOf(
-                    dp(365),
-                    (alturaTela * 0.92f).toInt()
-                )
-            )
-        }
-
-        // ANIMAÇÃO DE ENTRADA
-        container.scaleX = 0.85f
-        container.scaleY = 0.85f
-        container.alpha = 0f
-
-        container.animate()
-            .scaleX(1f)
-            .scaleY(1f)
-            .alpha(1f)
-            .setDuration(300)
-            .setInterpolator(
-                OvershootInterpolator(0.5f)
-            )
-            .start()
-
-        // PULINHO DA GIRAFINHA
-        fundoGirafa.translationY = dp(10).toFloat()
-
-        fundoGirafa.animate()
-            .translationY(0f)
-            .setDuration(450)
-            .start()
-
-        // ESTRELINHAS DECORATIVAS
-        estrelaEsquerda.alpha = 0f
-        estrelaDireita.alpha = 0f
-
-        estrelaEsquerda.animate()
-            .alpha(1f)
-            .rotation(20f)
-            .setDuration(450)
-            .start()
-
-        estrelaDireita.animate()
-            .alpha(1f)
-            .rotation(-20f)
-            .setDuration(450)
-            .start()
-    }
-
-    // ==========================================
-    // POP-UP PROVISÓRIO DE CPF
-    // ==========================================
-
-    private fun mostrarPopupCpf() {
-
-        val dialog = Dialog(this)
-
-        val conteudo = LinearLayout(this).apply {
-
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER
-
-            setPadding(
-                dp(25),
-                dp(22),
-                dp(25),
-                dp(22)
-            )
-
-            background = fundoArredondado(
-                azulClaro,
-                28,
-                azul
-            )
-        }
-
-        val titulo = TextView(this).apply {
-            text = "Área dos responsáveis"
-            textSize = 22f
-            setTextColor(azulEscuro)
-            typeface = Typeface.DEFAULT_BOLD
-            gravity = Gravity.CENTER
-        }
-
-        conteudo.addView(titulo)
-
-        val mensagem = TextView(this).apply {
-
-            text =
-                "Em breve, vamos confirmar o CPF do responsável para liberar esta área!"
-
-            textSize = 15f
-            setTextColor(azulEscuro)
-            gravity = Gravity.CENTER
-
-            setPadding(
-                dp(10),
-                dp(15),
-                dp(10),
-                dp(15)
-            )
-        }
-
-        conteudo.addView(mensagem)
-
-        val fechar = TextView(this).apply {
-
-            text = "ENTENDI!"
-            textSize = 17f
-            setTextColor(Color.WHITE)
-            gravity = Gravity.CENTER
-            typeface = Typeface.DEFAULT_BOLD
-
-            background = fundoArredondado(
-                azul,
-                22
-            )
-
-            setOnClickListener {
-                somClique()
-                dialog.dismiss()
-            }
-        }
-
-        conteudo.addView(
-            fechar,
-            LinearLayout.LayoutParams(
-                dp(190),
-                dp(46)
-            )
-        )
-
-        dialog.setContentView(conteudo)
-        dialog.show()
-
-        dialog.window?.apply {
-
-            setBackgroundDrawable(
-                ColorDrawable(Color.TRANSPARENT)
-            )
-
-            setLayout(
-                minOf(
-                    dp(420),
-                    (resources.displayMetrics.widthPixels * 0.85f).toInt()
-                ),
-                WindowManager.LayoutParams.WRAP_CONTENT
-            )
-
-            setGravity(Gravity.CENTER)
-            setDimAmount(0.5f)
-
-            addFlags(
-                WindowManager.LayoutParams.FLAG_DIM_BEHIND
-            )
         }
     }
 
@@ -1291,6 +811,15 @@ class TelaInicialActivity : Activity() {
         }
 
         animacoesContinuas.clear()
+
+        if (::root.isInitialized) {
+            for (i in 0 until root.childCount) {
+
+                root.getChildAt(i)
+                    .animate()
+                    .cancel()
+            }
+        }
 
         sonsAtivos.toList().forEach { player ->
 

@@ -188,8 +188,12 @@
             android:screenOrientation="landscape" />
         <activity
             android:name=".LoginActivity"
-            android:exported="false"
+            android:exported="true"
             android:windowSoftInputMode="adjustResize" />
+        <!-- TELA DE LOGIN E CADASTRO -->
+
     </application>
+
+    <uses-permission android:name="android.permission.INTERNET" />
 
 </manifest>
