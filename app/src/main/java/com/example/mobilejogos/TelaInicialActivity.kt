@@ -1,3 +1,4 @@
+
 package com.example.mobilejogos
 
 import android.animation.Animator
@@ -20,6 +21,7 @@ import android.view.animation.OvershootInterpolator
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.TextView
+import android.widget.Toast
 import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.random.Random
@@ -41,6 +43,7 @@ class TelaInicialActivity : Activity() {
     private val alturaBase = 393f
 
     private var popupAberto = false
+    private var verificandoSessao = false
 
     // ==========================================
     // CORES DO GLITTER
@@ -59,6 +62,7 @@ class TelaInicialActivity : Activity() {
     // ==========================================
 
     private val sonsAtivos = mutableListOf<MediaPlayer>()
+    private var audioAmbiente: MediaPlayer? = null
 
     private val animacoesContinuas =
         mutableListOf<ValueAnimator>()
@@ -91,7 +95,6 @@ class TelaInicialActivity : Activity() {
 
         root.post {
             if (!isFinishing && !isDestroyed) {
-
                 larguraTela = root.width
                 alturaTela = root.height
 
@@ -105,19 +108,14 @@ class TelaInicialActivity : Activity() {
     // MEDIDAS PROPORCIONAIS
     // ==========================================
 
-    private fun x(valor: Float): Int {
-        return (valor / larguraBase * larguraTela).toInt()
-    }
+    private fun x(valor: Float): Int =
+        (valor / larguraBase * larguraTela).toInt()
 
-    private fun y(valor: Float): Int {
-        return (valor / alturaBase * alturaTela).toInt()
-    }
+    private fun y(valor: Float): Int =
+        (valor / alturaBase * alturaTela).toInt()
 
-    private fun dp(valor: Int): Int {
-        return (
-                valor * resources.displayMetrics.density
-                ).toInt()
-    }
+    private fun dp(valor: Int): Int =
+        (valor * resources.displayMetrics.density).toInt()
 
     // ==========================================
     // ADICIONAR IMAGENS
@@ -133,11 +131,8 @@ class TelaInicialActivity : Activity() {
     ): ImageView {
 
         val imagemView = ImageView(this).apply {
-
             setImageResource(imagem)
-
             scaleType = ImageView.ScaleType.FIT_CENTER
-
             contentDescription = descricao
         }
 
@@ -147,9 +142,7 @@ class TelaInicialActivity : Activity() {
                 x(largura),
                 y(altura)
             ).apply {
-
                 gravity = Gravity.TOP or Gravity.START
-
                 leftMargin = x(posX)
                 topMargin = y(posY)
             }
@@ -162,28 +155,20 @@ class TelaInicialActivity : Activity() {
     // SONS
     // ==========================================
 
-    /**
-     * Toca um som.
-     * Se [duracaoMaximaMs] for informado, o som é cortado
-     * depois desse tempo, com um fade-out curto no final.
-     */
     private fun tocarSom(
         recurso: Int,
         volume: Float,
         duracaoMaximaMs: Long? = null
     ) {
-
         val player = MediaPlayer.create(
             this,
             recurso
         ) ?: return
 
         sonsAtivos.add(player)
-
         player.setVolume(volume, volume)
 
         player.setOnCompletionListener {
-
             sonsAtivos.remove(it)
             it.release()
         }
@@ -191,7 +176,6 @@ class TelaInicialActivity : Activity() {
         player.start()
 
         if (duracaoMaximaMs != null) {
-
             root.postDelayed({
                 encerrarSomComFade(player, volume)
             }, duracaoMaximaMs)
@@ -202,44 +186,44 @@ class TelaInicialActivity : Activity() {
         player: MediaPlayer,
         volumeInicial: Float
     ) {
-
-        // Já terminou sozinho ou a tela foi fechada
         if (!sonsAtivos.contains(player)) return
 
-        ValueAnimator.ofFloat(volumeInicial, 0f).apply {
-
+        ValueAnimator.ofFloat(
+            volumeInicial,
+            0f
+        ).apply {
             duration = 200L
 
             addUpdateListener {
-
                 if (sonsAtivos.contains(player)) {
-
                     try {
-                        val v = it.animatedValue as Float
-                        player.setVolume(v, v)
+                        val volume =
+                            it.animatedValue as Float
+
+                        player.setVolume(volume, volume)
                     } catch (_: Exception) {
                     }
                 }
             }
 
-            addListener(object : AnimatorListenerAdapter() {
-
-                override fun onAnimationEnd(animation: Animator) {
-
-                    if (sonsAtivos.remove(player)) {
-
-                        try {
-                            player.stop()
-                        } catch (_: Exception) {
-                        }
-
-                        try {
-                            player.release()
-                        } catch (_: Exception) {
+            addListener(
+                object : AnimatorListenerAdapter() {
+                    override fun onAnimationEnd(
+                        animation: Animator
+                    ) {
+                        if (sonsAtivos.remove(player)) {
+                            try {
+                                player.stop()
+                            } catch (_: Exception) {
+                            }
+                            try {
+                                player.release()
+                            } catch (_: Exception) {
+                            }
                         }
                     }
                 }
-            })
+            )
 
             start()
         }
@@ -250,9 +234,9 @@ class TelaInicialActivity : Activity() {
     }
 
     private fun somMagico() {
-        // Toca só os primeiros 900 ms (+ 200 ms de fade-out).
-        // Aumente para deixar mais longo ou diminua para ficar mais curto.
-        tocarSom(R.raw.sominicio, 0.50f, 900L)
+        // O som mágico foi transferido para
+        // o login realizado com sucesso.
+        somClique()
     }
 
     private fun somBrilho() {
@@ -260,64 +244,169 @@ class TelaInicialActivity : Activity() {
     }
 
     // ==========================================
+    // MÚSICA AMBIENTE
+    // ==========================================
+
+    private fun iniciarSomAmbiente() {
+        if (audioAmbiente == null) {
+            audioAmbiente = MediaPlayer.create(
+                this,
+                R.raw.fundo
+            )?.apply {
+                isLooping = true
+                setVolume(0.17f, 0.17f)
+            }
+        }
+
+        try {
+            if (audioAmbiente?.isPlaying != true) {
+                audioAmbiente?.start()
+            }
+        } catch (_: Exception) {
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        iniciarSomAmbiente()
+    }
+
+    override fun onPause() {
+        try {
+            audioAmbiente?.pause()
+        } catch (_: Exception) {
+        }
+        super.onPause()
+    }
+
+    // ==========================================
     // AUTENTICAÇÃO
     // ==========================================
 
     private fun usuarioEstaLogado(): Boolean {
-
-        // Ainda falta conectar a autenticação JWT.
-        // Não liberamos acesso sem login real.
-        return false
+        return LudicaSessao.obter(this) != null
     }
 
     // ==========================================
-    // POP-UP DE LOGIN E CADASTRO
+    // POP-UP DE LOGIN
     // ==========================================
 
     private fun abrirPopupLogin() {
-
         if (popupAberto || isFinishing || isDestroyed) {
             return
         }
 
         popupAberto = true
 
-        // ESCONDE O BOTÃO JOGAR E A GIRAFINHA PRINCIPAL
-        // enquanto o pop-up estiver aberto
+        // Impede reutilizar token temporário antigo.
+        LoginDialog.encerrarSessao()
+
+        // ESCONDE O BOTÃO JOGAR E A GIRAFINHA.
         botaoJogar.visibility = View.INVISIBLE
         girafa.visibility = View.INVISIBLE
 
         LoginDialog(this) {
-
-            // EXECUTA QUANDO O POP-UP FECHA
-
+            // EXECUTA QUANDO O POP-UP FECHA.
             popupAberto = false
 
-            // RESTAURA O BOTÃO JOGAR E A GIRAFINHA
             botaoJogar.visibility = View.VISIBLE
             girafa.visibility = View.VISIBLE
 
+            val token = LoginDialog.tokenDaSessao()
+            val id = LoginDialog.idDaSessao()
+
+            if (
+                !token.isNullOrBlank() &&
+                !id.isNullOrBlank()
+            ) {
+                try {
+                    LudicaSessao.salvar(
+                        this,
+                        token,
+                        id
+                    )
+
+                    if (!isFinishing && !isDestroyed) {
+                        abrirTelaJogos()
+                    }
+                } catch (_: Exception) {
+                    Toast.makeText(
+                        this,
+                        "Não foi possível guardar sua sessão.",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            }
         }.mostrar()
     }
 
     // ==========================================
-    // VERIFICAR ACESSO
+    // VERIFICAR LOGIN
     // ==========================================
 
     private fun verificarAcesso(
         aoEstarLogado: () -> Unit
     ) {
+        if (popupAberto || verificandoSessao) return
 
-        if (popupAberto) return
+        val sessao = LudicaSessao.obter(this)
 
-        if (usuarioEstaLogado()) {
-
-            aoEstarLogado()
-
-        } else {
-
+        if (sessao == null) {
             abrirPopupLogin()
+            return
         }
+
+        verificandoSessao = true
+
+        // CONFIRMA SE O TOKEN CONTINUA VÁLIDO.
+        ApiService.listarCriancas(
+            sessao.second,
+            sessao.first
+        ) { resultado ->
+
+            verificandoSessao = false
+
+            if (isFinishing || isDestroyed) {
+                return@listarCriancas
+            }
+
+            resultado.onSuccess {
+                aoEstarLogado()
+            }
+
+            resultado.onFailure { falha ->
+                val codigo =
+                    (falha as? ApiService.ApiException)
+                        ?.statusCode
+
+                if (codigo == 401 || codigo == 403) {
+                    LudicaSessao.limpar(this)
+                    LoginDialog.encerrarSessao()
+                    abrirPopupLogin()
+                } else {
+                    Toast.makeText(
+                        this,
+                        "Sem conexão para verificar sua sessão. Tente novamente.",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            }
+        }
+    }
+
+    // ==========================================
+    // ABRIR TELA INICIAL DOS JOGOS
+    // ==========================================
+
+    private fun abrirTelaJogos() {
+        if (isFinishing || isDestroyed) return
+
+        startActivity(
+            Intent(
+                this,
+                TelaInicialJogosGeral::class.java
+            )
+        )
     }
 
     // ==========================================
@@ -325,7 +414,6 @@ class TelaInicialActivity : Activity() {
     // ==========================================
 
     private fun abrirQuemVaiJogar() {
-
         startActivity(
             Intent(
                 this,
@@ -339,22 +427,16 @@ class TelaInicialActivity : Activity() {
     // ==========================================
 
     private fun mostrarPopupCpf() {
-
         AlertDialog.Builder(this)
             .setTitle("Área dos responsáveis")
             .setMessage(
                 "Em breve, vamos confirmar o CPF do responsável para liberar esta área!"
             )
             .setPositiveButton("ENTENDI") { dialog, _ ->
-
                 somClique()
                 dialog.dismiss()
             }
             .show()
-
-        // Futuramente abriremos a calculadora de CPF.
-        // Somente após uma confirmação segura
-        // navegaremos para TelaResponsavelActivity.
     }
 
     // ==========================================
@@ -362,25 +444,16 @@ class TelaInicialActivity : Activity() {
     // ==========================================
 
     private fun montarTela() {
-
         animacoesContinuas.forEach {
             it.cancel()
         }
-
         animacoesContinuas.clear()
 
         root.removeAllViews()
 
-        // ======================================
         // GRAMA E MORRINHOS
-        // ======================================
-
         val grama = ImageView(this).apply {
-
-            setImageResource(
-                R.drawable.gramainicio
-            )
-
+            setImageResource(R.drawable.gramainicio)
             scaleType = ImageView.ScaleType.FIT_XY
         }
 
@@ -390,15 +463,11 @@ class TelaInicialActivity : Activity() {
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 y(285f)
             ).apply {
-
                 gravity = Gravity.BOTTOM
             }
         )
 
-        // ======================================
         // NUVENS
-        // ======================================
-
         val nuvemEsquerda = adicionarImagem(
             R.drawable.nuveminicio,
             140f, 55f, 105f, 90f,
@@ -428,17 +497,13 @@ class TelaInicialActivity : Activity() {
         )
 
         botaoPais.setOnClickListener {
-
             if (!botaoPais.isEnabled || popupAberto) {
                 return@setOnClickListener
             }
 
             botaoPais.isEnabled = false
-
-            // SOM DE CLIQUE
             somClique()
 
-            // GLITTER
             animarEstrelinhas(
                 botaoPais,
                 18,
@@ -446,10 +511,8 @@ class TelaInicialActivity : Activity() {
                 125
             )
 
-            // GIRAR EM TORNO DO PRÓPRIO CENTRO
             botaoPais.pivotX = botaoPais.width / 2f
             botaoPais.pivotY = botaoPais.height / 2f
-
             botaoPais.rotation = 0f
 
             val giro = ObjectAnimator.ofFloat(
@@ -457,25 +520,21 @@ class TelaInicialActivity : Activity() {
                 View.ROTATION,
                 0f,
                 360f
-            )
-
-            giro.duration = 850L
-
-            giro.interpolator =
-                AccelerateDecelerateInterpolator()
+            ).apply {
+                duration = 850L
+                interpolator =
+                    AccelerateDecelerateInterpolator()
+            }
 
             giro.addListener(
                 object : AnimatorListenerAdapter() {
-
                     override fun onAnimationEnd(
                         animation: Animator
                     ) {
-
                         botaoPais.rotation = 0f
                         botaoPais.isEnabled = true
 
                         if (!isFinishing && !isDestroyed) {
-
                             verificarAcesso {
                                 mostrarPopupCpf()
                             }
@@ -498,17 +557,13 @@ class TelaInicialActivity : Activity() {
         )
 
         cabecaGirafa.setOnClickListener {
-
             if (!cabecaGirafa.isEnabled || popupAberto) {
                 return@setOnClickListener
             }
 
             cabecaGirafa.isEnabled = false
-
-            // SOM SUAVE
             somClique()
 
-            // BRILHINHOS
             animarEstrelinhas(
                 cabecaGirafa,
                 16,
@@ -516,7 +571,6 @@ class TelaInicialActivity : Activity() {
                 100
             )
 
-            // ANIMAÇÃO DA CABECINHA
             cabecaGirafa.animate()
                 .rotation(-15f)
                 .translationY(-y(7f).toFloat())
@@ -524,13 +578,11 @@ class TelaInicialActivity : Activity() {
                 .scaleY(1.12f)
                 .setDuration(150)
                 .withEndAction {
-
                     cabecaGirafa.animate()
                         .rotation(13f)
                         .translationY(y(3f).toFloat())
                         .setDuration(180)
                         .withEndAction {
-
                             cabecaGirafa.animate()
                                 .rotation(0f)
                                 .translationY(0f)
@@ -538,10 +590,7 @@ class TelaInicialActivity : Activity() {
                                 .scaleY(1f)
                                 .setDuration(180)
                                 .withEndAction {
-
                                     cabecaGirafa.isEnabled = true
-
-                                    // LOGIN OU QUEM VAI JOGAR
                                     verificarAcesso {
                                         abrirQuemVaiJogar()
                                     }
@@ -576,17 +625,15 @@ class TelaInicialActivity : Activity() {
         botaoJogar.bringToFront()
 
         botaoJogar.setOnClickListener {
-
             if (!botaoJogar.isEnabled || popupAberto) {
                 return@setOnClickListener
             }
 
             botaoJogar.isEnabled = false
 
-            // SOM MÁGICO (CURTO)
+            // AGORA USA O CLIQUE SUAVE
             somMagico()
 
-            // GLITTER
             animarEstrelinhas(
                 botaoJogar,
                 28,
@@ -594,24 +641,19 @@ class TelaInicialActivity : Activity() {
                 175
             )
 
-            // BOTÃO APERTA E VOLTA
             botaoJogar.animate()
                 .scaleX(0.94f)
                 .scaleY(0.94f)
                 .setDuration(120)
                 .withEndAction {
-
                     botaoJogar.animate()
                         .scaleX(1f)
                         .scaleY(1f)
                         .setDuration(160)
                         .withEndAction {
-
                             botaoJogar.isEnabled = true
-
-                            // ABRE LOGIN QUANDO NECESSÁRIO
                             verificarAcesso {
-                                abrirQuemVaiJogar()
+                                abrirTelaJogos()
                             }
                         }
                         .start()
@@ -619,27 +661,10 @@ class TelaInicialActivity : Activity() {
                 .start()
         }
 
-        // ======================================
-        // ANIMAR NUVENS
-        // ======================================
-
-        animarNuvem(
-            nuvemEsquerda,
-            12f,
-            3500L
-        )
-
-        animarNuvem(
-            nuvemDireita,
-            -15f,
-            4200L
-        )
-
-        animarNuvem(
-            nuvemCentral,
-            8f,
-            3000L
-        )
+        // NUVENS ANIMADAS
+        animarNuvem(nuvemEsquerda, 12f, 3500L)
+        animarNuvem(nuvemDireita, -15f, 4200L)
+        animarNuvem(nuvemCentral, 8f, 3000L)
     }
 
     // ==========================================
@@ -651,7 +676,6 @@ class TelaInicialActivity : Activity() {
         distancia: Float,
         duracao: Long
     ) {
-
         val deslocamento = x(distancia).toFloat()
 
         val animacao = ObjectAnimator.ofFloat(
@@ -660,12 +684,9 @@ class TelaInicialActivity : Activity() {
             -deslocamento,
             deslocamento
         ).apply {
-
             duration = duracao
-
             repeatCount = ValueAnimator.INFINITE
             repeatMode = ValueAnimator.REVERSE
-
             interpolator =
                 AccelerateDecelerateInterpolator()
         }
@@ -675,11 +696,10 @@ class TelaInicialActivity : Activity() {
     }
 
     // ==========================================
-    // GIRAFINHA E BOTÃO SOBEM JUNTOS
+    // ANIMAÇÃO DE ENTRADA
     // ==========================================
 
     private fun iniciarAnimacoes() {
-
         val distanciaInicial = y(210f).toFloat()
 
         girafa.translationY = distanciaInicial
@@ -688,16 +708,12 @@ class TelaInicialActivity : Activity() {
         girafa.alpha = 1f
         botaoJogar.alpha = 1f
 
-        // SOM DE BRILHO NA ENTRADA
         root.postDelayed({
-
             if (!isFinishing && !isDestroyed) {
                 somBrilho()
             }
-
         }, 400)
 
-        // GIRAFINHA SOBE
         girafa.animate()
             .translationY(0f)
             .setDuration(1700)
@@ -706,20 +722,16 @@ class TelaInicialActivity : Activity() {
                 OvershootInterpolator(0.7f)
             )
             .withEndAction {
-
-                // GLITTER AO CHEGAR
                 animarEstrelinhas(
                     girafa,
                     24,
                     80,
                     190
                 )
-
                 animarGirafaParada()
             }
             .start()
 
-        // BOTÃO SOBE JUNTO
         botaoJogar.animate()
             .translationY(0f)
             .setDuration(1700)
@@ -735,19 +747,15 @@ class TelaInicialActivity : Activity() {
     // ==========================================
 
     private fun animarGirafaParada() {
-
         val animacao = ObjectAnimator.ofFloat(
             girafa,
             View.TRANSLATION_Y,
             0f,
             -y(5f).toFloat()
         ).apply {
-
             duration = 1600L
-
             repeatCount = ValueAnimator.INFINITE
             repeatMode = ValueAnimator.REVERSE
-
             interpolator =
                 AccelerateDecelerateInterpolator()
         }
@@ -766,7 +774,6 @@ class TelaInicialActivity : Activity() {
         distanciaMinima: Int,
         distanciaMaxima: Int
     ) {
-
         val posicaoAlvo = IntArray(2)
         val posicaoRoot = IntArray(2)
 
@@ -784,9 +791,7 @@ class TelaInicialActivity : Activity() {
                     alvo.height / 2f
 
         repeat(quantidade) { indice ->
-
             val estrela = TextView(this).apply {
-
                 text = if (indice % 3 == 0) "✦" else "★"
 
                 textSize =
@@ -798,7 +803,6 @@ class TelaInicialActivity : Activity() {
 
                 gravity = Gravity.CENTER
                 typeface = Typeface.DEFAULT_BOLD
-
                 elevation = dp(12).toFloat()
             }
 
@@ -810,7 +814,6 @@ class TelaInicialActivity : Activity() {
                     tamanho,
                     tamanho
                 ).apply {
-
                     leftMargin =
                         (centroX - tamanho / 2f).toInt()
 
@@ -823,13 +826,12 @@ class TelaInicialActivity : Activity() {
                 (2.0 * Math.PI * indice / quantidade) +
                         Random.nextDouble(-0.25, 0.25)
 
-            val distancia =
-                x(
-                    Random.nextInt(
-                        distanciaMinima,
-                        distanciaMaxima
-                    ).toFloat()
-                ).toDouble()
+            val distancia = x(
+                Random.nextInt(
+                    distanciaMinima,
+                    distanciaMaxima
+                ).toFloat()
+            ).toDouble()
 
             estrela.scaleX = 0.15f
             estrela.scaleY = 0.15f
@@ -855,7 +857,6 @@ class TelaInicialActivity : Activity() {
                     AccelerateDecelerateInterpolator()
                 )
                 .withEndAction {
-
                     root.removeView(estrela)
                 }
                 .start()
@@ -867,16 +868,13 @@ class TelaInicialActivity : Activity() {
     // ==========================================
 
     override fun onDestroy() {
-
         animacoesContinuas.forEach {
             it.cancel()
         }
-
         animacoesContinuas.clear()
 
         if (::root.isInitialized) {
             for (i in 0 until root.childCount) {
-
                 root.getChildAt(i)
                     .animate()
                     .cancel()
@@ -884,19 +882,22 @@ class TelaInicialActivity : Activity() {
         }
 
         sonsAtivos.toList().forEach { player ->
-
             try {
                 player.stop()
             } catch (_: Exception) {
             }
-
             try {
                 player.release()
             } catch (_: Exception) {
             }
         }
-
         sonsAtivos.clear()
+
+        try {
+            audioAmbiente?.release()
+        } catch (_: Exception) {
+        }
+        audioAmbiente = null
 
         super.onDestroy()
     }
