@@ -129,7 +129,22 @@
         <!-- ====================================== -->
 
         <activity
+            android:name=".IdentificandoEmocoes2Activity"
+            android:exported="true"
+            android:screenOrientation="landscape" />
+
+        <activity
             android:name=".IdentificandoEmocoesActivity"
+            android:exported="true"
+            android:screenOrientation="landscape" />
+
+        <activity
+            android:name=".IdentificandoEmocoes3Activity"
+            android:exported="true"
+            android:screenOrientation="landscape" />
+
+        <activity
+            android:name=".IdentificandoEmocoes4Activity"
             android:exported="true"
             android:screenOrientation="landscape" />
 

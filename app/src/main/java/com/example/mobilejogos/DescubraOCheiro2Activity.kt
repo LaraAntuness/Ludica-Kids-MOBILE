@@ -1,5 +1,7 @@
 package com.example.mobilejogos
 
+import android.animation.ObjectAnimator
+import android.animation.PropertyValuesHolder
 import android.app.Activity
 import android.content.Intent
 import android.content.pm.ActivityInfo
@@ -7,18 +9,19 @@ import android.graphics.Color
 import android.graphics.PorterDuff
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.media.MediaPlayer
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import android.util.TypedValue
 import android.view.Gravity
-import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
-import android.view.animation.AccelerateDecelerateInterpolator
+import android.view.animation.OvershootInterpolator
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.TextView
-import android.widget.Toast
 
 class DescubraOCheiro2Activity : Activity() {
 
@@ -27,10 +30,19 @@ class DescubraOCheiro2Activity : Activity() {
     private val larguraBase = 874f
     private val alturaBase = 393f
 
+    private val handler = Handler(Looper.getMainLooper())
+
     private var jogoFinalizado = false
     private var popupAberto = false
+    private var processandoClique = false
+    private var navegando = false
+
+    private var audioAtual: MediaPlayer? = null
+
+    private val animacoes = mutableMapOf<View, ObjectAnimator>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
+
         super.onCreate(savedInstanceState)
 
         requestedOrientation =
@@ -51,86 +63,6 @@ class DescubraOCheiro2Activity : Activity() {
     }
 
     // =====================================================
-    // CORREÇÃO DOS TOQUES NOS ALIMENTOS
-    // =====================================================
-
-    override fun dispatchTouchEvent(event: MotionEvent): Boolean {
-
-        if (
-            ::tela.isInitialized &&
-            tela.width > 0 &&
-            tela.height > 0 &&
-            !jogoFinalizado &&
-            !popupAberto
-        ) {
-
-            val localizacao = IntArray(2)
-
-            tela.getLocationOnScreen(localizacao)
-
-            val sx = tela.width.toFloat() / larguraBase
-            val sy = tela.height.toFloat() / alturaBase
-
-            val toqueX = (event.rawX - localizacao[0]) / sx
-            val toqueY = (event.rawY - localizacao[1]) / sy
-
-            val chocolate = dentroDaArea(
-                toqueX, toqueY,
-                395f, 105f, 155f, 100f
-            )
-
-            val pao = dentroDaArea(
-                toqueX, toqueY,
-                600f, 105f, 155f, 100f
-            )
-
-            val maracuja = dentroDaArea(
-                toqueX, toqueY,
-                395f, 245f, 155f, 100f
-            )
-
-            val batataFrita = dentroDaArea(
-                toqueX, toqueY,
-                600f, 245f, 155f, 100f
-            )
-
-            val tocouAlimento =
-                chocolate || pao || maracuja || batataFrita
-
-            if (tocouAlimento) {
-
-                if (event.actionMasked == MotionEvent.ACTION_UP) {
-
-                    if (maracuja) {
-                        mostrarResposta(true)
-                    } else {
-                        mostrarResposta(false)
-                    }
-                }
-
-                return true
-            }
-        }
-
-        return super.dispatchTouchEvent(event)
-    }
-
-    private fun dentroDaArea(
-        toqueX: Float,
-        toqueY: Float,
-        x: Float,
-        y: Float,
-        largura: Float,
-        altura: Float
-    ): Boolean {
-
-        return toqueX >= x &&
-                toqueX <= x + largura &&
-                toqueY >= y &&
-                toqueY <= y + altura
-    }
-
-    // =====================================================
     // MONTAR TELA
     // =====================================================
 
@@ -140,21 +72,25 @@ class DescubraOCheiro2Activity : Activity() {
 
         jogoFinalizado = false
         popupAberto = false
+        processandoClique = false
+        navegando = false
 
         val sx = tela.width.toFloat() / larguraBase
         val sy = tela.height.toFloat() / alturaBase
 
-        // =================================================
-        // PLANO DE FUNDO
-        // =================================================
+        // NOVO PLANO DE FUNDO
 
-        val fundo = ImageView(this)
+        val fundo = ImageView(this).apply {
 
-        fundo.setImageResource(R.drawable.planodescubracomocheiro)
+            setImageResource(
+                R.drawable.planodefundodescubra
+            )
 
-        fundo.scaleType = ImageView.ScaleType.FIT_XY
+            scaleType = ImageView.ScaleType.FIT_XY
 
-        fundo.isClickable = false
+            isClickable = false
+            isFocusable = false
+        }
 
         tela.addView(
             fundo,
@@ -164,9 +100,7 @@ class DescubraOCheiro2Activity : Activity() {
             )
         )
 
-        // =================================================
-        // BOTÃO VOLTAR
-        // =================================================
+        // BOTÃO RETORNO ROSA
 
         val voltar = adicionarImagem(
             "botaoretornorosa",
@@ -174,16 +108,16 @@ class DescubraOCheiro2Activity : Activity() {
             sx, sy
         )
 
-        voltar.isClickable = true
         voltar.contentDescription = "Voltar"
+        voltar.isClickable = true
+        voltar.isFocusable = true
 
         voltar.setOnClickListener {
-            finish()
+
+            voltarParaCincoOpcoes()
         }
 
-        // =================================================
         // TÍTULO
-        // =================================================
 
         adicionarImagem(
             "titulodescubracomocheirorosa",
@@ -191,9 +125,7 @@ class DescubraOCheiro2Activity : Activity() {
             sx, sy
         )
 
-        // =================================================
         // MENINA ROSA
-        // =================================================
 
         adicionarImagem(
             "meninarosa",
@@ -201,55 +133,53 @@ class DescubraOCheiro2Activity : Activity() {
             sx, sy
         )
 
-        // =================================================
-        // BALÃO ROSA
-        // =================================================
+        // BALÃO ROSA CORRIGIDO
 
         criarBalao(sx, sy)
 
-        // =================================================
         // CHOCOLATE
-        // =================================================
 
         criarOpcao(
-            "chocolate",
-            395, 105,
-            sx, sy
+            nomeImagem = "chocolate",
+            x = 395,
+            y = 105,
+            sx = sx,
+            sy = sy
         )
 
-        // =================================================
         // PÃO
-        // =================================================
 
         criarOpcao(
-            "pao",
-            600, 105,
-            sx, sy
+            nomeImagem = "pao",
+            x = 600,
+            y = 105,
+            sx = sx,
+            sy = sy
         )
 
-        // =================================================
-        // MARACUJÁ - CORRETO
-        // =================================================
+        // MARACUJÁ - RESPOSTA CORRETA
 
         criarOpcao(
-            "maracuja",
-            395, 245,
-            sx, sy
+            nomeImagem = "maracuja",
+            x = 395,
+            y = 245,
+            sx = sx,
+            sy = sy
         )
 
-        // =================================================
         // BATATA FRITA
-        // =================================================
 
         criarOpcao(
-            "batatafrita",
-            600, 245,
-            sx, sy
+            nomeImagem = "batatafrita",
+            x = 600,
+            y = 245,
+            sx = sx,
+            sy = sy
         )
     }
 
     // =====================================================
-    // BALÃO ROSA
+    // BALÃO ROSA CORRIGIDO
     // =====================================================
 
     private fun criarBalao(
@@ -257,52 +187,90 @@ class DescubraOCheiro2Activity : Activity() {
         sy: Float
     ) {
 
-        val balao = adicionarImagem(
-            "balaopergunta",
-            85, 80, 340, 135,
-            sx, sy
-        )
+        val containerBalao = FrameLayout(this).apply {
 
-        // MUDA O BALÃO PARA ROSA-CLARO
-
-        balao.setColorFilter(
-            Color.parseColor("#F4BBD3"),
-            PorterDuff.Mode.SRC_IN
-        )
-
-        // PERGUNTA
-
-        val pergunta = TextView(this)
-
-        pergunta.text = "Qual alimento tem um\ncheiro azedinho?"
-
-        pergunta.gravity = Gravity.CENTER
-
-        pergunta.setTextColor(
-            Color.parseColor("#503344")
-        )
-
-        pergunta.setTextSize(
-            TypedValue.COMPLEX_UNIT_PX,
-            18f * sy
-        )
-
-        pergunta.typeface = Typeface.create(
-            "sans-serif",
-            Typeface.BOLD
-        )
-
-        pergunta.maxLines = 2
+            isClickable = false
+            isFocusable = false
+        }
 
         adicionarView(
-            pergunta,
-            125, 108, 235, 48,
+            containerBalao,
+            75, 85, 300, 135,
             sx, sy
+        )
+
+        // IMAGEM DO BALÃO
+
+        val balao = ImageView(this).apply {
+
+            setImageResource(R.drawable.balaopergunta)
+
+            scaleType = ImageView.ScaleType.FIT_XY
+
+            setColorFilter(
+                Color.parseColor("#F4BBD3"),
+                PorterDuff.Mode.SRC_IN
+            )
+
+            isClickable = false
+        }
+
+        containerBalao.addView(
+            balao,
+            FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+            )
+        )
+
+        // TEXTO CENTRALIZADO
+
+        val pergunta = TextView(this).apply {
+
+            text = "Qual alimento tem\num cheiro azedinho?"
+
+            gravity = Gravity.CENTER
+
+            setTextColor(
+                Color.parseColor("#503344")
+            )
+
+            setTextSize(
+                TypedValue.COMPLEX_UNIT_PX,
+                18f * minOf(sx, sy)
+            )
+
+            typeface = Typeface.create(
+                "sans-serif",
+                Typeface.BOLD
+            )
+
+            includeFontPadding = false
+
+            maxLines = 2
+
+            setPadding(0, 0, 0, 0)
+
+            isClickable = false
+        }
+
+        val parametrosTexto = FrameLayout.LayoutParams(
+            (245 * sx).toInt().coerceAtLeast(1),
+            (65 * sy).toInt().coerceAtLeast(1)
+        )
+
+        parametrosTexto.leftMargin = (27 * sx).toInt()
+
+        parametrosTexto.topMargin = (15 * sy).toInt()
+
+        containerBalao.addView(
+            pergunta,
+            parametrosTexto
         )
     }
 
     // =====================================================
-    // CRIAR CAIXINHA DOS ALIMENTOS
+    // CARTÕES DOS ALIMENTOS
     // =====================================================
 
     private fun criarOpcao(
@@ -313,47 +281,57 @@ class DescubraOCheiro2Activity : Activity() {
         sy: Float
     ) {
 
-        // SOMBRA
+        // SOMBRA DO CARTÃO
 
-        val sombra = View(this)
+        val sombra = View(this).apply {
 
-        sombra.background = GradientDrawable().apply {
+            background = GradientDrawable().apply {
 
-            setColor(
-                Color.parseColor("#E8E7E7")
-            )
+                setColor(
+                    Color.parseColor("#E8E7E7")
+                )
 
-            cornerRadius = 17f * sx
+                cornerRadius = 17f * sx
+            }
+
+            isClickable = false
+            isFocusable = false
         }
 
         adicionarView(
             sombra,
-            x + 13, y + 13,
-            155, 100,
-            sx, sy
+            x + 13,
+            y + 13,
+            155,
+            100,
+            sx,
+            sy
         )
 
         // CARTÃO ROSA
 
-        val cartao = FrameLayout(this)
+        val cartao = FrameLayout(this).apply {
 
-        cartao.background = GradientDrawable().apply {
+            background = GradientDrawable().apply {
 
-            setColor(
-                Color.parseColor("#F3B8D0")
-            )
+                setColor(
+                    Color.parseColor("#F3B8D0")
+                )
 
-            cornerRadius = 17f * sx
+                cornerRadius = 17f * sx
+            }
+
+            clipChildren = false
+            clipToPadding = false
         }
 
         adicionarView(
             cartao,
-            x, y,
-            155, 100,
+            x, y, 155, 100,
             sx, sy
         )
 
-        // IMAGEM
+        // IMAGEM DO ALIMENTO
 
         val alimento = ImageView(this)
 
@@ -381,6 +359,7 @@ class DescubraOCheiro2Activity : Activity() {
         alimento.contentDescription = nomeImagem
 
         alimento.isClickable = false
+        alimento.isFocusable = false
 
         val parametrosImagem = FrameLayout.LayoutParams(
             (115 * sx).toInt().coerceAtLeast(1),
@@ -393,74 +372,161 @@ class DescubraOCheiro2Activity : Activity() {
             parametrosImagem
         )
 
-        // TOQUE ADICIONAL NO CARTÃO
-        // O dispatchTouchEvent TAMBÉM RECONHECE A ÁREA
+        // ÁREA TRANSPARENTE DE CLIQUE
 
-        cartao.isClickable = true
+        val areaClique = View(this).apply {
 
-        cartao.setOnClickListener {
+            setBackgroundColor(Color.TRANSPARENT)
 
-            if (!jogoFinalizado && !popupAberto) {
+            isClickable = true
+            isFocusable = true
 
-                mostrarResposta(
-                    nomeImagem == "maracuja"
-                )
+            contentDescription =
+                "Selecionar $nomeImagem"
+        }
+
+        cartao.addView(
+            areaClique,
+            FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+            )
+        )
+
+        // ANIMAÇÃO E SOM AO CLICAR
+
+        areaClique.setOnClickListener {
+
+            if (
+                !jogoFinalizado &&
+                !popupAberto &&
+                !processandoClique &&
+                !navegando
+            ) {
+
+                processandoClique = true
+
+                animarPulsacao(cartao)
+
+                tocarAudio(R.raw.brilho_suave)
+
+                handler.postDelayed({
+
+                    processandoClique = false
+
+                    if (!navegando && !isFinishing) {
+
+                        mostrarResposta(
+                            nomeImagem == "maracuja",
+                            sx,
+                            sy
+                        )
+                    }
+
+                }, 380L)
             }
         }
     }
 
     // =====================================================
-    // RESPOSTA DA CRIANÇA
+    // ANIMAÇÃO DE PULSAÇÃO
+    // =====================================================
+
+    private fun animarPulsacao(view: View) {
+
+        animacoes.remove(view)?.cancel()
+
+        view.scaleX = 1f
+        view.scaleY = 1f
+
+        val escalaX = PropertyValuesHolder.ofFloat(
+            View.SCALE_X,
+            1f,
+            0.88f,
+            1.10f,
+            1f
+        )
+
+        val escalaY = PropertyValuesHolder.ofFloat(
+            View.SCALE_Y,
+            1f,
+            0.88f,
+            1.10f,
+            1f
+        )
+
+        val animacao = ObjectAnimator.ofPropertyValuesHolder(
+            view,
+            escalaX,
+            escalaY
+        )
+
+        animacao.duration = 380L
+
+        animacoes[view] = animacao
+
+        animacao.start()
+    }
+
+    // =====================================================
+    // CONFERIR RESPOSTA
     // =====================================================
 
     private fun mostrarResposta(
-        correta: Boolean
+        correta: Boolean,
+        sx: Float,
+        sy: Float
     ) {
 
-        if (jogoFinalizado || popupAberto) {
+        if (
+            jogoFinalizado ||
+            popupAberto ||
+            navegando
+        ) {
             return
         }
 
         if (correta) {
 
             jogoFinalizado = true
-
-            mostrarPopupParabens()
-
-        } else {
-
-            Toast.makeText(
-                this,
-                "Tente novamente!",
-                Toast.LENGTH_SHORT
-            ).show()
         }
+
+        mostrarPopup(
+            correta,
+            sx,
+            sy
+        )
     }
 
     // =====================================================
-    // POP-UP DE PARABÉNS
+    // POP-UP PERSONALIZADO
     // =====================================================
 
-    private fun mostrarPopupParabens() {
+    private fun mostrarPopup(
+        correta: Boolean,
+        sx: Float,
+        sy: Float
+    ) {
 
-        if (popupAberto) {
-            return
-        }
+        if (popupAberto) return
 
         popupAberto = true
 
-        val sx = tela.width.toFloat() / larguraBase
-        val sy = tela.height.toFloat() / alturaBase
+        val escala = minOf(sx, sy)
 
-        // CAMADA ESCURA
+        // CAMADA ESCURECIDA
 
-        val camadaEscura = FrameLayout(this)
+        val camadaEscura = FrameLayout(this).apply {
 
-        camadaEscura.setBackgroundColor(
-            Color.parseColor("#99000000")
-        )
+            setBackgroundColor(
+                Color.argb(85, 35, 45, 40)
+            )
 
-        camadaEscura.isClickable = true
+            isClickable = true
+            isFocusable = true
+
+            alpha = 0f
+        }
 
         tela.addView(
             camadaEscura,
@@ -470,265 +536,408 @@ class DescubraOCheiro2Activity : Activity() {
             )
         )
 
+        camadaEscura.animate()
+            .alpha(1f)
+            .setDuration(350)
+            .start()
+
         // CAIXA DO POP-UP
 
-        val popup = FrameLayout(this)
+        val popup = FrameLayout(this).apply {
 
-        popup.background = GradientDrawable(
-            GradientDrawable.Orientation.TOP_BOTTOM,
-            intArrayOf(
-                Color.parseColor("#FFF9F3"),
-                Color.parseColor("#FFE7EF")
-            )
-        ).apply {
+            background = GradientDrawable(
+                GradientDrawable.Orientation.TOP_BOTTOM,
+                intArrayOf(
+                    Color.rgb(255, 253, 245),
+                    Color.rgb(255, 249, 228)
+                )
+            ).apply {
 
-            cornerRadius = 28f * sx
+                cornerRadius = 28f * escala
 
-            setStroke(
-                (4 * sx).toInt().coerceAtLeast(1),
-                Color.parseColor("#F5B6D0")
-            )
+                setStroke(
+                    (3 * escala).toInt().coerceAtLeast(2),
+                    Color.rgb(245, 222, 160)
+                )
+            }
+
+            elevation = 12f * escala
+
+            isClickable = true
         }
-
-        popup.elevation = 15f * sx
-
-        val parametrosPopup = FrameLayout.LayoutParams(
-            (540 * sx).toInt(),
-            (270 * sy).toInt(),
-            Gravity.CENTER
-        )
 
         camadaEscura.addView(
             popup,
-            parametrosPopup
+            FrameLayout.LayoutParams(
+                (540 * sx).toInt(),
+                (260 * sy).toInt(),
+                Gravity.CENTER
+            )
         )
 
-        // ANIMAÇÃO
+        // ANIMAÇÃO DE ENTRADA
 
-        popup.scaleX = 0.5f
-        popup.scaleY = 0.5f
+        popup.scaleX = 0.6f
+        popup.scaleY = 0.6f
         popup.alpha = 0f
 
         popup.animate()
             .scaleX(1f)
             .scaleY(1f)
             .alpha(1f)
-            .setDuration(450)
+            .setDuration(500)
             .setInterpolator(
-                AccelerateDecelerateInterpolator()
+                OvershootInterpolator(1.1f)
             )
             .start()
 
-        // =================================================
-        // DECORAÇÃO
-        // =================================================
+        // POSICIONAR ELEMENTOS DO POP-UP
 
-        val estrela1 = TextView(this).apply {
+        fun colocar(
+            view: View,
+            x: Int,
+            y: Int,
+            largura: Int,
+            altura: Int
+        ) {
 
-            text = "★"
-
-            gravity = Gravity.CENTER
-
-            setTextColor(
-                Color.parseColor("#F4BE63")
+            val params = FrameLayout.LayoutParams(
+                (largura * sx).toInt().coerceAtLeast(1),
+                (altura * sy).toInt().coerceAtLeast(1)
             )
 
-            setTextSize(
-                TypedValue.COMPLEX_UNIT_PX,
-                38f * sy
-            )
+            params.leftMargin = (x * sx).toInt()
+            params.topMargin = (y * sy).toInt()
+
+            popup.addView(view, params)
         }
 
-        adicionarViewNoPopup(
-            popup,
-            estrela1,
-            35, 20, 45, 45,
-            sx, sy
+        // CRIAR TEXTOS
+
+        fun criarTexto(
+            conteudo: String,
+            tamanho: Float,
+            cor: Int
+        ): TextView {
+
+            return TextView(this).apply {
+
+                text = conteudo
+
+                setTextColor(cor)
+
+                setTextSize(
+                    TypedValue.COMPLEX_UNIT_PX,
+                    tamanho * escala
+                )
+
+                typeface = Typeface.DEFAULT_BOLD
+
+                gravity = Gravity.CENTER
+
+                includeFontPadding = false
+            }
+        }
+
+        // GIRAFINHA
+
+        val girafinha = ImageView(this).apply {
+
+            setImageResource(R.drawable.logoinferior)
+
+            scaleType = ImageView.ScaleType.FIT_CENTER
+        }
+
+        colocar(
+            girafinha,
+            215, 0, 110, 95
         )
 
-        val estrela2 = TextView(this).apply {
+        girafinha.scaleX = 0f
+        girafinha.scaleY = 0f
 
-            text = "★"
-
-            gravity = Gravity.CENTER
-
-            setTextColor(
-                Color.parseColor("#F4BE63")
+        girafinha.animate()
+            .scaleX(1f)
+            .scaleY(1f)
+            .setStartDelay(200)
+            .setDuration(600)
+            .setInterpolator(
+                OvershootInterpolator(1.8f)
             )
+            .start()
 
-            setTextSize(
-                TypedValue.COMPLEX_UNIT_PX,
-                38f * sy
-            )
-        }
+        // ESTRELAS DECORATIVAS
 
-        adicionarViewNoPopup(
-            popup,
-            estrela2,
-            460, 20, 45, 45,
-            sx, sy
+        val estrelaEsquerda = criarTexto(
+            "✦",
+            26f,
+            Color.rgb(245, 210, 135)
         )
 
-        // =================================================
-        // TÍTULO
-        // =================================================
+        colocar(
+            estrelaEsquerda,
+            75, 40, 35, 35
+        )
 
-        val titulo = TextView(this).apply {
+        val estrelaDireita = criarTexto(
+            "✦",
+            26f,
+            Color.rgb(245, 210, 135)
+        )
 
-            text = "Parabéns, explorador!"
+        colocar(
+            estrelaDireita,
+            430, 40, 35, 35
+        )
 
-            gravity = Gravity.CENTER
+        // TÍTULO DO POP-UP
 
-            setTextColor(
-                Color.parseColor("#D56B99")
-            )
+        val titulo = criarTexto(
 
-            setTextSize(
-                TypedValue.COMPLEX_UNIT_PX,
-                31f * sy
-            )
+            if (correta) {
 
-            typeface = Typeface.create(
-                "sans-serif-rounded",
-                Typeface.BOLD
-            )
-        }
+                "Parabéns, explorador!"
 
-        adicionarViewNoPopup(
-            popup,
+            } else {
+
+                "Ops! Não foi dessa vez!"
+            },
+
+            32f,
+
+            Color.rgb(165, 138, 199)
+        )
+
+        colocar(
             titulo,
-            35, 58, 470, 50,
-            sx, sy
+            35, 85, 470, 48
         )
 
-        // =================================================
-        // MENSAGEM ANIMADA
-        // =================================================
+        // MENSAGEM DO POP-UP
 
-        val mensagem = TextView(this).apply {
+        val mensagem = criarTexto(
 
-            text = "Muito bem! O maracujá tem\num cheirinho azedinho!"
+            if (correta) {
 
-            gravity = Gravity.CENTER
+                "O maracujá tem um cheirinho azedinho!"
 
-            setTextColor(
-                Color.parseColor("#604423")
-            )
+            } else {
 
-            setTextSize(
-                TypedValue.COMPLEX_UNIT_PX,
-                23f * sy
-            )
+                "Vamos tentar novamente?"
+            },
 
-            typeface = Typeface.create(
-                "sans-serif",
-                Typeface.BOLD
-            )
+            21f,
 
-            alpha = 0f
+            Color.rgb(145, 123, 105)
+        )
 
-            translationY = 15f * sy
-        }
-
-        adicionarViewNoPopup(
-            popup,
+        colocar(
             mensagem,
-            40, 111, 460, 63,
-            sx, sy
+            35, 135, 470, 38
         )
 
-        mensagem.animate()
-            .alpha(1f)
-            .translationY(0f)
-            .setStartDelay(350)
-            .setDuration(650)
-            .start()
+        // CRIAR BOTÕES DO POP-UP
 
-        // =================================================
-        // BOTÃO VOLTAR
-        // =================================================
+        fun criarBotao(
+            textoBotao: String,
+            corInicio: Int,
+            corFim: Int,
+            corBorda: Int
+        ): TextView {
 
-        criarBotaoPopup(
-            popup,
-            "← Voltar",
-            48, 195, 195, 52,
-            "#83BDEB",
-            sx, sy
-        ) {
+            return TextView(this).apply {
 
-            finish()
+                text = textoBotao
+
+                setTextColor(
+                    Color.rgb(75, 95, 95)
+                )
+
+                setTextSize(
+                    TypedValue.COMPLEX_UNIT_PX,
+                    23f * escala
+                )
+
+                typeface = Typeface.DEFAULT_BOLD
+
+                gravity = Gravity.CENTER
+
+                background = GradientDrawable(
+                    GradientDrawable.Orientation.TOP_BOTTOM,
+                    intArrayOf(
+                        corInicio,
+                        corFim
+                    )
+                ).apply {
+
+                    cornerRadius = 20f * escala
+
+                    setStroke(
+                        (2 * escala).toInt().coerceAtLeast(1),
+                        corBorda
+                    )
+                }
+
+                elevation = 4f * escala
+
+                isClickable = true
+                isFocusable = true
+            }
         }
 
         // =================================================
-        // BOTÃO PRÓXIMA FASE
+        // POP-UP DE RESPOSTA CORRETA
         // =================================================
 
-        criarBotaoPopup(
-            popup,
-            "Próxima fase →",
-            265, 195, 225, 52,
-            "#8ACF8B",
-            sx, sy
-        ) {
+        if (correta) {
 
-            abrirProximaFase()
+            // BOTÃO VOLTAR
+
+            val botaoVoltar = criarBotao(
+                "← Voltar",
+                Color.rgb(190, 232, 248),
+                Color.rgb(155, 215, 240),
+                Color.rgb(135, 195, 225)
+            )
+
+            colocar(
+                botaoVoltar,
+                55, 190, 195, 52
+            )
+
+            botaoVoltar.setOnClickListener {
+
+                voltarParaCincoOpcoes()
+            }
+
+            // BOTÃO PRÓXIMO NÍVEL
+
+            val botaoProximo = criarBotao(
+                "Próximo nível →",
+                Color.rgb(205, 242, 210),
+                Color.rgb(175, 225, 185),
+                Color.rgb(145, 205, 160)
+            )
+
+            colocar(
+                botaoProximo,
+                275, 190, 210, 52
+            )
+
+            botaoProximo.setOnClickListener {
+
+                if (!navegando) {
+
+                    botaoProximo.animate().cancel()
+
+                    animarPulsacao(botaoProximo)
+
+                    abrirProximaFase()
+                }
+            }
+
+            // ANIMAÇÃO SUAVE DO BOTÃO
+
+            botaoProximo.animate()
+                .scaleX(1.03f)
+                .scaleY(1.03f)
+                .setStartDelay(750)
+                .setDuration(450)
+                .withEndAction {
+
+                    botaoProximo.animate()
+                        .scaleX(1f)
+                        .scaleY(1f)
+                        .setStartDelay(0)
+                        .setDuration(400)
+                        .start()
+                }
+                .start()
+
+        } else {
+
+            // =============================================
+            // POP-UP DE RESPOSTA ERRADA
+            // =============================================
+
+            val botaoTentar = criarBotao(
+                "Tentar novamente",
+                Color.rgb(190, 232, 248),
+                Color.rgb(155, 215, 240),
+                Color.rgb(135, 195, 225)
+            )
+
+            colocar(
+                botaoTentar,
+                135, 190, 270, 52
+            )
+
+            botaoTentar.setOnClickListener {
+
+                if (
+                    !processandoClique &&
+                    !navegando
+                ) {
+
+                    processandoClique = true
+
+                    animarPulsacao(botaoTentar)
+
+                    tocarAudio(R.raw.clique_pop)
+
+                    handler.postDelayed({
+
+                        tela.removeView(camadaEscura)
+
+                        popupAberto = false
+                        processandoClique = false
+
+                        animacoes.remove(botaoTentar)?.cancel()
+
+                    }, 380L)
+                }
+            }
         }
     }
 
     // =====================================================
-    // BOTÕES DO POP-UP
+    // RETORNAR PARA O MENU DOS CINCO JOGOS
     // =====================================================
 
-    private fun criarBotaoPopup(
-        popup: FrameLayout,
-        texto: String,
-        x: Int,
-        y: Int,
-        largura: Int,
-        altura: Int,
-        cor: String,
-        sx: Float,
-        sy: Float,
-        acao: () -> Unit
-    ) {
+    private fun voltarParaCincoOpcoes() {
 
-        val botao = TextView(this)
+        if (navegando) return
 
-        botao.text = texto
+        navegando = true
 
-        botao.gravity = Gravity.CENTER
+        handler.removeCallbacksAndMessages(null)
 
-        botao.setTextColor(Color.WHITE)
+        pararAudio()
 
-        botao.setTextSize(
-            TypedValue.COMPLEX_UNIT_PX,
-            19f * sy
+        tocarSomNavegacao()
+
+        val intent = Intent(
+            this,
+            CincoOpcoesDosJogosActivity::class.java
         )
 
-        botao.typeface = Typeface.create(
-            "sans-serif",
-            Typeface.BOLD
-        )
+        intent.flags =
+            Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                    Intent.FLAG_ACTIVITY_SINGLE_TOP
 
-        botao.background = GradientDrawable().apply {
+        startActivity(intent)
 
-            setColor(Color.parseColor(cor))
+        finish()
+    }
 
-            cornerRadius = 18f * sx
-        }
+    // =====================================================
+    // BOTÃO VOLTAR DO CELULAR
+    // =====================================================
 
-        botao.isClickable = true
+    @Suppress("DEPRECATION")
+    override fun onBackPressed() {
 
-        botao.setOnClickListener {
-            acao()
-        }
-
-        adicionarViewNoPopup(
-            popup,
-            botao,
-            x, y, largura, altura,
-            sx, sy
-        )
+        voltarParaCincoOpcoes()
     }
 
     // =====================================================
@@ -736,6 +945,14 @@ class DescubraOCheiro2Activity : Activity() {
     // =====================================================
 
     private fun abrirProximaFase() {
+
+        if (navegando) return
+
+        navegando = true
+
+        pararAudio()
+
+        tocarSomNavegacao()
 
         try {
 
@@ -754,17 +971,233 @@ class DescubraOCheiro2Activity : Activity() {
 
         } catch (erro: Exception) {
 
+            navegando = false
+
             Log.e(
                 "DescubraOCheiro2",
                 "Erro ao abrir o nível 3",
                 erro
             )
 
-            Toast.makeText(
+            mostrarAvisoProximoNivel()
+        }
+    }
+
+    // =====================================================
+    // SOM DE NAVEGAÇÃO
+    // =====================================================
+
+    private fun tocarSomNavegacao() {
+
+        var player: MediaPlayer? = null
+
+        try {
+
+            player = MediaPlayer.create(
+                applicationContext,
+                R.raw.clique_pop
+            )
+
+            player?.setOnCompletionListener {
+
+                it.release()
+            }
+
+            player?.setOnErrorListener { mp, _, _ ->
+
+                mp.release()
+
+                true
+            }
+
+            player?.start()
+
+        } catch (erro: Exception) {
+
+            player?.release()
+
+            Log.e(
+                "DescubraOCheiro2",
+                "Erro no som de navegação",
+                erro
+            )
+        }
+    }
+
+    // =====================================================
+    // AVISO PERSONALIZADO DO PRÓXIMO NÍVEL
+    // =====================================================
+
+    private fun mostrarAvisoProximoNivel() {
+
+        val dialogo = android.app.Dialog(this)
+
+        val caixa = android.widget.LinearLayout(this).apply {
+
+            orientation =
+                android.widget.LinearLayout.VERTICAL
+
+            gravity = Gravity.CENTER
+
+            setPadding(35, 30, 35, 30)
+
+            background = GradientDrawable().apply {
+
+                setColor(
+                    Color.parseColor("#FFF9E4")
+                )
+
+                cornerRadius = 28f
+
+                setStroke(
+                    3,
+                    Color.parseColor("#F5DEA0")
+                )
+            }
+        }
+
+        val mensagem = TextView(this).apply {
+
+            text = "O próximo nível ainda não está disponível!"
+
+            textSize = 20f
+
+            gravity = Gravity.CENTER
+
+            typeface = Typeface.DEFAULT_BOLD
+
+            setTextColor(
+                Color.parseColor("#A58AC7")
+            )
+
+            setPadding(10, 10, 10, 25)
+        }
+
+        caixa.addView(mensagem)
+
+        val botao = TextView(this).apply {
+
+            text = "Voltar"
+
+            textSize = 18f
+
+            gravity = Gravity.CENTER
+
+            typeface = Typeface.DEFAULT_BOLD
+
+            setTextColor(
+                Color.parseColor("#4B5F5F")
+            )
+
+            setPadding(40, 15, 40, 15)
+
+            background = GradientDrawable().apply {
+
+                setColor(
+                    Color.parseColor("#BEE8F8")
+                )
+
+                cornerRadius = 20f
+            }
+
+            setOnClickListener {
+
+                dialogo.dismiss()
+
+                voltarParaCincoOpcoes()
+            }
+        }
+
+        caixa.addView(botao)
+
+        dialogo.setContentView(caixa)
+
+        dialogo.window?.setBackgroundDrawableResource(
+            android.R.color.transparent
+        )
+
+        dialogo.show()
+    }
+
+    // =====================================================
+    // REPRODUZIR SOM DOS ALIMENTOS
+    // =====================================================
+
+    private fun tocarAudio(
+        recursoAudio: Int
+    ) {
+
+        pararAudio()
+
+        try {
+
+            val player = MediaPlayer.create(
                 this,
-                "A próxima fase ainda não está disponível!",
-                Toast.LENGTH_LONG
-            ).show()
+                recursoAudio
+            ) ?: return
+
+            audioAtual = player
+
+            player.setOnCompletionListener {
+
+                if (audioAtual === player) {
+
+                    audioAtual = null
+
+                    player.release()
+                }
+            }
+
+            player.setOnErrorListener { _, _, _ ->
+
+                if (audioAtual === player) {
+
+                    pararAudio()
+                }
+
+                true
+            }
+
+            player.start()
+
+        } catch (erro: Exception) {
+
+            pararAudio()
+
+            Log.e(
+                "DescubraOCheiro2",
+                "Erro ao reproduzir áudio",
+                erro
+            )
+        }
+    }
+
+    // =====================================================
+    // PARAR ÁUDIO
+    // =====================================================
+
+    private fun pararAudio() {
+
+        val player = audioAtual
+
+        audioAtual = null
+
+        player?.let {
+
+            try {
+
+                it.setOnCompletionListener(null)
+                it.setOnErrorListener(null)
+
+                if (it.isPlaying) {
+
+                    it.stop()
+                }
+
+            } catch (_: Exception) {
+            }
+
+            it.release()
         }
     }
 
@@ -800,18 +1233,13 @@ class DescubraOCheiro2Activity : Activity() {
                 "DescubraOCheiro2",
                 "Imagem não encontrada: $nome"
             )
-
-            Toast.makeText(
-                this,
-                "Imagem não encontrada: $nome",
-                Toast.LENGTH_LONG
-            ).show()
         }
 
         imagem.scaleType =
             ImageView.ScaleType.FIT_CENTER
 
         imagem.isClickable = false
+        imagem.isFocusable = false
 
         adicionarView(
             imagem,
@@ -841,8 +1269,11 @@ class DescubraOCheiro2Activity : Activity() {
             (altura * sy).toInt().coerceAtLeast(1)
         )
 
-        parametros.leftMargin = (x * sx).toInt()
-        parametros.topMargin = (y * sy).toInt()
+        parametros.leftMargin =
+            (x * sx).toInt()
+
+        parametros.topMargin =
+            (y * sy).toInt()
 
         tela.addView(
             view,
@@ -851,31 +1282,37 @@ class DescubraOCheiro2Activity : Activity() {
     }
 
     // =====================================================
-    // ADICIONAR ELEMENTOS NO POP-UP
+    // CICLO DE VIDA
     // =====================================================
 
-    private fun adicionarViewNoPopup(
-        popup: FrameLayout,
-        view: View,
-        x: Int,
-        y: Int,
-        largura: Int,
-        altura: Int,
-        sx: Float,
-        sy: Float
-    ) {
+    override fun onStop() {
 
-        val parametros = FrameLayout.LayoutParams(
-            (largura * sx).toInt().coerceAtLeast(1),
-            (altura * sy).toInt().coerceAtLeast(1)
-        )
+        handler.removeCallbacksAndMessages(null)
 
-        parametros.leftMargin = (x * sx).toInt()
-        parametros.topMargin = (y * sy).toInt()
+        pararAudio()
 
-        popup.addView(
-            view,
-            parametros
-        )
+        animacoes.forEach { (view, animacao) ->
+
+            animacao.cancel()
+
+            view.scaleX = 1f
+            view.scaleY = 1f
+        }
+
+        animacoes.clear()
+
+        processandoClique = false
+        navegando = false
+
+        super.onStop()
+    }
+
+    override fun onDestroy() {
+
+        handler.removeCallbacksAndMessages(null)
+
+        pararAudio()
+
+        super.onDestroy()
     }
 }
