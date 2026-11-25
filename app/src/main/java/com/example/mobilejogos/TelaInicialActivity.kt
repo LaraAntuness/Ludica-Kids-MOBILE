@@ -1,4 +1,3 @@
-
 package com.example.mobilejogos
 
 import android.animation.Animator
@@ -163,9 +162,15 @@ class TelaInicialActivity : Activity() {
     // SONS
     // ==========================================
 
+    /**
+     * Toca um som.
+     * Se [duracaoMaximaMs] for informado, o som é cortado
+     * depois desse tempo, com um fade-out curto no final.
+     */
     private fun tocarSom(
         recurso: Int,
-        volume: Float
+        volume: Float,
+        duracaoMaximaMs: Long? = null
     ) {
 
         val player = MediaPlayer.create(
@@ -184,6 +189,60 @@ class TelaInicialActivity : Activity() {
         }
 
         player.start()
+
+        if (duracaoMaximaMs != null) {
+
+            root.postDelayed({
+                encerrarSomComFade(player, volume)
+            }, duracaoMaximaMs)
+        }
+    }
+
+    private fun encerrarSomComFade(
+        player: MediaPlayer,
+        volumeInicial: Float
+    ) {
+
+        // Já terminou sozinho ou a tela foi fechada
+        if (!sonsAtivos.contains(player)) return
+
+        ValueAnimator.ofFloat(volumeInicial, 0f).apply {
+
+            duration = 200L
+
+            addUpdateListener {
+
+                if (sonsAtivos.contains(player)) {
+
+                    try {
+                        val v = it.animatedValue as Float
+                        player.setVolume(v, v)
+                    } catch (_: Exception) {
+                    }
+                }
+            }
+
+            addListener(object : AnimatorListenerAdapter() {
+
+                override fun onAnimationEnd(animation: Animator) {
+
+                    if (sonsAtivos.remove(player)) {
+
+                        try {
+                            player.stop()
+                        } catch (_: Exception) {
+                        }
+
+                        try {
+                            player.release()
+                        } catch (_: Exception) {
+                        }
+                    }
+                }
+            })
+
+            start()
+        }
     }
 
     private fun somClique() {
@@ -191,7 +250,9 @@ class TelaInicialActivity : Activity() {
     }
 
     private fun somMagico() {
-        tocarSom(R.raw.sominicio, 0.50f)
+        // Toca só os primeiros 900 ms (+ 200 ms de fade-out).
+        // Aumente para deixar mais longo ou diminua para ficar mais curto.
+        tocarSom(R.raw.sominicio, 0.50f, 900L)
     }
 
     private fun somBrilho() {
@@ -210,7 +271,7 @@ class TelaInicialActivity : Activity() {
     }
 
     // ==========================================
-    // NOVO POP-UP DE LOGIN E CADASTRO
+    // POP-UP DE LOGIN E CADASTRO
     // ==========================================
 
     private fun abrirPopupLogin() {
@@ -221,19 +282,20 @@ class TelaInicialActivity : Activity() {
 
         popupAberto = true
 
-        // ESCONDE SOMENTE O BOTÃO JOGAR
-        // A girafinha principal continua aparecendo.
+        // ESCONDE O BOTÃO JOGAR E A GIRAFINHA PRINCIPAL
+        // enquanto o pop-up estiver aberto
         botaoJogar.visibility = View.INVISIBLE
+        girafa.visibility = View.INVISIBLE
 
-        // ABRE O FORMULÁRIO QUE CRIAMOS
         LoginDialog(this) {
 
             // EXECUTA QUANDO O POP-UP FECHA
 
             popupAberto = false
 
-            // RESTAURA O BOTÃO JOGAR
+            // RESTAURA O BOTÃO JOGAR E A GIRAFINHA
             botaoJogar.visibility = View.VISIBLE
+            girafa.visibility = View.VISIBLE
 
         }.mostrar()
     }
@@ -521,7 +583,7 @@ class TelaInicialActivity : Activity() {
 
             botaoJogar.isEnabled = false
 
-            // SOM MÁGICO ESCOLHIDO
+            // SOM MÁGICO (CURTO)
             somMagico()
 
             // GLITTER
