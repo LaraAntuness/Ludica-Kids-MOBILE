@@ -46,7 +46,6 @@ class MaoszinhasMagicas3Activity : Activity() {
         mutableListOf<CustomTarget<GifDrawable>>()
 
     private val animaisConcluidos = mutableSetOf<String>()
-
     private val animaisIniciados = mutableSetOf<String>()
 
     private val imagensAnimais =
@@ -99,7 +98,6 @@ class MaoszinhasMagicas3Activity : Activity() {
     private fun montarJogo() {
 
         pararTodasPulsacoes()
-
         limparGifs()
 
         root.removeAllViews()
@@ -145,8 +143,7 @@ class MaoszinhasMagicas3Activity : Activity() {
 
         val voltar = adicionarImagem(
             "botaoretornoamarelo",
-            15, 15, 48, 48,
-            sx, sy
+            19, 25, 40, 40, sx, sy
         )
 
         voltar.contentDescription =
@@ -156,7 +153,6 @@ class MaoszinhasMagicas3Activity : Activity() {
         voltar.isFocusable = true
 
         voltar.setOnClickListener {
-
             voltarParaJogos()
         }
 
@@ -166,80 +162,78 @@ class MaoszinhasMagicas3Activity : Activity() {
 
         adicionarImagem(
             "titulodescubracomotoque",
-            175, 12, 450, 60,
-            sx, sy
+            205, 2, 490, 85, sx, sy
         )
 
         // =================================================
-        // GAVIÃO - LADO ESQUERDO
+        // GAVIÃO - TAMANHO AJUSTADO
         // =================================================
-
         adicionarAnimal(
-            arquivo = "gaviao.gif",
-            x = 50,
-            y = 60,
-            largura = 130,
-            altura = 185,
+            arquivo = "gaviaoatualizado.gif",
+            x = 60,
+            y = 90,
+            largura = 230,
+            altura = 230,
             sx = sx,
             sy = sy,
             indice = 0
         )
 
         // =================================================
-        // BORBOLETA - PARTE INFERIOR
+        // BORBOLETA - TAMANHO AJUSTADO
         // =================================================
 
         adicionarAnimal(
             arquivo = "borboleta.gif",
-            x = 270,
-            y = 210,
-            largura = 95,
-            altura = 95,
+            x = 320,
+            y = 280,
+            largura = 85,
+            altura = 85,
             sx = sx,
             sy = sy,
             indice = 1
         )
 
         // =================================================
-        // ABELHA - CENTRO
+        // ABELHA - TAMANHO AJUSTADO
         // =================================================
 
         adicionarAnimal(
             arquivo = "abelha.gif",
-            x = 370,
-            y = 95,
-            largura = 110,
-            altura = 110,
+            x = 460,
+            y = 130,
+            largura = 120,
+            altura = 95,
             sx = sx,
             sy = sy,
             indice = 2
         )
 
         // =================================================
-        // CORUJA - LADO DIREITO
+        // CORUJA - TAMANHO AJUSTADO
         // =================================================
 
         adicionarAnimal(
             arquivo = "coruja.gif",
-            x = 530,
-            y = 140,
-            largura = 115,
-            altura = 135,
+            x = 565,
+            y = 128,
+            largura = 120,
+            altura = 130,
             sx = sx,
             sy = sy,
             indice = 3
         )
 
         // =================================================
-        // SOL - CANTO SUPERIOR DIREITO
+        // SOL - TAMANHO AJUSTADO
         // =================================================
 
         adicionarAnimal(
             arquivo = "sol.gif",
-            x = 620,
-            y = 15,
-            largura = 175,
-            altura = 175,
+            x = 675,
+            y = 18,
+            largura = 120,
+            altura = 120,
             sx = sx,
             sy = sy,
             indice = 4
@@ -265,8 +259,7 @@ class MaoszinhasMagicas3Activity : Activity() {
 
         val animal = ImageView(this).apply {
 
-            scaleType =
-                ImageView.ScaleType.FIT_CENTER
+            scaleType = ImageView.ScaleType.FIT_CENTER
 
             contentDescription =
                 arquivo.substringBefore(".")
@@ -304,9 +297,7 @@ class MaoszinhasMagicas3Activity : Activity() {
                 // GIF COMEÇA PARADO
 
                 resource.stop()
-
                 resource.setVisible(true, false)
-
                 resource.setLoopCount(1)
 
                 animal.setImageDrawable(resource)
@@ -318,9 +309,7 @@ class MaoszinhasMagicas3Activity : Activity() {
                 animal.isClickable = true
                 animal.isFocusable = true
 
-                // =========================================
                 // PULSAÇÃO ANTES DO TOQUE
-                // =========================================
 
                 if (
                     telaAtiva &&
@@ -335,9 +324,7 @@ class MaoszinhasMagicas3Activity : Activity() {
                     )
                 }
 
-                // =========================================
                 // IDENTIFICAR FINAL DA ANIMAÇÃO
-                // =========================================
 
                 resource.clearAnimationCallbacks()
 
@@ -365,9 +352,7 @@ class MaoszinhasMagicas3Activity : Activity() {
                     }
                 )
 
-                // =========================================
                 // CLIQUE NO ELEMENTO
-                // =========================================
 
                 animal.setOnClickListener {
 
@@ -377,7 +362,6 @@ class MaoszinhasMagicas3Activity : Activity() {
                         arquivo in animaisIniciados ||
                         arquivo in animaisConcluidos
                     ) {
-
                         return@setOnClickListener
                     }
 
@@ -387,8 +371,6 @@ class MaoszinhasMagicas3Activity : Activity() {
                     if (gif != null && !gif.isRunning) {
 
                         animaisIniciados.add(arquivo)
-
-                        // PARAR PULSAÇÃO
 
                         pararPulsacaoAnimal(
                             arquivo,
@@ -401,7 +383,7 @@ class MaoszinhasMagicas3Activity : Activity() {
                             R.raw.audio_toque
                         )
 
-                        // EXECUTAR ANIMAÇÃO DO GIF
+                        // EXECUTAR ANIMAÇÃO
 
                         gif.start()
                     }
@@ -415,7 +397,6 @@ class MaoszinhasMagicas3Activity : Activity() {
                 gifsAnimais.remove(arquivo)?.let {
 
                     it.stop()
-
                     it.clearAnimationCallbacks()
                 }
 
@@ -534,7 +515,6 @@ class MaoszinhasMagicas3Activity : Activity() {
     private fun pararTodasPulsacoes() {
 
         animacoesAnimais.values.forEach {
-
             it.cancel()
         }
 
@@ -558,7 +538,6 @@ class MaoszinhasMagicas3Activity : Activity() {
     ) {
 
         if (jogoFinalizado || navegando) {
-
             return
         }
 
@@ -566,7 +545,6 @@ class MaoszinhasMagicas3Activity : Activity() {
             animaisConcluidos.add(arquivo)
 
         if (!novoAnimal) {
-
             return
         }
 
@@ -844,7 +822,8 @@ class MaoszinhasMagicas3Activity : Activity() {
         // =================================================
 
         val subtitulo = criarTexto(
-            "Você descobriu todos os movimentos!\nVocê completou todos os níveis!",
+            "Você descobriu todos os movimentos!\n" +
+                    "Você completou todos os níveis!",
             20f,
             Color.rgb(145, 123, 105)
         )
@@ -902,10 +881,7 @@ class MaoszinhasMagicas3Activity : Activity() {
             isFocusable = true
         }
 
-        // =================================================
-        // BOTÃO VOLTAR CENTRALIZADO
         // ÚNICO BOTÃO DO ÚLTIMO NÍVEL
-        // =================================================
 
         colocar(
             botaoVoltar,
@@ -917,7 +893,7 @@ class MaoszinhasMagicas3Activity : Activity() {
             voltarParaJogos()
         }
 
-        // ANIMAÇÃO SUAVE DO BOTÃO
+        // ANIMAÇÃO DO BOTÃO
 
         botaoVoltar.animate()
             .scaleX(1.03f)

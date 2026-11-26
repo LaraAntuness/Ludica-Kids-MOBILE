@@ -149,19 +149,19 @@ class MaoszinhasMagicas2Activity : Activity() {
         // ANIMAIS
         adicionarAnimal(
             arquivo = "polvo.gif",
-            x = 15, y = 140, largura = 150, altura = 125,
+            x = 30, y = 150, largura = 150, altura = 125,
             sx = sx, sy = sy, indice = 0
         )
 
         adicionarAnimal(
             arquivo = "peixe.gif",
-            x = 265, y = 105, largura = 120, altura = 85,
+            x = 300, y = 180, largura = 120, altura = 85,
             sx = sx, sy = sy, indice = 1
         )
 
         adicionarAnimal(
             arquivo = "tubarao.gif",
-            x = 300, y = 210, largura = 250, altura = 110,
+            x = 350, y = 300, largura = 250, altura = 110,
             sx = sx, sy = sy, indice = 2
         )
 
@@ -169,7 +169,7 @@ class MaoszinhasMagicas2Activity : Activity() {
         // troque aqui por exemplo para "cavalo_marinho.gif"
         adicionarAnimal(
             arquivo = "cavalomarinho.gif",
-            x = 655, y = 85, largura = 100, altura = 160,
+            x = 750, y = 120, largura = 100, altura = 160,
             sx = sx, sy = sy, indice = 3
         )
 
