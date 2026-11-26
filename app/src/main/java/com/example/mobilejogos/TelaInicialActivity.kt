@@ -1,4 +1,3 @@
-
 package com.example.mobilejogos
 
 import android.animation.Animator
@@ -6,7 +5,7 @@ import android.animation.AnimatorListenerAdapter
 import android.animation.ObjectAnimator
 import android.animation.ValueAnimator
 import android.app.Activity
-import android.app.AlertDialog
+import android.content.pm.ApplicationInfo
 import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.graphics.Color
@@ -73,6 +72,19 @@ class TelaInicialActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // TESTE DO POP-UP: somente na versão de depuração do Android Studio.
+        // Reinicia a sessão em cada abertura do app para permitir testar
+        // novamente as abas Entrar e Criar conta, sem precisar da tela de sair.
+        // Não altera a conta ou os dados no backend.
+        if ((applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0) {
+            LudicaSessao.limpar(this)
+            LoginDialog.encerrarSessao()
+            getSharedPreferences("LudicaKids", MODE_PRIVATE)
+                .edit()
+                .putBoolean("usuarioLogado", false)
+                .apply()
+        }
 
         requestedOrientation =
             ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
@@ -234,9 +246,8 @@ class TelaInicialActivity : Activity() {
     }
 
     private fun somMagico() {
-        // O som mágico foi transferido para
-        // o login realizado com sucesso.
-        somClique()
+        // Som escolhido para o botão Jogar.
+        tocarSom(R.raw.som_jogar, 0.60f)
     }
 
     private fun somBrilho() {
@@ -287,6 +298,18 @@ class TelaInicialActivity : Activity() {
         return LudicaSessao.obter(this) != null
     }
 
+    // ACESSO TEMPORÁRIO PARA DESENVOLVIMENTO.
+    // Ativo por padrão apenas em builds debuggable do Android Studio.
+    // Pode ser desativado alterando a preferência usuarioLogado para false.
+    // Não cria token e nunca autoriza a área dos responsáveis.
+    private fun acessoDeTesteAtivo(): Boolean {
+        val depuracao = (applicationInfo.flags and
+                ApplicationInfo.FLAG_DEBUGGABLE) != 0
+        return depuracao && getSharedPreferences(
+            "LudicaKids", MODE_PRIVATE
+        ).getBoolean("usuarioLogado", true)
+    }
+
     // ==========================================
     // POP-UP DE LOGIN
     // ==========================================
@@ -315,19 +338,14 @@ class TelaInicialActivity : Activity() {
             val token = LoginDialog.tokenDaSessao()
             val id = LoginDialog.idDaSessao()
 
-            if (
-                !token.isNullOrBlank() &&
-                !id.isNullOrBlank()
-            ) {
+            // O acesso é liberado somente após a API confirmar o login.
+            // Para o cadastro, será necessário integrar o envio ao backend
+            // e receber uma sessão válida antes de navegar.
+            if (!token.isNullOrBlank() && !id.isNullOrBlank()) {
                 try {
-                    LudicaSessao.salvar(
-                        this,
-                        token,
-                        id
-                    )
-
+                    LudicaSessao.salvar(this, token, id)
                     if (!isFinishing && !isDestroyed) {
-                        abrirTelaJogos()
+                        abrirQuemVaiJogar()
                     }
                 } catch (_: Exception) {
                     Toast.makeText(
@@ -345,9 +363,16 @@ class TelaInicialActivity : Activity() {
     // ==========================================
 
     private fun verificarAcesso(
+        permitirTesteSemLogin: Boolean = false,
         aoEstarLogado: () -> Unit
     ) {
         if (popupAberto || verificandoSessao) return
+
+        // SOMENTE NAVEGAÇÃO INFANTIL no aplicativo de desenvolvimento.
+        if (permitirTesteSemLogin && acessoDeTesteAtivo()) {
+            aoEstarLogado()
+            return
+        }
 
         val sessao = LudicaSessao.obter(this)
 
@@ -402,10 +427,7 @@ class TelaInicialActivity : Activity() {
         if (isFinishing || isDestroyed) return
 
         startActivity(
-            Intent(
-                this,
-                TelaInicialJogosGeral::class.java
-            )
+            Intent(this, TelaInicialJogosGeral::class.java)
         )
     }
 
@@ -414,6 +436,8 @@ class TelaInicialActivity : Activity() {
     // ==========================================
 
     private fun abrirQuemVaiJogar() {
+        if (isFinishing || isDestroyed) return
+
         startActivity(
             Intent(
                 this,
@@ -427,16 +451,28 @@ class TelaInicialActivity : Activity() {
     // ==========================================
 
     private fun mostrarPopupCpf() {
-        AlertDialog.Builder(this)
-            .setTitle("Área dos responsáveis")
-            .setMessage(
-                "Em breve, vamos confirmar o CPF do responsável para liberar esta área!"
-            )
-            .setPositiveButton("ENTENDI") { dialog, _ ->
-                somClique()
-                dialog.dismiss()
+
+        if (popupAberto) return
+
+        popupAberto = true
+
+        CalculadoraPaisDialog(
+            activity = this,
+            aoFechar = {
+                popupAberto = false
+            },
+            aoConfirmar = {
+                if (!isFinishing && !isDestroyed) {
+
+                    startActivity(
+                        Intent(
+                            this,
+                            TelaResponsavelActivity::class.java
+                        )
+                    )
+                }
             }
-            .show()
+        ).mostrar()
     }
 
     // ==========================================
@@ -591,7 +627,7 @@ class TelaInicialActivity : Activity() {
                                 .setDuration(180)
                                 .withEndAction {
                                     cabecaGirafa.isEnabled = true
-                                    verificarAcesso {
+                                    verificarAcesso(permitirTesteSemLogin = true) {
                                         abrirQuemVaiJogar()
                                     }
                                 }
@@ -631,7 +667,6 @@ class TelaInicialActivity : Activity() {
 
             botaoJogar.isEnabled = false
 
-            // AGORA USA O CLIQUE SUAVE
             somMagico()
 
             animarEstrelinhas(
@@ -652,6 +687,9 @@ class TelaInicialActivity : Activity() {
                         .setDuration(160)
                         .withEndAction {
                             botaoJogar.isEnabled = true
+                            // Sem login: abre o pop-up Entrar / Criar conta.
+                            // Com sessão válida: abre a tela geral dos jogos.
+                            // O atalho de teste sem login não é usado neste botão.
                             verificarAcesso {
                                 abrirTelaJogos()
                             }
@@ -684,7 +722,7 @@ class TelaInicialActivity : Activity() {
             -deslocamento,
             deslocamento
         ).apply {
-            duration = duracao
+            this.duration = duracao
             repeatCount = ValueAnimator.INFINITE
             repeatMode = ValueAnimator.REVERSE
             interpolator =

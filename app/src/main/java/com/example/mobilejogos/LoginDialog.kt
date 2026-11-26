@@ -333,7 +333,7 @@ class LoginDialog(
 
     private fun tocarSucesso() {
         tocarSom(
-            R.raw.sominicio,
+            R.raw.entrarsom,
             0.55f
         )
     }
@@ -708,32 +708,7 @@ class LoginDialog(
         // SCROLLVIEW CORRIGIDO
         // ======================================
 
-        scrollPrincipal = object : ScrollView(activity) {
-
-            // Impede que o ScrollView desça
-            // automaticamente ao selecionar
-            // um campo de texto.
-
-            override fun requestChildFocus(
-                child: View,
-                focused: View
-            ) {
-                // Não deslocar a tela automaticamente.
-            }
-
-            override fun requestChildRectangleOnScreen(
-                child: View,
-                rectangle: Rect,
-                immediate: Boolean
-            ): Boolean {
-
-                // Ignora solicitações automáticas
-                // de movimentação por foco.
-
-                return false
-            }
-
-        }.apply {
+        scrollPrincipal = ScrollView(activity).apply {
 
             isFillViewport = true
 
@@ -814,7 +789,7 @@ class LoginDialog(
             // A rolagem é feita manualmente.
 
             setSoftInputMode(
-                WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING or
+                WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE or
                         WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN
             )
         }
@@ -2278,106 +2253,80 @@ class LoginDialog(
     // ==========================================
 
     private fun mostrarSucessoLogin() {
-
-        if (
-            sucessoVisivel ||
-            !dialog.isShowing
-        ) return
+        if (sucessoVisivel || !dialog.isShowing) return
 
         sucessoVisivel = true
-
         dialog.setCancelable(false)
         dialog.setCanceledOnTouchOutside(false)
-
         esconderTeclado()
-
         tocarSucesso()
 
+        // Apenas o cartão lilás: nenhum retângulo roxo atrás.
         val camada = FrameLayout(activity).apply {
-
-            background = ColorDrawable(
-                Color.argb(
-                    165,
-                    32,
-                    27,
-                    67
-                )
-            )
-
-            isClickable = true
+            background = ColorDrawable(Color.TRANSPARENT)
             clipChildren = false
             clipToPadding = false
+            isClickable = true
         }
 
         val cartao = LinearLayout(activity).apply {
-
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
-
-            setPadding(
-                dp(18),
-                dp(18),
-                dp(18),
-                dp(18)
-            )
-
+            setPadding(dp(20), dp(14), dp(20), dp(16))
             background = fundo(
                 lilas,
                 24,
                 Color.rgb(205, 170, 244),
                 2
             )
-
-            elevation = dp(12).toFloat()
+            elevation = dp(10).toFloat()
         }
 
         cartao.addView(
             TextView(activity).apply {
-
                 text = "✦  ✨  ✦"
-
-                textSize = 25f
+                textSize = 22f
                 gravity = Gravity.CENTER
-
                 setTextColor(roxo)
-            }
+                includeFontPadding = true
+            },
+            lp(-1, -2)
         )
 
         cartao.addView(
             TextView(activity).apply {
-
                 text = "Login realizado com sucesso!"
-
-                textSize = 19f
-
+                textSize = 17f
                 typeface = redonda(true)
                 gravity = Gravity.CENTER
-
-                setTextColor(
-                    Color.rgb(105, 65, 158)
-                )
-            }
+                setTextColor(Color.rgb(105, 65, 158))
+                includeFontPadding = true
+                setPadding(0, dp(6), 0, dp(3))
+            },
+            lp(-1, -2)
         )
 
         cartao.addView(
             TextView(activity).apply {
-
                 text = "Que bom ter você por aqui! 💜"
-
                 textSize = 12f
                 gravity = Gravity.CENTER
-
-                setTextColor(
-                    Color.rgb(137, 101, 175)
-                )
-            }
+                setTextColor(Color.rgb(137, 101, 175))
+                includeFontPadding = true
+            },
+            lp(-1, -2)
         )
 
+        // Altura WRAP_CONTENT para não cortar a última frase.
+        val larguraCartao = minOf(
+            dp(350),
+            (activity.resources.displayMetrics.widthPixels * 0.75f).toInt()
+        )
         camada.addView(
             cartao,
             FrameLayout.LayoutParams(
-                dp(300),
-                dp(135),
+                larguraCartao,
+                FrameLayout.LayoutParams.WRAP_CONTENT,
                 Gravity.CENTER
             )
         )
@@ -2385,35 +2334,30 @@ class LoginDialog(
         dialog.setContentView(camada)
 
         dialog.window?.apply {
-
-            setBackgroundDrawable(
-                ColorDrawable(Color.TRANSPARENT)
-            )
-
+            setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+            clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+            setDimAmount(0f)
             setGravity(Gravity.CENTER)
-
+            setSoftInputMode(
+                WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN or
+                        WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING
+            )
             setLayout(
-                larguraNormal,
-                alturaNormal
+                WindowManager.LayoutParams.MATCH_PARENT,
+                WindowManager.LayoutParams.MATCH_PARENT
             )
         }
 
         camada.post {
-
             criarGlitter(camada)
-
             camada.postDelayed({
-
-                if (
-                    !activity.isFinishing &&
+                if (!activity.isFinishing &&
                     !activity.isDestroyed &&
                     dialog.isShowing
                 ) {
-
                     dialog.dismiss()
                 }
-
-            }, 2100L)
+            }, 2300L)
         }
     }
 
