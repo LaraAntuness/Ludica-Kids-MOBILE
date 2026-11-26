@@ -1,4 +1,3 @@
-
 package com.example.mobilejogos
 
 import android.app.Activity
@@ -7,6 +6,7 @@ import android.content.pm.ActivityInfo
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.media.MediaPlayer
 import android.os.Bundle
 import android.util.Log
 import android.util.TypedValue
@@ -26,8 +26,12 @@ class ProveNaImaginacaoActivity : Activity() {
     private val alturaBase = 393f
 
     private var popupAberto = false
+    private var navegando = false
+
+    private var audioAtual: MediaPlayer? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
+
         super.onCreate(savedInstanceState)
 
         requestedOrientation =
@@ -56,13 +60,12 @@ class ProveNaImaginacaoActivity : Activity() {
         tela.removeAllViews()
 
         popupAberto = false
+        navegando = false
 
         val sx = tela.width.toFloat() / larguraBase
         val sy = tela.height.toFloat() / alturaBase
 
-        // =================================================
-        // PLANO DE FUNDO - FUNDOSABOR
-        // =================================================
+        // PLANO DE FUNDO
 
         val fundo = ImageView(this)
 
@@ -81,19 +84,23 @@ class ProveNaImaginacaoActivity : Activity() {
         )
 
         // =================================================
-        // BOTÃO DE VOLTAR DA TELA
+        // BOTÃO VOLTAR
         // =================================================
 
         val voltar = adicionarImagem(
             "botaoretornoazul",
-            19, 25, 40, 40, sx, sy,
+            19, 25, 40, 40,
+            sx, sy
         )
 
         voltar.isClickable = true
-        voltar.contentDescription = "Voltar"
+        voltar.isFocusable = true
+
+        voltar.contentDescription = "Voltar aos cinco jogos"
 
         voltar.setOnClickListener {
-            finish()
+
+            voltarParaCincoOpcoes()
         }
 
         // =================================================
@@ -102,7 +109,8 @@ class ProveNaImaginacaoActivity : Activity() {
 
         adicionarImagem(
             "titulobebidafavorita",
-            205, 2, 490, 85, sx, sy
+            205, 2, 490, 85,
+            sx, sy
         )
 
         // =================================================
@@ -121,7 +129,9 @@ class ProveNaImaginacaoActivity : Activity() {
 
             gravity = Gravity.CENTER
 
-            setTextColor(Color.parseColor("#303030"))
+            setTextColor(
+                Color.parseColor("#303030")
+            )
 
             setTextSize(
                 TypedValue.COMPLEX_UNIT_PX,
@@ -193,15 +203,15 @@ class ProveNaImaginacaoActivity : Activity() {
         sy: Float
     ) {
 
-        // =================================================
         // SOMBRA DO CARTÃO
-        // =================================================
 
         val sombra = View(this)
 
         sombra.background = GradientDrawable().apply {
 
-            setColor(Color.parseColor("#E8E7E7"))
+            setColor(
+                Color.parseColor("#E8E7E7")
+            )
 
             cornerRadius = 17f * sx
         }
@@ -224,7 +234,9 @@ class ProveNaImaginacaoActivity : Activity() {
 
         cartao.background = GradientDrawable().apply {
 
-            setColor(Color.parseColor("#96CBEB"))
+            setColor(
+                Color.parseColor("#96CBEB")
+            )
 
             cornerRadius = 17f * sx
         }
@@ -232,15 +244,21 @@ class ProveNaImaginacaoActivity : Activity() {
         cartao.isClickable = true
         cartao.isFocusable = true
 
+        cartao.contentDescription = "Selecionar $nomeBebida"
+
         val parametros = FrameLayout.LayoutParams(
             (155 * sx).toInt().coerceAtLeast(1),
             (100 * sy).toInt().coerceAtLeast(1)
         )
 
         parametros.leftMargin = (x * sx).toInt()
+
         parametros.topMargin = (y * sy).toInt()
 
-        tela.addView(cartao, parametros)
+        tela.addView(
+            cartao,
+            parametros
+        )
 
         // =================================================
         // IMAGEM DA BEBIDA
@@ -267,9 +285,13 @@ class ProveNaImaginacaoActivity : Activity() {
             ).show()
         }
 
-        alimento.scaleType = ImageView.ScaleType.FIT_CENTER
+        alimento.scaleType =
+            ImageView.ScaleType.FIT_CENTER
 
         alimento.contentDescription = nomeBebida
+
+        alimento.isClickable = false
+        alimento.isFocusable = false
 
         val parametrosImagem = FrameLayout.LayoutParams(
             (115 * sx).toInt(),
@@ -277,9 +299,13 @@ class ProveNaImaginacaoActivity : Activity() {
             Gravity.TOP or Gravity.CENTER_HORIZONTAL
         )
 
-        parametrosImagem.topMargin = (3 * sy).toInt()
+        parametrosImagem.topMargin =
+            (3 * sy).toInt()
 
-        cartao.addView(alimento, parametrosImagem)
+        cartao.addView(
+            alimento,
+            parametrosImagem
+        )
 
         // =================================================
         // NOME DA BEBIDA
@@ -291,7 +317,9 @@ class ProveNaImaginacaoActivity : Activity() {
 
         texto.gravity = Gravity.CENTER
 
-        texto.setTextColor(Color.parseColor("#24549B"))
+        texto.setTextColor(
+            Color.parseColor("#24549B")
+        )
 
         texto.setTextSize(
             TypedValue.COMPLEX_UNIT_PX,
@@ -300,21 +328,31 @@ class ProveNaImaginacaoActivity : Activity() {
 
         texto.typeface = Typeface.DEFAULT_BOLD
 
+        texto.isClickable = false
+        texto.isFocusable = false
+
         val parametrosTexto = FrameLayout.LayoutParams(
             FrameLayout.LayoutParams.MATCH_PARENT,
             (25 * sy).toInt(),
             Gravity.BOTTOM
         )
 
-        cartao.addView(texto, parametrosTexto)
+        cartao.addView(
+            texto,
+            parametrosTexto
+        )
 
         // =================================================
-        // CLIQUE NA BEBIDA
+        // CLIQUE NA BEBIDA COM SOM
         // =================================================
 
         cartao.setOnClickListener {
 
-            if (!popupAberto) {
+            if (!popupAberto && !navegando) {
+
+                // SOM AO TOCAR NA BEBIDA
+
+                tocarAudio(R.raw.audio_toque)
 
                 mostrarBebidaPreferida(
                     nomeImagem,
@@ -337,7 +375,8 @@ class ProveNaImaginacaoActivity : Activity() {
         sy: Float
     ) {
 
-        if (popupAberto) {
+        if (popupAberto || navegando) {
+
             return
         }
 
@@ -391,7 +430,10 @@ class ProveNaImaginacaoActivity : Activity() {
             Gravity.CENTER
         )
 
-        sobreposicao.addView(painel, parametrosPainel)
+        sobreposicao.addView(
+            painel,
+            parametrosPainel
+        )
 
         // =================================================
         // TÍTULO DO POP-UP
@@ -419,9 +461,13 @@ class ProveNaImaginacaoActivity : Activity() {
             (55 * sy).toInt()
         )
 
-        parametrosTitulo.topMargin = (10 * sy).toInt()
+        parametrosTitulo.topMargin =
+            (10 * sy).toInt()
 
-        painel.addView(titulo, parametrosTitulo)
+        painel.addView(
+            titulo,
+            parametrosTitulo
+        )
 
         // =================================================
         // IMAGEM DA BEBIDA ESCOLHIDA
@@ -436,10 +482,12 @@ class ProveNaImaginacaoActivity : Activity() {
         )
 
         if (id != 0) {
+
             imagem.setImageResource(id)
         }
 
-        imagem.scaleType = ImageView.ScaleType.FIT_CENTER
+        imagem.scaleType =
+            ImageView.ScaleType.FIT_CENTER
 
         imagem.contentDescription = nomeBebida
 
@@ -449,9 +497,13 @@ class ProveNaImaginacaoActivity : Activity() {
             Gravity.TOP or Gravity.CENTER_HORIZONTAL
         )
 
-        parametrosImagem.topMargin = (65 * sy).toInt()
+        parametrosImagem.topMargin =
+            (65 * sy).toInt()
 
-        painel.addView(imagem, parametrosImagem)
+        painel.addView(
+            imagem,
+            parametrosImagem
+        )
 
         // =================================================
         // NOME DA BEBIDA ESCOLHIDA
@@ -479,12 +531,16 @@ class ProveNaImaginacaoActivity : Activity() {
             (40 * sy).toInt()
         )
 
-        parametrosNome.topMargin = (170 * sy).toInt()
+        parametrosNome.topMargin =
+            (170 * sy).toInt()
 
-        painel.addView(nome, parametrosNome)
+        painel.addView(
+            nome,
+            parametrosNome
+        )
 
         // =================================================
-        // BOTÃO VOLTAR - TELA INICIAL DOS 5 JOGOS
+        // BOTÃO VOLTAR
         // =================================================
 
         criarBotaoPopup(
@@ -499,24 +555,11 @@ class ProveNaImaginacaoActivity : Activity() {
             sy
         ) {
 
-            popupAberto = false
-
-            val intent = Intent(
-                this,
-                CincoOpcoesDosJogosActivity::class.java
-            )
-
-            intent.flags =
-                Intent.FLAG_ACTIVITY_CLEAR_TOP or
-                        Intent.FLAG_ACTIVITY_SINGLE_TOP
-
-            startActivity(intent)
-
-            finish()
+            voltarParaCincoOpcoes()
         }
 
         // =================================================
-        // BOTÃO PRÓXIMO NÍVEL - VERDE
+        // BOTÃO PRÓXIMO NÍVEL
         // =================================================
 
         criarBotaoPopup(
@@ -535,14 +578,19 @@ class ProveNaImaginacaoActivity : Activity() {
         }
 
         // =================================================
-        // TOCAR FORA FECHA O POP-UP
+        // TOCAR FORA FECHA O POP-UP COM SOM
         // =================================================
 
         sobreposicao.setOnClickListener {
 
-            popupAberto = false
+            if (!navegando) {
 
-            tela.removeView(sobreposicao)
+                tocarAudio(R.raw.clique_pop)
+
+                popupAberto = false
+
+                tela.removeView(sobreposicao)
+            }
         }
     }
 
@@ -583,7 +631,9 @@ class ProveNaImaginacaoActivity : Activity() {
 
         botao.background = GradientDrawable().apply {
 
-            setColor(Color.parseColor(cor))
+            setColor(
+                Color.parseColor(cor)
+            )
 
             cornerRadius = 17f * sx
         }
@@ -591,9 +641,14 @@ class ProveNaImaginacaoActivity : Activity() {
         botao.elevation = 3f * sx
 
         botao.isClickable = true
+        botao.isFocusable = true
 
         botao.setOnClickListener {
-            acao()
+
+            if (!navegando) {
+
+                acao()
+            }
         }
 
         val parametros = FrameLayout.LayoutParams(
@@ -601,10 +656,54 @@ class ProveNaImaginacaoActivity : Activity() {
             (altura * sy).toInt().coerceAtLeast(1)
         )
 
-        parametros.leftMargin = (x * sx).toInt()
-        parametros.topMargin = (y * sy).toInt()
+        parametros.leftMargin =
+            (x * sx).toInt()
 
-        painel.addView(botao, parametros)
+        parametros.topMargin =
+            (y * sy).toInt()
+
+        painel.addView(
+            botao,
+            parametros
+        )
+    }
+
+    // =====================================================
+    // VOLTAR PARA A TELA DOS CINCO JOGOS
+    // =====================================================
+
+    private fun voltarParaCincoOpcoes() {
+
+        if (navegando || isFinishing) return
+
+        navegando = true
+
+        pararAudio()
+
+        tocarSomNavegacao()
+
+        val intent = Intent(
+            this,
+            CincoOpcoesDosJogosActivity::class.java
+        )
+
+        intent.flags =
+            Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                    Intent.FLAG_ACTIVITY_SINGLE_TOP
+
+        startActivity(intent)
+
+        finish()
+    }
+
+    // =====================================================
+    // BOTÃO VOLTAR DO CELULAR
+    // =====================================================
+
+    @Suppress("DEPRECATION")
+    override fun onBackPressed() {
+
+        voltarParaCincoOpcoes()
     }
 
     // =====================================================
@@ -612,6 +711,14 @@ class ProveNaImaginacaoActivity : Activity() {
     // =====================================================
 
     private fun abrirProximoNivel() {
+
+        if (navegando || isFinishing) return
+
+        navegando = true
+
+        pararAudio()
+
+        tocarSomNavegacao()
 
         try {
 
@@ -630,6 +737,8 @@ class ProveNaImaginacaoActivity : Activity() {
 
         } catch (erro: Exception) {
 
+            navegando = false
+
             Log.e(
                 "ProveNaImaginacao",
                 "Erro ao abrir próximo nível",
@@ -641,6 +750,128 @@ class ProveNaImaginacaoActivity : Activity() {
                 "O próximo nível ainda não está disponível!",
                 Toast.LENGTH_SHORT
             ).show()
+        }
+    }
+
+    // =====================================================
+    // REPRODUZIR ÁUDIO AO TOCAR NAS BEBIDAS
+    // =====================================================
+
+    private fun tocarAudio(recursoAudio: Int) {
+
+        pararAudio()
+
+        try {
+
+            val player = MediaPlayer.create(
+                this,
+                recursoAudio
+            ) ?: return
+
+            audioAtual = player
+
+            player.setOnCompletionListener {
+
+                if (audioAtual === player) {
+
+                    audioAtual = null
+
+                    player.release()
+                }
+            }
+
+            player.setOnErrorListener { _, _, _ ->
+
+                if (audioAtual === player) {
+
+                    pararAudio()
+                }
+
+                true
+            }
+
+            player.start()
+
+        } catch (erro: Exception) {
+
+            pararAudio()
+
+            Log.e(
+                "ProveNaImaginacao",
+                "Erro ao reproduzir áudio",
+                erro
+            )
+        }
+    }
+
+    // =====================================================
+    // SOM DOS BOTÕES DE NAVEGAÇÃO
+    // =====================================================
+
+    private fun tocarSomNavegacao() {
+
+        var player: MediaPlayer? = null
+
+        try {
+
+            player = MediaPlayer.create(
+                applicationContext,
+                R.raw.clique_pop
+            )
+
+            player?.setOnCompletionListener {
+
+                it.release()
+            }
+
+            player?.setOnErrorListener { mp, _, _ ->
+
+                mp.release()
+
+                true
+            }
+
+            player?.start()
+
+        } catch (erro: Exception) {
+
+            player?.release()
+
+            Log.e(
+                "ProveNaImaginacao",
+                "Erro no som de navegação",
+                erro
+            )
+        }
+    }
+
+    // =====================================================
+    // PARAR ÁUDIO
+    // =====================================================
+
+    private fun pararAudio() {
+
+        val player = audioAtual
+
+        audioAtual = null
+
+        player?.let {
+
+            try {
+
+                it.setOnCompletionListener(null)
+
+                it.setOnErrorListener(null)
+
+                if (it.isPlaying) {
+
+                    it.stop()
+                }
+
+            } catch (_: Exception) {
+            }
+
+            it.release()
         }
     }
 
@@ -684,7 +915,8 @@ class ProveNaImaginacaoActivity : Activity() {
             )
         }
 
-        imagem.scaleType = ImageView.ScaleType.FIT_CENTER
+        imagem.scaleType =
+            ImageView.ScaleType.FIT_CENTER
 
         adicionarView(
             imagem,
@@ -718,9 +950,33 @@ class ProveNaImaginacaoActivity : Activity() {
             (altura * sy).toInt().coerceAtLeast(1)
         )
 
-        parametros.leftMargin = (x * sx).toInt()
-        parametros.topMargin = (y * sy).toInt()
+        parametros.leftMargin =
+            (x * sx).toInt()
 
-        tela.addView(view, parametros)
+        parametros.topMargin =
+            (y * sy).toInt()
+
+        tela.addView(
+            view,
+            parametros
+        )
+    }
+
+    // =====================================================
+    // CICLO DE VIDA
+    // =====================================================
+
+    override fun onPause() {
+
+        pararAudio()
+
+        super.onPause()
+    }
+
+    override fun onDestroy() {
+
+        pararAudio()
+
+        super.onDestroy()
     }
 }

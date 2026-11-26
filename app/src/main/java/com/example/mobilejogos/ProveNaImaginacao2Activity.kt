@@ -1,4 +1,3 @@
-
 package com.example.mobilejogos
 
 import android.app.Activity
@@ -8,6 +7,7 @@ import android.graphics.Color
 import android.graphics.PorterDuff
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.media.MediaPlayer
 import android.os.Bundle
 import android.util.Log
 import android.util.TypedValue
@@ -30,8 +30,12 @@ class ProveNaImaginacao2Activity : Activity() {
     private val textoEscuro = Color.parseColor("#75405B")
 
     private var popupAberto = false
+    private var navegando = false
+
+    private var audioAtual: MediaPlayer? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
+
         super.onCreate(savedInstanceState)
 
         requestedOrientation =
@@ -58,7 +62,9 @@ class ProveNaImaginacao2Activity : Activity() {
     private fun montarTela() {
 
         tela.removeAllViews()
+
         popupAberto = false
+        navegando = false
 
         val sx = tela.width.toFloat() / larguraBase
         val sy = tela.height.toFloat() / alturaBase
@@ -72,7 +78,9 @@ class ProveNaImaginacao2Activity : Activity() {
         fundo.setImageResource(R.drawable.fundosabor)
 
         fundo.scaleType = ImageView.ScaleType.FIT_XY
+
         fundo.isClickable = false
+        fundo.isFocusable = false
 
         tela.addView(
             fundo,
@@ -88,15 +96,18 @@ class ProveNaImaginacao2Activity : Activity() {
 
         val voltar = adicionarImagem(
             "botaoretornorosa",
-            19, 25, 40, 40, sx, sy
-
+            19, 25, 40, 40,
+            sx, sy
         )
 
         voltar.isClickable = true
-        voltar.contentDescription = "Voltar"
+        voltar.isFocusable = true
+
+        voltar.contentDescription = "Voltar aos cinco jogos"
 
         voltar.setOnClickListener {
-            finish()
+
+            voltarParaCincoOpcoes()
         }
 
         // =================================================
@@ -105,7 +116,8 @@ class ProveNaImaginacao2Activity : Activity() {
 
         adicionarImagem(
             "titulomelhorsabor",
-            205, 2, 490, 85, sx, sy
+            205, 2, 490, 85,
+            sx, sy
         )
 
         // =================================================
@@ -132,6 +144,7 @@ class ProveNaImaginacao2Activity : Activity() {
             text = "Qual desses alimentos\nvocê mais gosta?"
 
             gravity = Gravity.CENTER
+
             setTextColor(textoEscuro)
 
             setTextSize(
@@ -140,6 +153,7 @@ class ProveNaImaginacao2Activity : Activity() {
             )
 
             typeface = Typeface.DEFAULT_BOLD
+
             maxLines = 2
         }
 
@@ -225,10 +239,14 @@ class ProveNaImaginacao2Activity : Activity() {
 
         sombra.background = GradientDrawable().apply {
 
-            setColor(Color.parseColor("#E8E7E7"))
+            setColor(
+                Color.parseColor("#E8E7E7")
+            )
 
             cornerRadius = 17f * sx
         }
+
+        sombra.isClickable = false
 
         adicionarView(
             sombra,
@@ -256,15 +274,24 @@ class ProveNaImaginacao2Activity : Activity() {
         cartao.isClickable = true
         cartao.isFocusable = true
 
+        cartao.contentDescription =
+            "Selecionar $nomeAlimento"
+
         val parametros = FrameLayout.LayoutParams(
             (155 * sx).toInt().coerceAtLeast(1),
             (100 * sy).toInt().coerceAtLeast(1)
         )
 
-        parametros.leftMargin = (x * sx).toInt()
-        parametros.topMargin = (y * sy).toInt()
+        parametros.leftMargin =
+            (x * sx).toInt()
 
-        tela.addView(cartao, parametros)
+        parametros.topMargin =
+            (y * sy).toInt()
+
+        tela.addView(
+            cartao,
+            parametros
+        )
 
         // =================================================
         // IMAGEM DO ALIMENTO
@@ -301,6 +328,9 @@ class ProveNaImaginacao2Activity : Activity() {
 
         alimento.contentDescription = nomeAlimento
 
+        alimento.isClickable = false
+        alimento.isFocusable = false
+
         val parametrosImagem = FrameLayout.LayoutParams(
             (115 * sx).toInt().coerceAtLeast(1),
             (72 * sy).toInt().coerceAtLeast(1),
@@ -310,7 +340,10 @@ class ProveNaImaginacao2Activity : Activity() {
         parametrosImagem.topMargin =
             (3 * sy).toInt()
 
-        cartao.addView(alimento, parametrosImagem)
+        cartao.addView(
+            alimento,
+            parametrosImagem
+        )
 
         // =================================================
         // NOME DO ALIMENTO
@@ -319,7 +352,9 @@ class ProveNaImaginacao2Activity : Activity() {
         val texto = TextView(this)
 
         texto.text = nomeAlimento
+
         texto.gravity = Gravity.CENTER
+
         texto.setTextColor(textoEscuro)
 
         texto.setTextSize(
@@ -329,21 +364,31 @@ class ProveNaImaginacao2Activity : Activity() {
 
         texto.typeface = Typeface.DEFAULT_BOLD
 
+        texto.isClickable = false
+        texto.isFocusable = false
+
         val parametrosTexto = FrameLayout.LayoutParams(
             FrameLayout.LayoutParams.MATCH_PARENT,
             (25 * sy).toInt().coerceAtLeast(1),
             Gravity.BOTTOM
         )
 
-        cartao.addView(texto, parametrosTexto)
+        cartao.addView(
+            texto,
+            parametrosTexto
+        )
 
         // =================================================
-        // SELEÇÃO DO ALIMENTO
+        // SELEÇÃO DO ALIMENTO COM SOM
         // =================================================
 
         cartao.setOnClickListener {
 
-            if (!popupAberto) {
+            if (!popupAberto && !navegando) {
+
+                // SOM AO TOCAR NO ALIMENTO
+
+                tocarAudio(R.raw.audio_toque)
 
                 mostrarAlimentoPreferido(
                     nomeImagem,
@@ -366,7 +411,8 @@ class ProveNaImaginacao2Activity : Activity() {
         sy: Float
     ) {
 
-        if (popupAberto) {
+        if (popupAberto || navegando) {
+
             return
         }
 
@@ -411,6 +457,7 @@ class ProveNaImaginacao2Activity : Activity() {
         }
 
         painel.elevation = 12f * sx
+
         painel.isClickable = true
 
         val parametrosPainel = FrameLayout.LayoutParams(
@@ -419,7 +466,10 @@ class ProveNaImaginacao2Activity : Activity() {
             Gravity.CENTER
         )
 
-        sobreposicao.addView(painel, parametrosPainel)
+        sobreposicao.addView(
+            painel,
+            parametrosPainel
+        )
 
         // =================================================
         // TÍTULO DO POP-UP
@@ -428,7 +478,9 @@ class ProveNaImaginacao2Activity : Activity() {
         val titulo = TextView(this)
 
         titulo.text = "Seu alimento preferido é:"
+
         titulo.gravity = Gravity.CENTER
+
         titulo.setTextColor(textoEscuro)
 
         titulo.setTextSize(
@@ -446,7 +498,10 @@ class ProveNaImaginacao2Activity : Activity() {
         parametrosTitulo.topMargin =
             (10 * sy).toInt()
 
-        painel.addView(titulo, parametrosTitulo)
+        painel.addView(
+            titulo,
+            parametrosTitulo
+        )
 
         // =================================================
         // IMAGEM DO ALIMENTO ESCOLHIDO
@@ -461,6 +516,7 @@ class ProveNaImaginacao2Activity : Activity() {
         )
 
         if (id != 0) {
+
             imagem.setImageResource(id)
         }
 
@@ -478,7 +534,10 @@ class ProveNaImaginacao2Activity : Activity() {
         parametrosImagem.topMargin =
             (65 * sy).toInt()
 
-        painel.addView(imagem, parametrosImagem)
+        painel.addView(
+            imagem,
+            parametrosImagem
+        )
 
         // =================================================
         // NOME DO ALIMENTO ESCOLHIDO
@@ -487,7 +546,9 @@ class ProveNaImaginacao2Activity : Activity() {
         val nome = TextView(this)
 
         nome.text = nomeAlimento
+
         nome.gravity = Gravity.CENTER
+
         nome.setTextColor(textoEscuro)
 
         nome.setTextSize(
@@ -505,10 +566,13 @@ class ProveNaImaginacao2Activity : Activity() {
         parametrosNome.topMargin =
             (170 * sy).toInt()
 
-        painel.addView(nome, parametrosNome)
+        painel.addView(
+            nome,
+            parametrosNome
+        )
 
         // =================================================
-        // BOTÃO VOLTAR - TELA INICIAL DOS 5 JOGOS
+        // BOTÃO VOLTAR - ROSA
         // =================================================
 
         criarBotaoPopup(
@@ -523,19 +587,7 @@ class ProveNaImaginacao2Activity : Activity() {
             sy
         ) {
 
-            popupAberto = false
-
-            val intent = Intent(
-                this,
-                CincoOpcoesDosJogosActivity::class.java
-            )
-
-            intent.flags =
-                Intent.FLAG_ACTIVITY_CLEAR_TOP or
-                        Intent.FLAG_ACTIVITY_SINGLE_TOP
-
-            startActivity(intent)
-            finish()
+            voltarParaCincoOpcoes()
         }
 
         // =================================================
@@ -558,14 +610,19 @@ class ProveNaImaginacao2Activity : Activity() {
         }
 
         // =================================================
-        // TOCAR FORA FECHA O POP-UP
+        // TOCAR FORA FECHA O POP-UP COM SOM
         // =================================================
 
         sobreposicao.setOnClickListener {
 
-            popupAberto = false
+            if (!navegando) {
 
-            tela.removeView(sobreposicao)
+                tocarAudio(R.raw.clique_pop)
+
+                popupAberto = false
+
+                tela.removeView(sobreposicao)
+            }
         }
     }
 
@@ -589,7 +646,9 @@ class ProveNaImaginacao2Activity : Activity() {
         val botao = TextView(this)
 
         botao.text = texto
+
         botao.gravity = Gravity.CENTER
+
         botao.setTextColor(textoEscuro)
 
         botao.setTextSize(
@@ -604,16 +663,24 @@ class ProveNaImaginacao2Activity : Activity() {
 
         botao.background = GradientDrawable().apply {
 
-            setColor(Color.parseColor(cor))
+            setColor(
+                Color.parseColor(cor)
+            )
 
             cornerRadius = 17f * sx
         }
 
         botao.elevation = 3f * sx
+
         botao.isClickable = true
+        botao.isFocusable = true
 
         botao.setOnClickListener {
-            acao()
+
+            if (!navegando) {
+
+                acao()
+            }
         }
 
         val parametros = FrameLayout.LayoutParams(
@@ -627,7 +694,48 @@ class ProveNaImaginacao2Activity : Activity() {
         parametros.topMargin =
             (y * sy).toInt()
 
-        painel.addView(botao, parametros)
+        painel.addView(
+            botao,
+            parametros
+        )
+    }
+
+    // =====================================================
+    // VOLTAR PARA A TELA DOS CINCO JOGOS
+    // =====================================================
+
+    private fun voltarParaCincoOpcoes() {
+
+        if (navegando || isFinishing) return
+
+        navegando = true
+
+        pararAudio()
+
+        tocarSomNavegacao()
+
+        val intent = Intent(
+            this,
+            CincoOpcoesDosJogosActivity::class.java
+        )
+
+        intent.flags =
+            Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                    Intent.FLAG_ACTIVITY_SINGLE_TOP
+
+        startActivity(intent)
+
+        finish()
+    }
+
+    // =====================================================
+    // BOTÃO VOLTAR DO CELULAR
+    // =====================================================
+
+    @Suppress("DEPRECATION")
+    override fun onBackPressed() {
+
+        voltarParaCincoOpcoes()
     }
 
     // =====================================================
@@ -635,6 +743,14 @@ class ProveNaImaginacao2Activity : Activity() {
     // =====================================================
 
     private fun abrirProximoNivel() {
+
+        if (navegando || isFinishing) return
+
+        navegando = true
+
+        pararAudio()
+
+        tocarSomNavegacao()
 
         try {
 
@@ -648,9 +764,12 @@ class ProveNaImaginacao2Activity : Activity() {
             )
 
             startActivity(intent)
+
             finish()
 
         } catch (erro: Exception) {
+
+            navegando = false
 
             Log.e(
                 "ProveNaImaginacao2",
@@ -663,6 +782,128 @@ class ProveNaImaginacao2Activity : Activity() {
                 "O próximo nível ainda não está disponível!",
                 Toast.LENGTH_SHORT
             ).show()
+        }
+    }
+
+    // =====================================================
+    // REPRODUZIR ÁUDIO AO TOCAR NOS ALIMENTOS
+    // =====================================================
+
+    private fun tocarAudio(recursoAudio: Int) {
+
+        pararAudio()
+
+        try {
+
+            val player = MediaPlayer.create(
+                this,
+                recursoAudio
+            ) ?: return
+
+            audioAtual = player
+
+            player.setOnCompletionListener {
+
+                if (audioAtual === player) {
+
+                    audioAtual = null
+
+                    player.release()
+                }
+            }
+
+            player.setOnErrorListener { _, _, _ ->
+
+                if (audioAtual === player) {
+
+                    pararAudio()
+                }
+
+                true
+            }
+
+            player.start()
+
+        } catch (erro: Exception) {
+
+            pararAudio()
+
+            Log.e(
+                "ProveNaImaginacao2",
+                "Erro ao reproduzir áudio",
+                erro
+            )
+        }
+    }
+
+    // =====================================================
+    // SOM DOS BOTÕES DE NAVEGAÇÃO
+    // =====================================================
+
+    private fun tocarSomNavegacao() {
+
+        var player: MediaPlayer? = null
+
+        try {
+
+            player = MediaPlayer.create(
+                applicationContext,
+                R.raw.clique_pop
+            )
+
+            player?.setOnCompletionListener {
+
+                it.release()
+            }
+
+            player?.setOnErrorListener { mp, _, _ ->
+
+                mp.release()
+
+                true
+            }
+
+            player?.start()
+
+        } catch (erro: Exception) {
+
+            player?.release()
+
+            Log.e(
+                "ProveNaImaginacao2",
+                "Erro no som de navegação",
+                erro
+            )
+        }
+    }
+
+    // =====================================================
+    // PARAR ÁUDIO
+    // =====================================================
+
+    private fun pararAudio() {
+
+        val player = audioAtual
+
+        audioAtual = null
+
+        player?.let {
+
+            try {
+
+                it.setOnCompletionListener(null)
+
+                it.setOnErrorListener(null)
+
+                if (it.isPlaying) {
+
+                    it.stop()
+                }
+
+            } catch (_: Exception) {
+            }
+
+            it.release()
         }
     }
 
@@ -747,6 +988,27 @@ class ProveNaImaginacao2Activity : Activity() {
         parametros.topMargin =
             (y * sy).toInt()
 
-        tela.addView(view, parametros)
+        tela.addView(
+            view,
+            parametros
+        )
+    }
+
+    // =====================================================
+    // CICLO DE VIDA
+    // =====================================================
+
+    override fun onPause() {
+
+        pararAudio()
+
+        super.onPause()
+    }
+
+    override fun onDestroy() {
+
+        pararAudio()
+
+        super.onDestroy()
     }
 }

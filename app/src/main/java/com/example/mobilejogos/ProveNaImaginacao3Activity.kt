@@ -7,6 +7,7 @@ import android.graphics.Color
 import android.graphics.PorterDuff
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.media.MediaPlayer
 import android.os.Bundle
 import android.util.Log
 import android.util.TypedValue
@@ -29,8 +30,12 @@ class ProveNaImaginacao3Activity : Activity() {
     private val textoEscuro = Color.parseColor("#35542D")
 
     private var popupAberto = false
+    private var navegando = false
+
+    private var audioAtual: MediaPlayer? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
+
         super.onCreate(savedInstanceState)
 
         requestedOrientation =
@@ -59,6 +64,7 @@ class ProveNaImaginacao3Activity : Activity() {
         tela.removeAllViews()
 
         popupAberto = false
+        navegando = false
 
         val sx = tela.width.toFloat() / larguraBase
         val sy = tela.height.toFloat() / alturaBase
@@ -76,6 +82,7 @@ class ProveNaImaginacao3Activity : Activity() {
         fundo.scaleType = ImageView.ScaleType.FIT_XY
 
         fundo.isClickable = false
+        fundo.isFocusable = false
 
         tela.addView(
             fundo,
@@ -92,13 +99,15 @@ class ProveNaImaginacao3Activity : Activity() {
         val voltar = adicionarImagem(
             "botaoretornoverde",
             19, 25, 40, 40, sx, sy
-
         )
 
         voltar.isClickable = true
-        voltar.contentDescription = "Voltar"
+        voltar.isFocusable = true
+
+        voltar.contentDescription = "Voltar aos cinco jogos"
 
         voltar.setOnClickListener {
+
             voltarParaJogos()
         }
 
@@ -108,7 +117,8 @@ class ProveNaImaginacao3Activity : Activity() {
 
         adicionarImagem(
             "titulomelhorsalgado",
-            205, 2, 490, 85, sx, sy
+            205, 2, 490, 85,
+            sx, sy
         )
 
         // =================================================
@@ -237,6 +247,8 @@ class ProveNaImaginacao3Activity : Activity() {
             cornerRadius = 17f * sx
         }
 
+        sombra.isClickable = false
+
         adicionarView(
             sombra,
             x + 13,
@@ -263,13 +275,19 @@ class ProveNaImaginacao3Activity : Activity() {
         cartao.isClickable = true
         cartao.isFocusable = true
 
+        cartao.contentDescription =
+            "Selecionar $nomeAlimento"
+
         val parametros = FrameLayout.LayoutParams(
             (155 * sx).toInt().coerceAtLeast(1),
             (100 * sy).toInt().coerceAtLeast(1)
         )
 
-        parametros.leftMargin = (x * sx).toInt()
-        parametros.topMargin = (y * sy).toInt()
+        parametros.leftMargin =
+            (x * sx).toInt()
+
+        parametros.topMargin =
+            (y * sy).toInt()
 
         tela.addView(
             cartao,
@@ -311,6 +329,9 @@ class ProveNaImaginacao3Activity : Activity() {
 
         alimento.contentDescription = nomeAlimento
 
+        alimento.isClickable = false
+        alimento.isFocusable = false
+
         val parametrosImagem = FrameLayout.LayoutParams(
             (115 * sx).toInt().coerceAtLeast(1),
             (72 * sy).toInt().coerceAtLeast(1),
@@ -344,6 +365,9 @@ class ProveNaImaginacao3Activity : Activity() {
 
         texto.typeface = Typeface.DEFAULT_BOLD
 
+        texto.isClickable = false
+        texto.isFocusable = false
+
         val parametrosTexto = FrameLayout.LayoutParams(
             FrameLayout.LayoutParams.MATCH_PARENT,
             (25 * sy).toInt().coerceAtLeast(1),
@@ -356,12 +380,16 @@ class ProveNaImaginacao3Activity : Activity() {
         )
 
         // =================================================
-        // CLIQUE NO ALIMENTO
+        // CLIQUE NO ALIMENTO COM SOM
         // =================================================
 
         cartao.setOnClickListener {
 
-            if (!popupAberto) {
+            if (!popupAberto && !navegando) {
+
+                // SOM AO TOCAR NO ALIMENTO
+
+                tocarAudio(R.raw.audio_toque)
 
                 mostrarAlimentoPreferido(
                     nomeImagem,
@@ -384,7 +412,8 @@ class ProveNaImaginacao3Activity : Activity() {
         sy: Float
     ) {
 
-        if (popupAberto) {
+        if (popupAberto || navegando) {
+
             return
         }
 
@@ -544,7 +573,7 @@ class ProveNaImaginacao3Activity : Activity() {
         )
 
         // =================================================
-        // BOTÃO VOLTAR - CENTRALIZADO
+        // APENAS O BOTÃO VOLTAR - CENTRALIZADO
         // =================================================
 
         criarBotaoPopup(
@@ -563,19 +592,24 @@ class ProveNaImaginacao3Activity : Activity() {
         }
 
         // =================================================
-        // TOCAR FORA FECHA O POP-UP
+        // TOCAR FORA FECHA O POP-UP COM SOM
         // =================================================
 
         sobreposicao.setOnClickListener {
 
-            popupAberto = false
+            if (!navegando) {
 
-            tela.removeView(sobreposicao)
+                tocarAudio(R.raw.clique_pop)
+
+                popupAberto = false
+
+                tela.removeView(sobreposicao)
+            }
         }
     }
 
     // =====================================================
-    // CRIAR BOTÕES DO POP-UP
+    // CRIAR BOTÃO DO POP-UP
     // =====================================================
 
     private fun criarBotaoPopup(
@@ -621,9 +655,14 @@ class ProveNaImaginacao3Activity : Activity() {
         botao.elevation = 3f * sx
 
         botao.isClickable = true
+        botao.isFocusable = true
 
         botao.setOnClickListener {
-            acao()
+
+            if (!navegando) {
+
+                acao()
+            }
         }
 
         val parametros = FrameLayout.LayoutParams(
@@ -644,10 +683,18 @@ class ProveNaImaginacao3Activity : Activity() {
     }
 
     // =====================================================
-    // VOLTAR PARA TELA INICIAL DOS JOGOS
+    // VOLTAR PARA TELA INICIAL DOS CINCO JOGOS
     // =====================================================
 
     private fun voltarParaJogos() {
+
+        if (navegando || isFinishing) return
+
+        navegando = true
+
+        pararAudio()
+
+        tocarSomNavegacao()
 
         val intent = Intent(
             this,
@@ -662,6 +709,138 @@ class ProveNaImaginacao3Activity : Activity() {
         startActivity(intent)
 
         finish()
+    }
+
+    // =====================================================
+    // BOTÃO VOLTAR DO CELULAR
+    // =====================================================
+
+    @Suppress("DEPRECATION")
+    override fun onBackPressed() {
+
+        voltarParaJogos()
+    }
+
+    // =====================================================
+    // REPRODUZIR ÁUDIO AO TOCAR NOS ALIMENTOS
+    // =====================================================
+
+    private fun tocarAudio(recursoAudio: Int) {
+
+        pararAudio()
+
+        try {
+
+            val player = MediaPlayer.create(
+                this,
+                recursoAudio
+            ) ?: return
+
+            audioAtual = player
+
+            player.setOnCompletionListener {
+
+                if (audioAtual === player) {
+
+                    audioAtual = null
+
+                    player.release()
+                }
+            }
+
+            player.setOnErrorListener { _, _, _ ->
+
+                if (audioAtual === player) {
+
+                    pararAudio()
+                }
+
+                true
+            }
+
+            player.start()
+
+        } catch (erro: Exception) {
+
+            pararAudio()
+
+            Log.e(
+                "ProveNaImaginacao3",
+                "Erro ao reproduzir áudio",
+                erro
+            )
+        }
+    }
+
+    // =====================================================
+    // SOM DOS BOTÕES DE NAVEGAÇÃO
+    // =====================================================
+
+    private fun tocarSomNavegacao() {
+
+        var player: MediaPlayer? = null
+
+        try {
+
+            player = MediaPlayer.create(
+                applicationContext,
+                R.raw.clique_pop
+            )
+
+            player?.setOnCompletionListener {
+
+                it.release()
+            }
+
+            player?.setOnErrorListener { mp, _, _ ->
+
+                mp.release()
+
+                true
+            }
+
+            player?.start()
+
+        } catch (erro: Exception) {
+
+            player?.release()
+
+            Log.e(
+                "ProveNaImaginacao3",
+                "Erro no som de navegação",
+                erro
+            )
+        }
+    }
+
+    // =====================================================
+    // PARAR ÁUDIO
+    // =====================================================
+
+    private fun pararAudio() {
+
+        val player = audioAtual
+
+        audioAtual = null
+
+        player?.let {
+
+            try {
+
+                it.setOnCompletionListener(null)
+
+                it.setOnErrorListener(null)
+
+                if (it.isPlaying) {
+
+                    it.stop()
+                }
+
+            } catch (_: Exception) {
+            }
+
+            it.release()
+        }
     }
 
     // =====================================================
@@ -749,5 +928,23 @@ class ProveNaImaginacao3Activity : Activity() {
             view,
             parametros
         )
+    }
+
+    // =====================================================
+    // CICLO DE VIDA
+    // =====================================================
+
+    override fun onPause() {
+
+        pararAudio()
+
+        super.onPause()
+    }
+
+    override fun onDestroy() {
+
+        pararAudio()
+
+        super.onDestroy()
     }
 }

@@ -76,26 +76,18 @@ class DescubraOCheiroActivity : Activity() {
         val sx = tela.width.toFloat() / larguraBase
         val sy = tela.height.toFloat() / alturaBase
 
-        // PLANO DE FUNDO
+        // PLANO DE FUNDO ATUALIZADO
 
         val fundo = ImageView(this).apply {
 
             setImageResource(
-                R.drawable.planodescubracomocheiro
+                R.drawable.fundoatualizado
             )
 
             scaleType = ImageView.ScaleType.FIT_XY
             isClickable = false
             isFocusable = false
         }
-
-        tela.addView(
-            fundo,
-            FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.MATCH_PARENT
-            )
-        )
 
         // BOTÃO RETORNO
 

@@ -1,5 +1,8 @@
 package com.example.mobilejogos
 
+import android.animation.ObjectAnimator
+import android.animation.PropertyValuesHolder
+import android.animation.ValueAnimator
 import android.app.Activity
 import android.content.ActivityNotFoundException
 import android.content.Intent
@@ -7,13 +10,16 @@ import android.content.pm.ActivityInfo
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.media.MediaPlayer
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
 import android.view.WindowManager
+import android.view.animation.AccelerateDecelerateInterpolator
 import android.view.animation.OvershootInterpolator
 import android.widget.FrameLayout
 import android.widget.ImageView
@@ -26,7 +32,6 @@ class OlhinhosCuriosos2Activity : Activity() {
 
     private val handler = Handler(Looper.getMainLooper())
 
-    // Próximo nível
     private val proximaFaseActivity = "OlhinhosCuriosos3Activity"
 
     // =====================================================
@@ -44,12 +49,19 @@ class OlhinhosCuriosos2Activity : Activity() {
     private val selecionados = mutableSetOf<String>()
 
     private var indiceAtual = 0
-
     private var finalizado = false
+    private var navegando = false
 
     private var pedidoView: TextView? = null
-
     private var mensagemView: TextView? = null
+
+    private var audioToquePlayer: MediaPlayer? = null
+
+    private val animacoesAnimais =
+        mutableMapOf<String, ObjectAnimator>()
+
+    private val imagensAnimais =
+        mutableMapOf<String, ImageView>()
 
     data class Animal(
         val imagem: String,
@@ -60,11 +72,8 @@ class OlhinhosCuriosos2Activity : Activity() {
         val altura: Int
     )
 
-    // =====================================================
-    // INICIAR ACTIVITY
-    // =====================================================
-
     override fun onCreate(savedInstanceState: Bundle?) {
+
         super.onCreate(savedInstanceState)
 
         requestedOrientation =
@@ -94,14 +103,16 @@ class OlhinhosCuriosos2Activity : Activity() {
 
     private fun montarJogo() {
 
+        pararTodasAnimacoes()
+
+        imagensAnimais.clear()
+
         root.removeAllViews()
 
         val sx = root.width / 874f
         val sy = root.height / 402f
 
-        // =====================================================
-        // FUNDO
-        // =====================================================
+        // PLANO DE FUNDO
 
         val fundo = ImageView(this).apply {
 
@@ -120,33 +131,39 @@ class OlhinhosCuriosos2Activity : Activity() {
             )
         )
 
-        // =====================================================
+        // =================================================
         // BOTÃO RETORNO
-        // =====================================================
+        // =================================================
 
         val voltar = adicionarImagem(
             "botaoretornoamareloclaro",
-            19, 25, 40, 40, sx, sy
+            19, 25, 40, 40,
+            sx, sy
         )
 
         voltar.isClickable = true
+        voltar.isFocusable = true
+
+        voltar.contentDescription = "Voltar aos cinco jogos"
 
         voltar.setOnClickListener {
-            finish()
+
+            voltarParaJogos()
         }
 
-        // =====================================================
+        // =================================================
         // TÍTULO
-        // =====================================================
+        // =================================================
 
         adicionarImagem(
             "titulo_toquenosanimais",
-            205, 2, 490, 85, sx, sy
+            205, 2, 490, 85,
+            sx, sy
         )
 
-        // =====================================================
+        // =================================================
         // TEXTO INDICANDO O ANIMAL
-        // =====================================================
+        // =================================================
 
         pedidoView = TextView(this).apply {
 
@@ -181,12 +198,13 @@ class OlhinhosCuriosos2Activity : Activity() {
 
         adicionarView(
             pedidoView!!,
-            240, 80, 394, 42, sx, sy
+            240, 80, 394, 42,
+            sx, sy
         )
 
-        // =====================================================
+        // =================================================
         // MENSAGEM DE ERRO
-        // =====================================================
+        // =================================================
 
         mensagemView = TextView(this).apply {
 
@@ -210,43 +228,51 @@ class OlhinhosCuriosos2Activity : Activity() {
 
         adicionarView(
             mensagemView!!,
-            235, 112, 404, 36, sx, sy
+            235, 112, 404, 36,
+            sx, sy
         )
 
-        // =====================================================
+        // =================================================
         // ADICIONAR OS CINCO ANIMAIS
-        // =====================================================
+        // =================================================
 
-        animais.forEach { animal ->
+        animais.forEachIndexed { index, animal ->
 
-            // DESTAQUE AMARELO
+            // CÍRCULO AMARELO
+            // INICIALMENTE INVISÍVEL
 
-            val halo = FrameLayout(this)
+            val halo = View(this).apply {
 
-            val fundoHalo = GradientDrawable().apply {
+                background = GradientDrawable().apply {
 
-                shape = GradientDrawable.OVAL
+                    shape = GradientDrawable.OVAL
 
-                setColor(
-                    Color.argb(100, 255, 221, 40)
-                )
+                    setColor(
+                        Color.argb(100, 255, 221, 40)
+                    )
 
-                setStroke(
-                    (4 * minOf(sx, sy))
-                        .toInt()
-                        .coerceAtLeast(2),
-                    Color.rgb(255, 215, 0)
-                )
-            }
+                    setStroke(
+                        (4 * minOf(sx, sy))
+                            .toInt()
+                            .coerceAtLeast(2),
 
-            halo.background = fundoHalo
-
-            halo.visibility =
-                if (animal.imagem in selecionados) {
-                    View.VISIBLE
-                } else {
-                    View.GONE
+                        Color.rgb(255, 215, 0)
+                    )
                 }
+
+                visibility =
+                    if (animal.imagem in selecionados) {
+
+                        View.VISIBLE
+
+                    } else {
+
+                        View.INVISIBLE
+                    }
+
+                isClickable = false
+                isFocusable = false
+            }
 
             adicionarView(
                 halo,
@@ -258,7 +284,9 @@ class OlhinhosCuriosos2Activity : Activity() {
                 sy
             )
 
+            // =================================================
             // IMAGEM DO ANIMAL
+            // =================================================
 
             val imagemId = resources.getIdentifier(
                 animal.imagem,
@@ -269,6 +297,7 @@ class OlhinhosCuriosos2Activity : Activity() {
             val imagem = ImageView(this).apply {
 
                 if (imagemId != 0) {
+
                     setImageResource(imagemId)
                 }
 
@@ -291,18 +320,211 @@ class OlhinhosCuriosos2Activity : Activity() {
                 sy
             )
 
+            imagensAnimais[animal.imagem] = imagem
+
+            // PULSAÇÃO NO PRÓPRIO ANIMAL
+
+            if (
+                animal.imagem !in selecionados &&
+                !finalizado
+            ) {
+
+                animarAnimal(
+                    animal.imagem,
+                    imagem,
+                    index
+                )
+            }
+
+            // CLIQUE NO ANIMAL
+
             imagem.setOnClickListener {
 
-                verificarAnimal(
-                    animal,
-                    halo,
-                    sx,
-                    sy
-                )
+                if (!finalizado && !navegando) {
+
+                    tocarSomAudioToque()
+
+                    verificarAnimal(
+                        animal,
+                        halo,
+                        imagem,
+                        sx,
+                        sy
+                    )
+                }
             }
         }
 
         atualizarPedido()
+    }
+
+    // =====================================================
+    // PULSAÇÃO SUAVE NOS ANIMAIS
+    // =====================================================
+
+    private fun animarAnimal(
+        nomeAnimal: String,
+        imagem: ImageView,
+        indice: Int
+    ) {
+
+        animacoesAnimais
+            .remove(nomeAnimal)
+            ?.cancel()
+
+        imagem.scaleX = 1f
+        imagem.scaleY = 1f
+
+        val escalaX = PropertyValuesHolder.ofFloat(
+            View.SCALE_X,
+            1f,
+            1.09f,
+            1f
+        )
+
+        val escalaY = PropertyValuesHolder.ofFloat(
+            View.SCALE_Y,
+            1f,
+            1.09f,
+            1f
+        )
+
+        val animacao = ObjectAnimator.ofPropertyValuesHolder(
+            imagem,
+            escalaX,
+            escalaY
+        ).apply {
+
+            duration = 1600L
+
+            startDelay = indice * 180L
+
+            repeatCount = ValueAnimator.INFINITE
+
+            repeatMode = ValueAnimator.RESTART
+
+            interpolator =
+                AccelerateDecelerateInterpolator()
+        }
+
+        animacoesAnimais[nomeAnimal] = animacao
+
+        animacao.start()
+    }
+
+    // =====================================================
+    // PARAR PULSAÇÃO DO ANIMAL ENCONTRADO
+    // =====================================================
+
+    private fun pararAnimacaoAnimal(
+        nomeAnimal: String,
+        imagem: ImageView
+    ) {
+
+        animacoesAnimais
+            .remove(nomeAnimal)
+            ?.cancel()
+
+        imagem.animate()
+            .scaleX(1f)
+            .scaleY(1f)
+            .setDuration(180L)
+            .start()
+    }
+
+    // =====================================================
+    // PARAR TODAS AS ANIMAÇÕES
+    // =====================================================
+
+    private fun pararTodasAnimacoes() {
+
+        animacoesAnimais.values.forEach {
+
+            it.cancel()
+        }
+
+        animacoesAnimais.clear()
+
+        imagensAnimais.values.forEach {
+
+            it.animate().cancel()
+
+            it.scaleX = 1f
+            it.scaleY = 1f
+        }
+    }
+
+    // =====================================================
+    // SOM AO TOCAR NOS ANIMAIS
+    // =====================================================
+
+    private fun tocarSomAudioToque() {
+
+        pararAudio()
+
+        try {
+
+            val player = MediaPlayer.create(
+                this,
+                R.raw.audio_toque
+            ) ?: return
+
+            audioToquePlayer = player
+
+            player.setOnCompletionListener {
+
+                if (audioToquePlayer === it) {
+
+                    audioToquePlayer = null
+
+                    it.release()
+                }
+            }
+
+            player.setOnErrorListener { mp, _, _ ->
+
+                if (audioToquePlayer === mp) {
+
+                    audioToquePlayer = null
+
+                    mp.release()
+                }
+
+                true
+            }
+
+            player.start()
+
+        } catch (erro: Exception) {
+
+            pararAudio()
+
+            Log.e(
+                "OlhinhosCuriosos2",
+                "Erro ao reproduzir áudio",
+                erro
+            )
+        }
+    }
+
+    // =====================================================
+    // PARAR ÁUDIO
+    // =====================================================
+
+    private fun pararAudio() {
+
+        val player = audioToquePlayer
+
+        audioToquePlayer = null
+
+        player?.let {
+
+            it.setOnCompletionListener(null)
+
+            it.setOnErrorListener(null)
+
+            it.release()
+        }
     }
 
     // =====================================================
@@ -312,17 +534,26 @@ class OlhinhosCuriosos2Activity : Activity() {
     private fun verificarAnimal(
         animal: Animal,
         halo: View,
+        imagem: ImageView,
         sx: Float,
         sy: Float
     ) {
 
-        if (finalizado || animal.imagem in selecionados) {
+        if (
+            finalizado ||
+            navegando ||
+            animal.imagem in selecionados
+        ) {
             return
         }
 
+        if (indiceAtual >= animais.size) return
+
         val esperado = animais[indiceAtual]
 
+        // =================================================
         // ANIMAL ERRADO
+        // =================================================
 
         if (animal.imagem != esperado.imagem) {
 
@@ -342,19 +573,48 @@ class OlhinhosCuriosos2Activity : Activity() {
             handler.postDelayed({
 
                 if (!finalizado) {
+
                     mensagemView?.visibility = View.GONE
                 }
 
-            }, 1800)
+            }, 1800L)
 
             return
         }
 
+        // =================================================
         // ANIMAL CORRETO
+        // =================================================
 
         selecionados.add(animal.imagem)
 
+        // PARAR A PULSAÇÃO
+
+        pararAnimacaoAnimal(
+            animal.imagem,
+            imagem
+        )
+
+        // MOSTRAR O CÍRCULO AMARELO
+
         halo.visibility = View.VISIBLE
+
+        halo.alpha = 0f
+
+        halo.scaleX = 0.85f
+        halo.scaleY = 0.85f
+
+        // ANIMAÇÃO DE ENTRADA DO CÍRCULO
+
+        halo.animate()
+            .alpha(1f)
+            .scaleX(1f)
+            .scaleY(1f)
+            .setDuration(300L)
+            .setInterpolator(
+                OvershootInterpolator(1.2f)
+            )
+            .start()
 
         indiceAtual++
 
@@ -381,7 +641,11 @@ class OlhinhosCuriosos2Activity : Activity() {
         val animal = animais[indiceAtual]
 
         val artigo = when (animal.nome) {
-            "golfinho", "caranguejo", "peixe" -> "no"
+
+            "golfinho",
+            "caranguejo",
+            "peixe" -> "no"
+
             else -> "na"
         }
 
@@ -406,6 +670,8 @@ class OlhinhosCuriosos2Activity : Activity() {
 
         finalizado = true
 
+        pararTodasAnimacoes()
+
         handler.removeCallbacksAndMessages(null)
 
         pedidoView?.visibility = View.GONE
@@ -414,9 +680,12 @@ class OlhinhosCuriosos2Activity : Activity() {
 
         handler.postDelayed({
 
-            mostrarPopupVitoria(sx, sy)
+            if (!isFinishing && !isDestroyed && !navegando) {
 
-        }, 450)
+                mostrarPopupVitoria(sx, sy)
+            }
+
+        }, 450L)
     }
 
     // =====================================================
@@ -427,6 +696,8 @@ class OlhinhosCuriosos2Activity : Activity() {
         sx: Float,
         sy: Float
     ) {
+
+        val escala = minOf(sx, sy)
 
         // FUNDO LEVEMENTE ESCURECIDO
 
@@ -454,9 +725,9 @@ class OlhinhosCuriosos2Activity : Activity() {
             .setDuration(350)
             .start()
 
-        // =====================================================
+        // =================================================
         // POP-UP COM CORES SUAVES
-        // =====================================================
+        // =================================================
 
         val popup = FrameLayout(this).apply {
 
@@ -468,12 +739,13 @@ class OlhinhosCuriosos2Activity : Activity() {
                 )
             ).apply {
 
-                cornerRadius = 28f * minOf(sx, sy)
+                cornerRadius = 28f * escala
 
                 setStroke(
-                    (3 * minOf(sx, sy))
+                    (3 * escala)
                         .toInt()
                         .coerceAtLeast(2),
+
                     Color.rgb(245, 222, 160)
                 )
             }
@@ -489,9 +761,12 @@ class OlhinhosCuriosos2Activity : Activity() {
             Gravity.CENTER
         )
 
-        root.addView(popup, popupParams)
+        root.addView(
+            popup,
+            popupParams
+        )
 
-        // ANIMAÇÃO DE ENTRADA
+        // ANIMAÇÃO DE ENTRADA DO POP-UP
 
         popup.scaleX = 0.6f
         popup.scaleY = 0.6f
@@ -507,9 +782,9 @@ class OlhinhosCuriosos2Activity : Activity() {
             )
             .start()
 
-        // =====================================================
+        // =================================================
         // POSICIONAR ELEMENTOS DO POP-UP
-        // =====================================================
+        // =================================================
 
         fun colocar(
             view: View,
@@ -520,8 +795,13 @@ class OlhinhosCuriosos2Activity : Activity() {
         ) {
 
             val params = FrameLayout.LayoutParams(
-                (largura * sx).toInt().coerceAtLeast(1),
-                (altura * sy).toInt().coerceAtLeast(1)
+                (largura * sx)
+                    .toInt()
+                    .coerceAtLeast(1),
+
+                (altura * sy)
+                    .toInt()
+                    .coerceAtLeast(1)
             ).apply {
 
                 leftMargin = (x * sx).toInt()
@@ -532,9 +812,9 @@ class OlhinhosCuriosos2Activity : Activity() {
             popup.addView(view, params)
         }
 
-        // =====================================================
+        // =================================================
         // CRIAR TEXTOS
-        // =====================================================
+        // =================================================
 
         fun criarTexto(
             conteudo: String,
@@ -550,7 +830,7 @@ class OlhinhosCuriosos2Activity : Activity() {
 
                 setTextSize(
                     TypedValue.COMPLEX_UNIT_PX,
-                    tamanho * minOf(sx, sy)
+                    tamanho * escala
                 )
 
                 typeface = Typeface.DEFAULT_BOLD
@@ -561,9 +841,9 @@ class OlhinhosCuriosos2Activity : Activity() {
             }
         }
 
-        // =====================================================
+        // =================================================
         // GIRAFINHA
-        // =====================================================
+        // =================================================
 
         val girafinha = ImageView(this).apply {
 
@@ -574,6 +854,7 @@ class OlhinhosCuriosos2Activity : Activity() {
             )
 
             if (imagemId != 0) {
+
                 setImageResource(imagemId)
             }
 
@@ -584,8 +865,6 @@ class OlhinhosCuriosos2Activity : Activity() {
             girafinha,
             215, 0, 110, 95
         )
-
-        // ANIMAÇÃO DA GIRAFINHA
 
         girafinha.scaleX = 0f
         girafinha.scaleY = 0f
@@ -600,9 +879,9 @@ class OlhinhosCuriosos2Activity : Activity() {
             )
             .start()
 
-        // =====================================================
-        // ESTRELAS
-        // =====================================================
+        // =================================================
+        // ESTRELAS DECORATIVAS
+        // =================================================
 
         val estrelaEsquerda = criarTexto(
             "✦",
@@ -626,9 +905,9 @@ class OlhinhosCuriosos2Activity : Activity() {
             430, 40, 35, 35
         )
 
-        // =====================================================
+        // =================================================
         // TÍTULO DO POP-UP
-        // =====================================================
+        // =================================================
 
         val titulo = criarTexto(
             "Parabéns, explorador!",
@@ -641,9 +920,9 @@ class OlhinhosCuriosos2Activity : Activity() {
             35, 85, 470, 48
         )
 
-        // =====================================================
+        // =================================================
         // SUBTÍTULO
-        // =====================================================
+        // =================================================
 
         val subtitulo = criarTexto(
             "Você encontrou todos os animais!",
@@ -656,9 +935,9 @@ class OlhinhosCuriosos2Activity : Activity() {
             35, 135, 470, 38
         )
 
-        // =====================================================
-        // CRIAR BOTÕES
-        // =====================================================
+        // =================================================
+        // CRIAR BOTÕES PASTEL
+        // =================================================
 
         fun criarBotao(
             textoBotao: String,
@@ -677,7 +956,7 @@ class OlhinhosCuriosos2Activity : Activity() {
 
                 setTextSize(
                     TypedValue.COMPLEX_UNIT_PX,
-                    23f * minOf(sx, sy)
+                    23f * escala
                 )
 
                 typeface = Typeface.DEFAULT_BOLD
@@ -692,12 +971,13 @@ class OlhinhosCuriosos2Activity : Activity() {
                     )
                 ).apply {
 
-                    cornerRadius = 20f * minOf(sx, sy)
+                    cornerRadius = 20f * escala
 
                     setStroke(
-                        (2 * minOf(sx, sy))
+                        (2 * escala)
                             .toInt()
                             .coerceAtLeast(1),
+
                         corBorda
                     )
                 }
@@ -710,9 +990,9 @@ class OlhinhosCuriosos2Activity : Activity() {
             }
         }
 
-        // =====================================================
-        // BOTÃO VOLTAR
-        // =====================================================
+        // =================================================
+        // BOTÃO VOLTAR - AZUL PASTEL
+        // =================================================
 
         val botaoVoltar = criarBotao(
             "← Voltar",
@@ -727,12 +1007,13 @@ class OlhinhosCuriosos2Activity : Activity() {
         )
 
         botaoVoltar.setOnClickListener {
-            finish()
+
+            voltarParaJogos()
         }
 
-        // =====================================================
-        // BOTÃO PRÓXIMO NÍVEL
-        // =====================================================
+        // =================================================
+        // BOTÃO PRÓXIMO NÍVEL - VERDE PASTEL
+        // =================================================
 
         val botaoProximo = criarBotao(
             "Próximo nível →",
@@ -747,10 +1028,11 @@ class OlhinhosCuriosos2Activity : Activity() {
         )
 
         botaoProximo.setOnClickListener {
+
             abrirProximoNivel()
         }
 
-        // ANIMAÇÃO DO BOTÃO
+        // ANIMAÇÃO DO BOTÃO PRÓXIMO
 
         botaoProximo.animate()
             .scaleX(1.03f)
@@ -762,6 +1044,7 @@ class OlhinhosCuriosos2Activity : Activity() {
                 botaoProximo.animate()
                     .scaleX(1f)
                     .scaleY(1f)
+                    .setStartDelay(0)
                     .setDuration(400)
                     .start()
             }
@@ -769,10 +1052,44 @@ class OlhinhosCuriosos2Activity : Activity() {
     }
 
     // =====================================================
-    // ABRIR PRÓXIMO NÍVEL
+    // VOLTAR PARA A TELA DOS CINCO JOGOS
+    // =====================================================
+
+    private fun voltarParaJogos() {
+
+        if (navegando || isFinishing) return
+
+        navegando = true
+
+        handler.removeCallbacksAndMessages(null)
+
+        pararTodasAnimacoes()
+
+        pararAudio()
+
+        val intent = Intent(
+            this,
+            CincoOpcoesDosJogosActivity::class.java
+        )
+
+        intent.flags =
+            Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                    Intent.FLAG_ACTIVITY_SINGLE_TOP
+
+        startActivity(intent)
+
+        finish()
+    }
+
+    // =====================================================
+    // ABRIR PRÓXIMO NÍVEL - NÍVEL 3
     // =====================================================
 
     private fun abrirProximoNivel() {
+
+        if (navegando || isFinishing) return
+
+        navegando = true
 
         try {
 
@@ -784,9 +1101,19 @@ class OlhinhosCuriosos2Activity : Activity() {
                 )
             }
 
+            handler.removeCallbacksAndMessages(null)
+
+            pararTodasAnimacoes()
+
+            pararAudio()
+
             startActivity(intent)
 
-        } catch (e: ActivityNotFoundException) {
+            finish()
+
+        } catch (erro: ActivityNotFoundException) {
+
+            navegando = false
 
             Toast.makeText(
                 this,
@@ -797,7 +1124,17 @@ class OlhinhosCuriosos2Activity : Activity() {
     }
 
     // =====================================================
-    // ADICIONAR IMAGEM
+    // BOTÃO VOLTAR DO CELULAR
+    // =====================================================
+
+    @Suppress("DEPRECATION")
+    override fun onBackPressed() {
+
+        voltarParaJogos()
+    }
+
+    // =====================================================
+    // ADICIONAR IMAGENS
     // =====================================================
 
     private fun adicionarImagem(
@@ -819,10 +1156,12 @@ class OlhinhosCuriosos2Activity : Activity() {
         )
 
         if (imagemId != 0) {
+
             imagem.setImageResource(imagemId)
         }
 
-        imagem.scaleType = ImageView.ScaleType.FIT_CENTER
+        imagem.scaleType =
+            ImageView.ScaleType.FIT_CENTER
 
         adicionarView(
             imagem,
@@ -838,7 +1177,7 @@ class OlhinhosCuriosos2Activity : Activity() {
     }
 
     // =====================================================
-    // ADICIONAR VIEW
+    // ADICIONAR ELEMENTOS NA TELA
     // =====================================================
 
     private fun adicionarView(
@@ -852,15 +1191,65 @@ class OlhinhosCuriosos2Activity : Activity() {
     ) {
 
         val parametros = FrameLayout.LayoutParams(
-            (largura * sx).toInt().coerceAtLeast(1),
-            (altura * sy).toInt().coerceAtLeast(1)
+            (largura * sx)
+                .toInt()
+                .coerceAtLeast(1),
+
+            (altura * sy)
+                .toInt()
+                .coerceAtLeast(1)
         )
 
-        parametros.leftMargin = (x * sx).toInt()
+        parametros.leftMargin =
+            (x * sx).toInt()
 
-        parametros.topMargin = (y * sy).toInt()
+        parametros.topMargin =
+            (y * sy).toInt()
 
-        root.addView(view, parametros)
+        root.addView(
+            view,
+            parametros
+        )
+    }
+
+    // =====================================================
+    // RETOMAR ANIMAÇÕES
+    // =====================================================
+
+    override fun onResume() {
+
+        super.onResume()
+
+        if (!finalizado && !navegando) {
+
+            animais.forEachIndexed { index, animal ->
+
+                if (animal.imagem !in selecionados) {
+
+                    imagensAnimais[animal.imagem]?.let {
+
+                        animarAnimal(
+                            animal.imagem,
+                            it,
+                            index
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    // =====================================================
+    // PAUSAR ANIMAÇÕES E ÁUDIO
+    // =====================================================
+
+    override fun onPause() {
+
+        pararTodasAnimacoes()
+
+        pararAudio()
+
+        super.onPause()
     }
 
     // =====================================================
@@ -870,6 +1259,10 @@ class OlhinhosCuriosos2Activity : Activity() {
     override fun onDestroy() {
 
         handler.removeCallbacksAndMessages(null)
+
+        pararTodasAnimacoes()
+
+        pararAudio()
 
         super.onDestroy()
     }
