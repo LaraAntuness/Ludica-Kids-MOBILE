@@ -81,7 +81,7 @@ class DescubraOCheiroActivity : Activity() {
         val fundo = ImageView(this).apply {
 
             setImageResource(
-                R.drawable.planodefundodescubra
+                R.drawable.planodescubracomocheiro
             )
 
             scaleType = ImageView.ScaleType.FIT_XY

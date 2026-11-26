@@ -31,7 +31,7 @@ class BibliotecaSonoraActivity : Activity() {
     private val audioBola = R.raw.som_bola
     private val audioCavalinho = R.raw.som_cavalinho
     private val audioMeninoAviao = R.raw.som_aviao
-    private val audioDinossauro = R.raw.som_dinossauro
+    private val audioDinossauro = R.raw.som_aviao
     private val audioBrinquedos = R.raw.som_brinquedos
 
     override fun onCreate(savedInstanceState: Bundle?) {
