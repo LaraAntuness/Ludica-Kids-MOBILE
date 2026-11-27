@@ -132,7 +132,7 @@ class TelaInicialJogosGeral : AppCompatActivity() {
 
         val bubba = adicionarImagem(
             "girafabotao",
-            794, 8, 65, 70
+            794, 8, 45, 50
         )
 
         bubba.contentDescription = "Quem vai jogar"

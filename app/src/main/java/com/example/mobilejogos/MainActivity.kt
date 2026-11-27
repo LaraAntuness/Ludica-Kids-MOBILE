@@ -174,7 +174,7 @@ class MainActivity : Activity() {
 
         adicionarImagem(
             "titulo_toquenosanimais",
-            227, 3, 420, 73,
+            227, 1, 420, 73,
             sx, sy
         )
 
@@ -236,7 +236,7 @@ class MainActivity : Activity() {
 
         adicionarView(
             pedidoView!!,
-            307, 65, 260, 35,
+            307, 58, 260, 35,
             sx, sy
         )
 
