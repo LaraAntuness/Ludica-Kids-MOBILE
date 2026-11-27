@@ -25,6 +25,9 @@ import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
+import kotlin.math.cos
+import kotlin.math.sin
+import kotlin.random.Random
 
 class OlhinhosCuriosos2Activity : Activity() {
 
@@ -35,7 +38,7 @@ class OlhinhosCuriosos2Activity : Activity() {
     private val proximaFaseActivity = "OlhinhosCuriosos3Activity"
 
     // =====================================================
-    // ANIMAIS DO NÍVEL 2
+    // POSIÇÕES DOS ANIMAIS
     // =====================================================
 
     private val animais = listOf(
@@ -45,6 +48,19 @@ class OlhinhosCuriosos2Activity : Activity() {
         Animal("peixe", "peixe", 275, 245, 95, 85),
         Animal("garanguejo", "caranguejo", 540, 302, 145, 95)
     )
+
+    // CORES DO GLITTER
+
+    private val coresGlitter = listOf(
+        Color.rgb(255, 211, 85),
+        Color.rgb(255, 235, 165),
+        Color.rgb(130, 187, 237),
+        Color.rgb(183, 222, 255),
+        Color.WHITE,
+        Color.rgb(164, 211, 144)
+    )
+
+    private val estrelasAtivas = mutableListOf<View>()
 
     private val selecionados = mutableSetOf<String>()
 
@@ -56,6 +72,8 @@ class OlhinhosCuriosos2Activity : Activity() {
     private var mensagemView: TextView? = null
 
     private var audioToquePlayer: MediaPlayer? = null
+    private var audioFundoPlayer: MediaPlayer? = null
+    private var audioAcertoPlayer: MediaPlayer? = null
 
     private val animacoesAnimais =
         mutableMapOf<String, ObjectAnimator>()
@@ -104,13 +122,15 @@ class OlhinhosCuriosos2Activity : Activity() {
     private fun montarJogo() {
 
         pararTodasAnimacoes()
+        limparGlitter()
 
         imagensAnimais.clear()
-
         root.removeAllViews()
 
         val sx = root.width / 874f
         val sy = root.height / 402f
+
+        val escala = minOf(sx, sy)
 
         // PLANO DE FUNDO
 
@@ -132,7 +152,7 @@ class OlhinhosCuriosos2Activity : Activity() {
         )
 
         // =================================================
-        // BOTÃO RETORNO
+        // BOTÃO VOLTAR
         // =================================================
 
         val voltar = adicionarImagem(
@@ -144,25 +164,25 @@ class OlhinhosCuriosos2Activity : Activity() {
         voltar.isClickable = true
         voltar.isFocusable = true
 
-        voltar.contentDescription = "Voltar aos cinco jogos"
+        voltar.contentDescription =
+            "Voltar aos cinco jogos"
 
         voltar.setOnClickListener {
-
             voltarParaJogos()
         }
 
         // =================================================
-        // TÍTULO
+        // TÍTULO MENOR
         // =================================================
 
         adicionarImagem(
             "titulo_toquenosanimais",
-            205, 2, 490, 85,
+            227, 3, 420, 73,
             sx, sy
         )
 
         // =================================================
-        // TEXTO INDICANDO O ANIMAL
+        // BALÃO DE INSTRUÇÕES
         // =================================================
 
         pedidoView = TextView(this).apply {
@@ -171,75 +191,114 @@ class OlhinhosCuriosos2Activity : Activity() {
 
             setTextSize(
                 TypedValue.COMPLEX_UNIT_PX,
-                28f * minOf(sx, sy)
+                19f * escala
             )
 
+            // COR LARANJA DAS FRASES
+
             setTextColor(
-                Color.rgb(87, 75, 25)
+                Color.rgb(220, 140, 45)
             )
 
             typeface = Typeface.DEFAULT_BOLD
 
             gravity = Gravity.CENTER
 
-            setShadowLayer(
-                2f,
-                1f,
-                1f,
-                Color.WHITE
-            )
-
-            includeFontPadding = true
-
-            maxLines = 1
+            includeFontPadding = false
 
             isSingleLine = true
+
+            setPadding(
+                (8 * sx).toInt(),
+                0,
+                (8 * sx).toInt(),
+                0
+            )
+
+            background = GradientDrawable(
+                GradientDrawable.Orientation.TOP_BOTTOM,
+                intArrayOf(
+                    Color.rgb(255, 253, 245),
+                    Color.rgb(255, 249, 228)
+                )
+            ).apply {
+
+                cornerRadius = 18f * escala
+
+                setStroke(
+                    (2.5f * escala)
+                        .toInt()
+                        .coerceAtLeast(1),
+
+                    Color.rgb(245, 222, 160)
+                )
+            }
+
+            elevation = 4f
         }
 
         adicionarView(
             pedidoView!!,
-            240, 80, 394, 42,
+            307, 65, 260, 35,
             sx, sy
         )
 
         // =================================================
-        // MENSAGEM DE ERRO
+        // MENSAGEM DE ERRO PERSONALIZADA
         // =================================================
 
         mensagemView = TextView(this).apply {
 
             setTextSize(
                 TypedValue.COMPLEX_UNIT_PX,
-                15f * minOf(sx, sy)
+                13f * escala
             )
 
             setTextColor(
-                Color.rgb(145, 48, 40)
+                Color.rgb(170, 85, 85)
             )
 
             typeface = Typeface.DEFAULT_BOLD
 
             gravity = Gravity.CENTER
 
-            includeFontPadding = true
+            includeFontPadding = false
+
+            background = GradientDrawable().apply {
+
+                setColor(
+                    Color.rgb(255, 235, 232)
+                )
+
+                cornerRadius = 15f * escala
+
+                setStroke(
+                    (2 * escala)
+                        .toInt()
+                        .coerceAtLeast(1),
+
+                    Color.rgb(240, 182, 180)
+                )
+            }
+
+            elevation = 3f
 
             visibility = View.GONE
         }
 
         adicionarView(
             mensagemView!!,
-            235, 112, 404, 36,
+            302, 104, 270, 26,
             sx, sy
         )
 
         // =================================================
-        // ADICIONAR OS CINCO ANIMAIS
+        // ANIMAIS
         // =================================================
 
         animais.forEachIndexed { index, animal ->
 
             // CÍRCULO AMARELO
-            // INICIALMENTE INVISÍVEL
 
             val halo = View(this).apply {
 
@@ -252,7 +311,7 @@ class OlhinhosCuriosos2Activity : Activity() {
                     )
 
                     setStroke(
-                        (4 * minOf(sx, sy))
+                        (4 * escala)
                             .toInt()
                             .coerceAtLeast(2),
 
@@ -262,11 +321,8 @@ class OlhinhosCuriosos2Activity : Activity() {
 
                 visibility =
                     if (animal.imagem in selecionados) {
-
                         View.VISIBLE
-
                     } else {
-
                         View.INVISIBLE
                     }
 
@@ -284,9 +340,7 @@ class OlhinhosCuriosos2Activity : Activity() {
                 sy
             )
 
-            // =================================================
             // IMAGEM DO ANIMAL
-            // =================================================
 
             val imagemId = resources.getIdentifier(
                 animal.imagem,
@@ -297,7 +351,6 @@ class OlhinhosCuriosos2Activity : Activity() {
             val imagem = ImageView(this).apply {
 
                 if (imagemId != 0) {
-
                     setImageResource(imagemId)
                 }
 
@@ -306,7 +359,6 @@ class OlhinhosCuriosos2Activity : Activity() {
                 contentDescription = animal.nome
 
                 isClickable = true
-
                 isFocusable = true
             }
 
@@ -322,7 +374,7 @@ class OlhinhosCuriosos2Activity : Activity() {
 
             imagensAnimais[animal.imagem] = imagem
 
-            // PULSAÇÃO NO PRÓPRIO ANIMAL
+            // PULSAÇÃO DOS ANIMAIS
 
             if (
                 animal.imagem !in selecionados &&
@@ -359,7 +411,296 @@ class OlhinhosCuriosos2Activity : Activity() {
     }
 
     // =====================================================
-    // PULSAÇÃO SUAVE NOS ANIMAIS
+    // MÚSICA DE FUNDO
+    // =====================================================
+
+    private fun iniciarAudioFundo() {
+
+        try {
+
+            if (audioFundoPlayer == null) {
+
+                val audioId = resources.getIdentifier(
+                    "audiodefundojogo",
+                    "raw",
+                    packageName
+                )
+
+                if (audioId == 0) {
+
+                    Log.e(
+                        "OlhinhosCuriosos2",
+                        "Áudio de fundo não encontrado"
+                    )
+
+                    return
+                }
+
+                audioFundoPlayer = MediaPlayer.create(
+                    this,
+                    audioId
+                )
+
+                audioFundoPlayer?.isLooping = true
+
+                audioFundoPlayer?.setVolume(
+                    0.35f,
+                    0.35f
+                )
+            }
+
+            if (audioFundoPlayer?.isPlaying == false) {
+
+                audioFundoPlayer?.start()
+            }
+
+        } catch (erro: Exception) {
+
+            liberarAudioFundo()
+
+            Log.e(
+                "OlhinhosCuriosos2",
+                "Erro no áudio de fundo",
+                erro
+            )
+        }
+    }
+
+    // =====================================================
+    // PAUSAR MÚSICA
+    // =====================================================
+
+    private fun pausarAudioFundo() {
+
+        try {
+
+            if (audioFundoPlayer?.isPlaying == true) {
+
+                audioFundoPlayer?.pause()
+            }
+
+        } catch (_: Exception) {
+
+            liberarAudioFundo()
+        }
+    }
+
+    private fun liberarAudioFundo() {
+
+        audioFundoPlayer?.release()
+
+        audioFundoPlayer = null
+    }
+
+    // =====================================================
+    // SOM DE ACERTO
+    // =====================================================
+
+    private fun tocarSomAcerto() {
+
+        liberarAudioAcerto()
+
+        try {
+
+            val audioId = resources.getIdentifier(
+                "brilho_suave",
+                "raw",
+                packageName
+            )
+
+            if (audioId == 0) {
+
+                Log.e(
+                    "OlhinhosCuriosos2",
+                    "Áudio brilho_suave não encontrado"
+                )
+
+                return
+            }
+
+            val player = MediaPlayer.create(
+                this,
+                audioId
+            ) ?: return
+
+            audioAcertoPlayer = player
+
+            player.setVolume(
+                0.55f,
+                0.55f
+            )
+
+            player.setOnCompletionListener {
+
+                if (audioAcertoPlayer === it) {
+
+                    liberarAudioAcerto()
+                }
+            }
+
+            player.setOnErrorListener { mp, _, _ ->
+
+                if (audioAcertoPlayer === mp) {
+
+                    liberarAudioAcerto()
+                }
+
+                true
+            }
+
+            player.start()
+
+        } catch (erro: Exception) {
+
+            liberarAudioAcerto()
+
+            Log.e(
+                "OlhinhosCuriosos2",
+                "Erro no som de acerto",
+                erro
+            )
+        }
+    }
+
+    private fun liberarAudioAcerto() {
+
+        val player = audioAcertoPlayer
+
+        audioAcertoPlayer = null
+
+        player?.let {
+
+            it.setOnCompletionListener(null)
+            it.setOnErrorListener(null)
+            it.release()
+        }
+    }
+
+    // =====================================================
+    // GLITTER ANIMADO
+    // =====================================================
+
+    private fun animarGlitter(
+        imagem: ImageView,
+        sx: Float,
+        sy: Float
+    ) {
+
+        val escala = minOf(sx, sy)
+
+        val centroX =
+            imagem.x + imagem.width / 2f
+
+        val centroY =
+            imagem.y + imagem.height / 2f
+
+        repeat(32) { indice ->
+
+            val estrela = TextView(this).apply {
+
+                text =
+                    if (indice % 3 == 0) "✦" else "★"
+
+                setTextSize(
+                    TypedValue.COMPLEX_UNIT_PX,
+                    Random.nextInt(12, 23) * escala
+                )
+
+                setTextColor(
+                    coresGlitter.random()
+                )
+
+                gravity = Gravity.CENTER
+
+                includeFontPadding = false
+
+                elevation = 6f
+
+                isClickable = false
+                isFocusable = false
+
+                importantForAccessibility =
+                    View.IMPORTANT_FOR_ACCESSIBILITY_NO
+            }
+
+            val tamanho =
+                (34 * escala).toInt().coerceAtLeast(1)
+
+            val parametros = FrameLayout.LayoutParams(
+                tamanho,
+                tamanho
+            ).apply {
+
+                leftMargin =
+                    (centroX - tamanho / 2f).toInt()
+
+                topMargin =
+                    (centroY - tamanho / 2f).toInt()
+            }
+
+            root.addView(
+                estrela,
+                parametros
+            )
+
+            estrelasAtivas.add(estrela)
+
+            val angulo =
+                2.0 * Math.PI * indice / 32.0 +
+                        Random.nextDouble(-0.2, 0.2)
+
+            val distancia =
+                Random.nextInt(45, 120) * escala
+
+            estrela.alpha = 1f
+
+            estrela.scaleX = 0.2f
+            estrela.scaleY = 0.2f
+
+            estrela.animate()
+                .translationX(
+                    (cos(angulo) * distancia).toFloat()
+                )
+                .translationY(
+                    (sin(angulo) * distancia).toFloat()
+                )
+                .rotation(
+                    Random.nextFloat() * 360f
+                )
+                .scaleX(1.2f)
+                .scaleY(1.2f)
+                .alpha(0f)
+                .setDuration(
+                    Random.nextLong(700L, 1200L)
+                )
+                .withEndAction {
+
+                    root.removeView(estrela)
+
+                    estrelasAtivas.remove(estrela)
+                }
+                .start()
+        }
+    }
+
+    // =====================================================
+    // REMOVER GLITTER
+    // =====================================================
+
+    private fun limparGlitter() {
+
+        estrelasAtivas.toList().forEach { estrela ->
+
+            estrela.animate().cancel()
+
+            root.removeView(estrela)
+        }
+
+        estrelasAtivas.clear()
+    }
+
+    // =====================================================
+    // PULSAÇÃO DOS ANIMAIS
     // =====================================================
 
     private fun animarAnimal(
@@ -432,10 +773,6 @@ class OlhinhosCuriosos2Activity : Activity() {
             .start()
     }
 
-    // =====================================================
-    // PARAR TODAS AS ANIMAÇÕES
-    // =====================================================
-
     private fun pararTodasAnimacoes() {
 
         animacoesAnimais.values.forEach {
@@ -501,15 +838,11 @@ class OlhinhosCuriosos2Activity : Activity() {
 
             Log.e(
                 "OlhinhosCuriosos2",
-                "Erro ao reproduzir áudio",
+                "Erro ao reproduzir áudio de toque",
                 erro
             )
         }
     }
-
-    // =====================================================
-    // PARAR ÁUDIO
-    // =====================================================
 
     private fun pararAudio() {
 
@@ -520,9 +853,7 @@ class OlhinhosCuriosos2Activity : Activity() {
         player?.let {
 
             it.setOnCompletionListener(null)
-
             it.setOnErrorListener(null)
-
             it.release()
         }
     }
@@ -552,7 +883,7 @@ class OlhinhosCuriosos2Activity : Activity() {
         val esperado = animais[indiceAtual]
 
         // =================================================
-        // ANIMAL ERRADO
+        // RESPOSTA ERRADA
         // =================================================
 
         if (animal.imagem != esperado.imagem) {
@@ -561,11 +892,16 @@ class OlhinhosCuriosos2Activity : Activity() {
 
                 text = "Animal errado, tente novamente!"
 
-                setTextColor(
-                    Color.rgb(145, 48, 40)
-                )
-
                 visibility = View.VISIBLE
+
+                animate().cancel()
+
+                alpha = 0f
+
+                animate()
+                    .alpha(1f)
+                    .setDuration(200L)
+                    .start()
             }
 
             handler.removeCallbacksAndMessages(null)
@@ -583,19 +919,31 @@ class OlhinhosCuriosos2Activity : Activity() {
         }
 
         // =================================================
-        // ANIMAL CORRETO
+        // RESPOSTA CORRETA
         // =================================================
 
         selecionados.add(animal.imagem)
 
-        // PARAR A PULSAÇÃO
+        // SOM DE ACERTO
+
+        tocarSomAcerto()
+
+        // GLITTER
+
+        animarGlitter(
+            imagem,
+            sx,
+            sy
+        )
+
+        // PARAR PULSAÇÃO
 
         pararAnimacaoAnimal(
             animal.imagem,
             imagem
         )
 
-        // MOSTRAR O CÍRCULO AMARELO
+        // MOSTRAR CÍRCULO AMARELO
 
         halo.visibility = View.VISIBLE
 
@@ -603,8 +951,6 @@ class OlhinhosCuriosos2Activity : Activity() {
 
         halo.scaleX = 0.85f
         halo.scaleY = 0.85f
-
-        // ANIMAÇÃO DE ENTRADA DO CÍRCULO
 
         halo.animate()
             .alpha(1f)
@@ -629,7 +975,7 @@ class OlhinhosCuriosos2Activity : Activity() {
     }
 
     // =====================================================
-    // ATUALIZAR ANIMAL SOLICITADO
+    // ATUALIZAR FRASE DO BALÃO
     // =====================================================
 
     private fun atualizarPedido() {
@@ -651,9 +997,26 @@ class OlhinhosCuriosos2Activity : Activity() {
 
         pedidoView?.apply {
 
-            text = "Toque $artigo ${animal.nome}"
+            animate().cancel()
+
+            text = "✦  Toque $artigo ${animal.nome}!  ✦"
 
             visibility = View.VISIBLE
+
+            alpha = 0f
+
+            scaleX = 0.90f
+            scaleY = 0.90f
+
+            animate()
+                .alpha(1f)
+                .scaleX(1f)
+                .scaleY(1f)
+                .setDuration(350L)
+                .setInterpolator(
+                    OvershootInterpolator(1.2f)
+                )
+                .start()
         }
 
         mensagemView?.visibility = View.GONE
@@ -678,14 +1041,21 @@ class OlhinhosCuriosos2Activity : Activity() {
 
         mensagemView?.visibility = View.GONE
 
+        // AGUARDAR O GLITTER DO ÚLTIMO ANIMAL
+        // A MÚSICA CONTINUA TOCANDO
+
         handler.postDelayed({
 
-            if (!isFinishing && !isDestroyed && !navegando) {
+            if (
+                !isFinishing &&
+                !isDestroyed &&
+                !navegando
+            ) {
 
                 mostrarPopupVitoria(sx, sy)
             }
 
-        }, 450L)
+        }, 1200L)
     }
 
     // =====================================================
@@ -699,7 +1069,7 @@ class OlhinhosCuriosos2Activity : Activity() {
 
         val escala = minOf(sx, sy)
 
-        // FUNDO LEVEMENTE ESCURECIDO
+        // FUNDO ESCURECIDO
 
         val fundoEscuro = View(this).apply {
 
@@ -708,6 +1078,8 @@ class OlhinhosCuriosos2Activity : Activity() {
             )
 
             alpha = 0f
+
+            elevation = 8f
 
             isClickable = true
         }
@@ -722,12 +1094,10 @@ class OlhinhosCuriosos2Activity : Activity() {
 
         fundoEscuro.animate()
             .alpha(1f)
-            .setDuration(350)
+            .setDuration(350L)
             .start()
 
-        // =================================================
-        // POP-UP COM CORES SUAVES
-        // =================================================
+        // CAIXA DO POP-UP
 
         val popup = FrameLayout(this).apply {
 
@@ -766,7 +1136,7 @@ class OlhinhosCuriosos2Activity : Activity() {
             popupParams
         )
 
-        // ANIMAÇÃO DE ENTRADA DO POP-UP
+        // ANIMAÇÃO DE ENTRADA
 
         popup.scaleX = 0.6f
         popup.scaleY = 0.6f
@@ -776,15 +1146,13 @@ class OlhinhosCuriosos2Activity : Activity() {
             .scaleX(1f)
             .scaleY(1f)
             .alpha(1f)
-            .setDuration(500)
+            .setDuration(500L)
             .setInterpolator(
                 OvershootInterpolator(1.1f)
             )
             .start()
 
-        // =================================================
         // POSICIONAR ELEMENTOS DO POP-UP
-        // =================================================
 
         fun colocar(
             view: View,
@@ -812,9 +1180,7 @@ class OlhinhosCuriosos2Activity : Activity() {
             popup.addView(view, params)
         }
 
-        // =================================================
         // CRIAR TEXTOS
-        // =================================================
 
         fun criarTexto(
             conteudo: String,
@@ -841,9 +1207,7 @@ class OlhinhosCuriosos2Activity : Activity() {
             }
         }
 
-        // =================================================
         // GIRAFINHA
-        // =================================================
 
         val girafinha = ImageView(this).apply {
 
@@ -872,16 +1236,14 @@ class OlhinhosCuriosos2Activity : Activity() {
         girafinha.animate()
             .scaleX(1f)
             .scaleY(1f)
-            .setStartDelay(200)
-            .setDuration(600)
+            .setStartDelay(200L)
+            .setDuration(600L)
             .setInterpolator(
                 OvershootInterpolator(1.8f)
             )
             .start()
 
-        // =================================================
         // ESTRELAS DECORATIVAS
-        // =================================================
 
         val estrelaEsquerda = criarTexto(
             "✦",
@@ -905,9 +1267,7 @@ class OlhinhosCuriosos2Activity : Activity() {
             430, 40, 35, 35
         )
 
-        // =================================================
         // TÍTULO DO POP-UP
-        // =================================================
 
         val titulo = criarTexto(
             "Parabéns, explorador!",
@@ -920,12 +1280,10 @@ class OlhinhosCuriosos2Activity : Activity() {
             35, 85, 470, 48
         )
 
-        // =================================================
         // SUBTÍTULO
-        // =================================================
 
         val subtitulo = criarTexto(
-            "Você encontrou todos os animais!",
+            "Você encontrou todos os animais! 🐾",
             21f,
             Color.rgb(145, 123, 105)
         )
@@ -935,9 +1293,7 @@ class OlhinhosCuriosos2Activity : Activity() {
             35, 135, 470, 38
         )
 
-        // =================================================
-        // CRIAR BOTÕES PASTEL
-        // =================================================
+        // CRIAR BOTÕES
 
         fun criarBotao(
             textoBotao: String,
@@ -985,14 +1341,11 @@ class OlhinhosCuriosos2Activity : Activity() {
                 elevation = 4f
 
                 isClickable = true
-
                 isFocusable = true
             }
         }
 
-        // =================================================
-        // BOTÃO VOLTAR - AZUL PASTEL
-        // =================================================
+        // BOTÃO VOLTAR
 
         val botaoVoltar = criarBotao(
             "← Voltar",
@@ -1011,9 +1364,7 @@ class OlhinhosCuriosos2Activity : Activity() {
             voltarParaJogos()
         }
 
-        // =================================================
-        // BOTÃO PRÓXIMO NÍVEL - VERDE PASTEL
-        // =================================================
+        // BOTÃO PRÓXIMO NÍVEL
 
         val botaoProximo = criarBotao(
             "Próximo nível →",
@@ -1037,22 +1388,22 @@ class OlhinhosCuriosos2Activity : Activity() {
         botaoProximo.animate()
             .scaleX(1.03f)
             .scaleY(1.03f)
-            .setStartDelay(750)
-            .setDuration(450)
+            .setStartDelay(750L)
+            .setDuration(450L)
             .withEndAction {
 
                 botaoProximo.animate()
                     .scaleX(1f)
                     .scaleY(1f)
-                    .setStartDelay(0)
-                    .setDuration(400)
+                    .setStartDelay(0L)
+                    .setDuration(400L)
                     .start()
             }
             .start()
     }
 
     // =====================================================
-    // VOLTAR PARA A TELA DOS CINCO JOGOS
+    // VOLTAR PARA OS CINCO JOGOS
     // =====================================================
 
     private fun voltarParaJogos() {
@@ -1065,7 +1416,13 @@ class OlhinhosCuriosos2Activity : Activity() {
 
         pararTodasAnimacoes()
 
+        limparGlitter()
+
         pararAudio()
+
+        liberarAudioAcerto()
+
+        liberarAudioFundo()
 
         val intent = Intent(
             this,
@@ -1082,7 +1439,7 @@ class OlhinhosCuriosos2Activity : Activity() {
     }
 
     // =====================================================
-    // ABRIR PRÓXIMO NÍVEL - NÍVEL 3
+    // ABRIR TERCEIRO NÍVEL
     // =====================================================
 
     private fun abrirProximoNivel() {
@@ -1101,13 +1458,19 @@ class OlhinhosCuriosos2Activity : Activity() {
                 )
             }
 
+            startActivity(intent)
+
             handler.removeCallbacksAndMessages(null)
 
             pararTodasAnimacoes()
 
+            limparGlitter()
+
             pararAudio()
 
-            startActivity(intent)
+            liberarAudioAcerto()
+
+            liberarAudioFundo()
 
             finish()
 
@@ -1213,12 +1576,17 @@ class OlhinhosCuriosos2Activity : Activity() {
     }
 
     // =====================================================
-    // RETOMAR ANIMAÇÕES
+    // RETOMAR ANIMAÇÕES E MÚSICA
     // =====================================================
 
     override fun onResume() {
 
         super.onResume()
+
+        if (!navegando) {
+
+            iniciarAudioFundo()
+        }
 
         if (!finalizado && !navegando) {
 
@@ -1240,14 +1608,20 @@ class OlhinhosCuriosos2Activity : Activity() {
     }
 
     // =====================================================
-    // PAUSAR ANIMAÇÕES E ÁUDIO
+    // PAUSAR ANIMAÇÕES E ÁUDIOS
     // =====================================================
 
     override fun onPause() {
 
         pararTodasAnimacoes()
 
+        limparGlitter()
+
         pararAudio()
+
+        liberarAudioAcerto()
+
+        pausarAudioFundo()
 
         super.onPause()
     }
@@ -1262,7 +1636,13 @@ class OlhinhosCuriosos2Activity : Activity() {
 
         pararTodasAnimacoes()
 
+        limparGlitter()
+
         pararAudio()
+
+        liberarAudioAcerto()
+
+        liberarAudioFundo()
 
         super.onDestroy()
     }

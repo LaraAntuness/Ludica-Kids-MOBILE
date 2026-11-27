@@ -23,6 +23,9 @@ import android.view.animation.OvershootInterpolator
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.TextView
+import kotlin.math.cos
+import kotlin.math.sin
+import kotlin.random.Random
 
 class OlhinhosCuriosos3Activity : Activity() {
 
@@ -31,7 +34,7 @@ class OlhinhosCuriosos3Activity : Activity() {
     private val handler = Handler(Looper.getMainLooper())
 
     // =====================================================
-    // ANIMAIS DO NÍVEL 3
+    // POSIÇÕES DOS ANIMAIS DO NÍVEL 3
     // =====================================================
 
     private val animais = listOf(
@@ -42,16 +45,37 @@ class OlhinhosCuriosos3Activity : Activity() {
         Animal("ovelha", "ovelha", 390, 120, 140, 115)
     )
 
+    // =====================================================
+    // CORES DO GLITTER
+    // =====================================================
+
+    private val coresGlitter = listOf(
+        Color.rgb(255, 211, 85),
+        Color.rgb(255, 235, 165),
+        Color.rgb(130, 187, 237),
+        Color.rgb(183, 222, 255),
+        Color.WHITE,
+        Color.rgb(164, 211, 144)
+    )
+
+    private val estrelasAtivas = mutableListOf<View>()
+
     private val selecionados = mutableSetOf<String>()
 
     private var indiceAtual = 0
     private var finalizado = false
     private var navegando = false
+    private var telaAtiva = false
+    private var popupAberto = false
 
     private var pedidoView: TextView? = null
     private var mensagemView: TextView? = null
 
+    // ÁUDIOS
+
     private var audioToquePlayer: MediaPlayer? = null
+    private var audioFundoPlayer: MediaPlayer? = null
+    private var audioAcertoPlayer: MediaPlayer? = null
 
     private val animacoesAnimais =
         mutableMapOf<String, ObjectAnimator>()
@@ -96,7 +120,10 @@ class OlhinhosCuriosos3Activity : Activity() {
         setContentView(root)
 
         root.post {
-            montarJogo()
+
+            if (!isFinishing && !isDestroyed) {
+                montarJogo()
+            }
         }
     }
 
@@ -108,6 +135,8 @@ class OlhinhosCuriosos3Activity : Activity() {
 
         pararTodasAnimacoes()
 
+        limparGlitter()
+
         imagensAnimais.clear()
 
         halosAnimais.clear()
@@ -116,6 +145,8 @@ class OlhinhosCuriosos3Activity : Activity() {
 
         val sx = root.width / 874f
         val sy = root.height / 402f
+
+        val escala = minOf(sx, sy)
 
         // =================================================
         // PLANO DE FUNDO
@@ -128,6 +159,9 @@ class OlhinhosCuriosos3Activity : Activity() {
             )
 
             scaleType = ImageView.ScaleType.FIT_XY
+
+            isClickable = false
+            isFocusable = false
         }
 
         root.addView(
@@ -151,7 +185,8 @@ class OlhinhosCuriosos3Activity : Activity() {
         voltar.isClickable = true
         voltar.isFocusable = true
 
-        voltar.contentDescription = "Voltar aos cinco jogos"
+        voltar.contentDescription =
+            "Voltar aos cinco jogos"
 
         voltar.setOnClickListener {
 
@@ -159,17 +194,17 @@ class OlhinhosCuriosos3Activity : Activity() {
         }
 
         // =================================================
-        // TÍTULO
+        // TÍTULO PADRONIZADO
         // =================================================
 
         adicionarImagem(
             "titulo_toquenosanimais",
-            250, 10, 370, 70,
+            227, 3, 420, 73,
             sx, sy
         )
 
         // =================================================
-        // TEXTO INDICANDO O ANIMAL
+        // BALÃO DE INSTRUÇÕES
         // =================================================
 
         pedidoView = TextView(this).apply {
@@ -178,64 +213,110 @@ class OlhinhosCuriosos3Activity : Activity() {
 
             setTextSize(
                 TypedValue.COMPLEX_UNIT_PX,
-                28f * minOf(sx, sy)
+                19f * escala
             )
 
+            // COR LARANJA
+
             setTextColor(
-                Color.rgb(87, 75, 25)
+                Color.rgb(220, 140, 45)
             )
 
             typeface = Typeface.DEFAULT_BOLD
 
             gravity = Gravity.CENTER
 
-            setShadowLayer(
-                2f,
-                1f,
-                1f,
-                Color.WHITE
-            )
-
-            includeFontPadding = true
-
-            maxLines = 1
+            includeFontPadding = false
 
             isSingleLine = true
+
+            setPadding(
+                (8 * sx).toInt(),
+                0,
+                (8 * sx).toInt(),
+                0
+            )
+
+            background = GradientDrawable(
+                GradientDrawable.Orientation.TOP_BOTTOM,
+                intArrayOf(
+                    Color.rgb(255, 253, 245),
+                    Color.rgb(255, 249, 228)
+                )
+            ).apply {
+
+                cornerRadius = 18f * escala
+
+                setStroke(
+                    (2.5f * escala)
+                        .toInt()
+                        .coerceAtLeast(1),
+
+                    Color.rgb(245, 222, 160)
+                )
+            }
+
+            elevation = 4f
+
+            isClickable = false
+            isFocusable = false
         }
 
         adicionarView(
             pedidoView!!,
-            240, 80, 394, 42,
+            307, 65, 260, 35,
             sx, sy
         )
 
         // =================================================
-        // MENSAGEM DE ERRO
+        // MENSAGEM DE ERRO PERSONALIZADA
         // =================================================
 
         mensagemView = TextView(this).apply {
 
             setTextSize(
                 TypedValue.COMPLEX_UNIT_PX,
-                15f * minOf(sx, sy)
+                13f * escala
             )
 
             setTextColor(
-                Color.rgb(145, 48, 40)
+                Color.rgb(170, 85, 85)
             )
 
             typeface = Typeface.DEFAULT_BOLD
 
             gravity = Gravity.CENTER
 
-            includeFontPadding = true
+            includeFontPadding = false
+
+            background = GradientDrawable().apply {
+
+                setColor(
+                    Color.rgb(255, 235, 232)
+                )
+
+                cornerRadius = 15f * escala
+
+                setStroke(
+                    (2 * escala)
+                        .toInt()
+                        .coerceAtLeast(1),
+
+                    Color.rgb(240, 182, 180)
+                )
+            }
+
+            elevation = 3f
 
             visibility = View.GONE
+
+            isClickable = false
+            isFocusable = false
         }
 
         adicionarView(
             mensagemView!!,
-            235, 112, 404, 36,
+            302, 104, 270, 26,
             sx, sy
         )
 
@@ -259,7 +340,7 @@ class OlhinhosCuriosos3Activity : Activity() {
                     )
 
                     setStroke(
-                        (4 * minOf(sx, sy))
+                        (4 * escala)
                             .toInt()
                             .coerceAtLeast(2),
 
@@ -269,11 +350,8 @@ class OlhinhosCuriosos3Activity : Activity() {
 
                 visibility =
                     if (animal.imagem in selecionados) {
-
                         View.VISIBLE
-
                     } else {
-
                         View.INVISIBLE
                     }
 
@@ -317,6 +395,9 @@ class OlhinhosCuriosos3Activity : Activity() {
                 isClickable = false
 
                 isFocusable = false
+
+                importantForAccessibility =
+                    View.IMPORTANT_FOR_ACCESSIBILITY_NO
             }
 
             adicionarView(
@@ -331,11 +412,12 @@ class OlhinhosCuriosos3Activity : Activity() {
 
             imagensAnimais[animal.imagem] = imagem
 
-            // ANIMAÇÃO NO PRÓPRIO ANIMAL
+            // PULSAÇÃO DO ANIMAL
 
             if (
                 animal.imagem !in selecionados &&
-                !finalizado
+                !finalizado &&
+                telaAtiva
             ) {
 
                 animarAnimal(
@@ -347,7 +429,7 @@ class OlhinhosCuriosos3Activity : Activity() {
         }
 
         // =================================================
-        // ÁREAS DE TOQUE DOS ANIMAIS
+        // ÁREAS DE TOQUE INDEPENDENTES
         // =================================================
 
         animais.forEach { animal ->
@@ -376,13 +458,19 @@ class OlhinhosCuriosos3Activity : Activity() {
 
             areaToque.setOnClickListener {
 
-                if (!finalizado && !navegando) {
+                if (
+                    !finalizado &&
+                    !navegando &&
+                    telaAtiva
+                ) {
 
                     tocarSomAudioToque()
 
-                    val halo = halosAnimais[animal.imagem]
+                    val halo =
+                        halosAnimais[animal.imagem]
 
-                    val imagem = imagensAnimais[animal.imagem]
+                    val imagem =
+                        imagensAnimais[animal.imagem]
 
                     if (halo != null && imagem != null) {
 
@@ -398,8 +486,7 @@ class OlhinhosCuriosos3Activity : Activity() {
             }
         }
 
-        // GARANTIR QUE O BOTÃO VOLTAR
-        // FIQUE ACIMA DAS ÁREAS DE TOQUE
+        // GARANTIR QUE O BOTÃO VOLTAR FIQUE NA FRENTE
 
         voltar.bringToFront()
 
@@ -407,7 +494,305 @@ class OlhinhosCuriosos3Activity : Activity() {
     }
 
     // =====================================================
-    // PULSAÇÃO SUAVE NOS ANIMAIS
+    // MÚSICA DE FUNDO CONTÍNUA
+    // =====================================================
+
+    private fun iniciarAudioFundo() {
+
+        try {
+
+            if (audioFundoPlayer == null) {
+
+                val audioId = resources.getIdentifier(
+                    "audiodefundojogo",
+                    "raw",
+                    packageName
+                )
+
+                if (audioId == 0) {
+
+                    Log.e(
+                        "OlhinhosCuriosos3",
+                        "Áudio de fundo não encontrado"
+                    )
+
+                    return
+                }
+
+                audioFundoPlayer = MediaPlayer.create(
+                    this,
+                    audioId
+                )
+
+                audioFundoPlayer?.isLooping = true
+
+                audioFundoPlayer?.setVolume(
+                    0.35f,
+                    0.35f
+                )
+            }
+
+            if (audioFundoPlayer?.isPlaying == false) {
+
+                audioFundoPlayer?.start()
+            }
+
+        } catch (erro: Exception) {
+
+            liberarAudioFundo()
+
+            Log.e(
+                "OlhinhosCuriosos3",
+                "Erro no áudio de fundo",
+                erro
+            )
+        }
+    }
+
+    // =====================================================
+    // PAUSAR MÚSICA DE FUNDO
+    // =====================================================
+
+    private fun pausarAudioFundo() {
+
+        try {
+
+            if (audioFundoPlayer?.isPlaying == true) {
+
+                audioFundoPlayer?.pause()
+            }
+
+        } catch (_: Exception) {
+
+            liberarAudioFundo()
+        }
+    }
+
+    // =====================================================
+    // LIBERAR MÚSICA
+    // =====================================================
+
+    private fun liberarAudioFundo() {
+
+        audioFundoPlayer?.release()
+
+        audioFundoPlayer = null
+    }
+
+    // =====================================================
+    // SOM DE ACERTO
+    // =====================================================
+
+    private fun tocarSomAcerto() {
+
+        liberarAudioAcerto()
+
+        try {
+
+            val audioId = resources.getIdentifier(
+                "brilho_suave",
+                "raw",
+                packageName
+            )
+
+            if (audioId == 0) {
+
+                Log.e(
+                    "OlhinhosCuriosos3",
+                    "Áudio brilho_suave não encontrado"
+                )
+
+                return
+            }
+
+            val player = MediaPlayer.create(
+                this,
+                audioId
+            ) ?: return
+
+            audioAcertoPlayer = player
+
+            player.setVolume(
+                0.55f,
+                0.55f
+            )
+
+            player.setOnCompletionListener {
+
+                if (audioAcertoPlayer === it) {
+
+                    liberarAudioAcerto()
+                }
+            }
+
+            player.setOnErrorListener { mp, _, _ ->
+
+                if (audioAcertoPlayer === mp) {
+
+                    liberarAudioAcerto()
+                }
+
+                true
+            }
+
+            player.start()
+
+        } catch (erro: Exception) {
+
+            liberarAudioAcerto()
+
+            Log.e(
+                "OlhinhosCuriosos3",
+                "Erro no som de acerto",
+                erro
+            )
+        }
+    }
+
+    private fun liberarAudioAcerto() {
+
+        val player = audioAcertoPlayer
+
+        audioAcertoPlayer = null
+
+        player?.let {
+
+            it.setOnCompletionListener(null)
+
+            it.setOnErrorListener(null)
+
+            it.release()
+        }
+    }
+
+    // =====================================================
+    // GLITTER ANIMADO AO REDOR DOS ANIMAIS
+    // =====================================================
+
+    private fun animarGlitter(
+        imagem: ImageView,
+        sx: Float,
+        sy: Float
+    ) {
+
+        val escala = minOf(sx, sy)
+
+        val centroX =
+            imagem.x + imagem.width / 2f
+
+        val centroY =
+            imagem.y + imagem.height / 2f
+
+        // QUANTIDADE DE ESTRELINHAS
+
+        repeat(32) { indice ->
+
+            val estrela = TextView(this).apply {
+
+                text =
+                    if (indice % 3 == 0) "✦" else "★"
+
+                setTextSize(
+                    TypedValue.COMPLEX_UNIT_PX,
+                    Random.nextInt(12, 23) * escala
+                )
+
+                setTextColor(
+                    coresGlitter.random()
+                )
+
+                gravity = Gravity.CENTER
+
+                includeFontPadding = false
+
+                elevation = 6f
+
+                isClickable = false
+
+                isFocusable = false
+
+                importantForAccessibility =
+                    View.IMPORTANT_FOR_ACCESSIBILITY_NO
+            }
+
+            val tamanho =
+                (34 * escala).toInt().coerceAtLeast(1)
+
+            val parametros = FrameLayout.LayoutParams(
+                tamanho,
+                tamanho
+            ).apply {
+
+                leftMargin =
+                    (centroX - tamanho / 2f).toInt()
+
+                topMargin =
+                    (centroY - tamanho / 2f).toInt()
+            }
+
+            root.addView(
+                estrela,
+                parametros
+            )
+
+            estrelasAtivas.add(estrela)
+
+            val angulo =
+                2.0 * Math.PI * indice / 32.0 +
+                        Random.nextDouble(-0.2, 0.2)
+
+            val distancia =
+                Random.nextInt(45, 120) * escala
+
+            estrela.alpha = 1f
+
+            estrela.scaleX = 0.2f
+            estrela.scaleY = 0.2f
+
+            estrela.animate()
+                .translationX(
+                    (cos(angulo) * distancia).toFloat()
+                )
+                .translationY(
+                    (sin(angulo) * distancia).toFloat()
+                )
+                .rotation(
+                    Random.nextFloat() * 360f
+                )
+                .scaleX(1.2f)
+                .scaleY(1.2f)
+                .alpha(0f)
+                .setDuration(
+                    Random.nextLong(700L, 1200L)
+                )
+                .withEndAction {
+
+                    root.removeView(estrela)
+
+                    estrelasAtivas.remove(estrela)
+                }
+                .start()
+        }
+    }
+
+    // =====================================================
+    // REMOVER GLITTER
+    // =====================================================
+
+    private fun limparGlitter() {
+
+        estrelasAtivas.toList().forEach { estrela ->
+
+            estrela.animate().cancel()
+
+            root.removeView(estrela)
+        }
+
+        estrelasAtivas.clear()
+    }
+
+    // =====================================================
+    // PULSAÇÃO SUAVE DOS ANIMAIS
     // =====================================================
 
     private fun animarAnimal(
@@ -461,7 +846,7 @@ class OlhinhosCuriosos3Activity : Activity() {
     }
 
     // =====================================================
-    // PARAR A PULSAÇÃO DE UM ANIMAL ENCONTRADO
+    // PARAR PULSAÇÃO DO ANIMAL ENCONTRADO
     // =====================================================
 
     private fun pararAnimacaoAnimal(
@@ -549,14 +934,14 @@ class OlhinhosCuriosos3Activity : Activity() {
 
             Log.e(
                 "OlhinhosCuriosos3",
-                "Erro ao reproduzir áudio",
+                "Erro ao reproduzir áudio de toque",
                 erro
             )
         }
     }
 
     // =====================================================
-    // PARAR ÁUDIO
+    // PARAR ÁUDIO DE TOQUE
     // =====================================================
 
     private fun pararAudio() {
@@ -600,7 +985,7 @@ class OlhinhosCuriosos3Activity : Activity() {
         val esperado = animais[indiceAtual]
 
         // =================================================
-        // ANIMAL ERRADO
+        // RESPOSTA ERRADA
         // =================================================
 
         if (animal.imagem != esperado.imagem) {
@@ -609,11 +994,16 @@ class OlhinhosCuriosos3Activity : Activity() {
 
                 text = "Animal errado, tente novamente!"
 
-                setTextColor(
-                    Color.rgb(145, 48, 40)
-                )
-
                 visibility = View.VISIBLE
+
+                animate().cancel()
+
+                alpha = 0f
+
+                animate()
+                    .alpha(1f)
+                    .setDuration(200L)
+                    .start()
             }
 
             handler.removeCallbacksAndMessages(null)
@@ -631,19 +1021,31 @@ class OlhinhosCuriosos3Activity : Activity() {
         }
 
         // =================================================
-        // ANIMAL CORRETO
+        // RESPOSTA CORRETA
         // =================================================
 
         selecionados.add(animal.imagem)
 
-        // PARAR PULSAÇÃO DO ANIMAL CORRETO
+        // SOM DE ACERTO
+
+        tocarSomAcerto()
+
+        // GLITTER NO ANIMAL CORRETO
+
+        animarGlitter(
+            imagem,
+            sx,
+            sy
+        )
+
+        // PARAR PULSAÇÃO
 
         pararAnimacaoAnimal(
             animal.imagem,
             imagem
         )
 
-        // MOSTRAR O CÍRCULO AMARELO
+        // MOSTRAR CÍRCULO AMARELO
 
         halo.visibility = View.VISIBLE
 
@@ -651,8 +1053,6 @@ class OlhinhosCuriosos3Activity : Activity() {
 
         halo.scaleX = 0.85f
         halo.scaleY = 0.85f
-
-        // ANIMAÇÃO DE ENTRADA DO CÍRCULO
 
         halo.animate()
             .alpha(1f)
@@ -677,7 +1077,7 @@ class OlhinhosCuriosos3Activity : Activity() {
     }
 
     // =====================================================
-    // ATUALIZAR ANIMAL SOLICITADO
+    // ATUALIZAR FRASE DO BALÃO
     // =====================================================
 
     private fun atualizarPedido() {
@@ -702,9 +1102,27 @@ class OlhinhosCuriosos3Activity : Activity() {
 
         pedidoView?.apply {
 
-            text = "Toque $artigo ${animal.nome}"
+            animate().cancel()
+
+            text =
+                "✦  Toque $artigo ${animal.nome}!  ✦"
 
             visibility = View.VISIBLE
+
+            alpha = 0f
+
+            scaleX = 0.90f
+            scaleY = 0.90f
+
+            animate()
+                .alpha(1f)
+                .scaleX(1f)
+                .scaleY(1f)
+                .setDuration(350L)
+                .setInterpolator(
+                    OvershootInterpolator(1.2f)
+                )
+                .start()
         }
 
         mensagemView?.visibility = View.GONE
@@ -729,14 +1147,21 @@ class OlhinhosCuriosos3Activity : Activity() {
 
         mensagemView?.visibility = View.GONE
 
+        // AGUARDAR O GLITTER DO ÚLTIMO ANIMAL
+
         handler.postDelayed({
 
-            if (!isFinishing && !isDestroyed && !navegando) {
+            if (
+                !isFinishing &&
+                !isDestroyed &&
+                !navegando &&
+                telaAtiva
+            ) {
 
                 mostrarPopupVitoria(sx, sy)
             }
 
-        }, 450L)
+        }, 1200L)
     }
 
     // =====================================================
@@ -748,9 +1173,15 @@ class OlhinhosCuriosos3Activity : Activity() {
         sy: Float
     ) {
 
+        if (popupAberto || navegando) return
+
+        popupAberto = true
+
         val escala = minOf(sx, sy)
 
-        // FUNDO LEVEMENTE ESCURECIDO
+        // =================================================
+        // FUNDO ESCURECIDO
+        // =================================================
 
         val fundoEscuro = View(this).apply {
 
@@ -759,6 +1190,8 @@ class OlhinhosCuriosos3Activity : Activity() {
             )
 
             alpha = 0f
+
+            elevation = 8f
 
             isClickable = true
         }
@@ -773,11 +1206,11 @@ class OlhinhosCuriosos3Activity : Activity() {
 
         fundoEscuro.animate()
             .alpha(1f)
-            .setDuration(350)
+            .setDuration(350L)
             .start()
 
         // =================================================
-        // POP-UP COM CORES SUAVES
+        // CAIXA DO POP-UP
         // =================================================
 
         val popup = FrameLayout(this).apply {
@@ -829,14 +1262,14 @@ class OlhinhosCuriosos3Activity : Activity() {
             .scaleX(1f)
             .scaleY(1f)
             .alpha(1f)
-            .setDuration(500)
+            .setDuration(500L)
             .setInterpolator(
                 OvershootInterpolator(1.1f)
             )
             .start()
 
         // =================================================
-        // POSICIONAR ELEMENTOS
+        // POSICIONAR ELEMENTOS DO POP-UP
         // =================================================
 
         fun colocar(
@@ -862,7 +1295,10 @@ class OlhinhosCuriosos3Activity : Activity() {
                 topMargin = (y * sy).toInt()
             }
 
-            popup.addView(view, params)
+            popup.addView(
+                view,
+                params
+            )
         }
 
         // =================================================
@@ -919,16 +1355,14 @@ class OlhinhosCuriosos3Activity : Activity() {
             215, 0, 110, 95
         )
 
-        // ANIMAÇÃO DA GIRAFINHA
-
         girafinha.scaleX = 0f
         girafinha.scaleY = 0f
 
         girafinha.animate()
             .scaleX(1f)
             .scaleY(1f)
-            .setStartDelay(200)
-            .setDuration(600)
+            .setStartDelay(200L)
+            .setDuration(600L)
             .setInterpolator(
                 OvershootInterpolator(1.8f)
             )
@@ -980,7 +1414,8 @@ class OlhinhosCuriosos3Activity : Activity() {
         // =================================================
 
         val subtitulo = criarTexto(
-            "Você encontrou todos os animais!\nVocê completou todos os níveis!",
+            "Você encontrou todos os animais! 🐾\n" +
+                    "Você completou todos os níveis!",
             20f,
             Color.rgb(145, 123, 105)
         )
@@ -991,7 +1426,7 @@ class OlhinhosCuriosos3Activity : Activity() {
         )
 
         // =================================================
-        // CRIAR BOTÃO VOLTAR
+        // BOTÃO VOLTAR
         // =================================================
 
         val botaoVoltar = TextView(this).apply {
@@ -1039,9 +1474,7 @@ class OlhinhosCuriosos3Activity : Activity() {
             isFocusable = true
         }
 
-        // =================================================
-        // BOTÃO VOLTAR CENTRALIZADO
-        // =================================================
+        // ÚNICO BOTÃO DO ÚLTIMO NÍVEL
 
         colocar(
             botaoVoltar,
@@ -1053,20 +1486,22 @@ class OlhinhosCuriosos3Activity : Activity() {
             voltarParaJogos()
         }
 
-        // ANIMAÇÃO SUAVE DO BOTÃO VOLTAR
+        // =================================================
+        // ANIMAÇÃO SUAVE DO BOTÃO
+        // =================================================
 
         botaoVoltar.animate()
             .scaleX(1.03f)
             .scaleY(1.03f)
-            .setStartDelay(750)
-            .setDuration(450)
+            .setStartDelay(750L)
+            .setDuration(450L)
             .withEndAction {
 
                 botaoVoltar.animate()
                     .scaleX(1f)
                     .scaleY(1f)
-                    .setStartDelay(0)
-                    .setDuration(400)
+                    .setStartDelay(0L)
+                    .setDuration(400L)
                     .start()
             }
             .start()
@@ -1086,7 +1521,13 @@ class OlhinhosCuriosos3Activity : Activity() {
 
         pararTodasAnimacoes()
 
+        limparGlitter()
+
         pararAudio()
+
+        liberarAudioAcerto()
+
+        liberarAudioFundo()
 
         val intent = Intent(
             this,
@@ -1192,14 +1633,20 @@ class OlhinhosCuriosos3Activity : Activity() {
     }
 
     // =====================================================
-    // RETOMAR ANIMAÇÕES
+    // RETOMAR ANIMAÇÕES E MÚSICA
     // =====================================================
 
     override fun onResume() {
 
         super.onResume()
 
-        if (!finalizado && !navegando) {
+        telaAtiva = true
+
+        if (navegando) return
+
+        iniciarAudioFundo()
+
+        if (!finalizado) {
 
             animais.forEachIndexed { index, animal ->
 
@@ -1215,18 +1662,45 @@ class OlhinhosCuriosos3Activity : Activity() {
                     }
                 }
             }
+
+        } else if (!popupAberto) {
+
+            root.post {
+
+                if (
+                    telaAtiva &&
+                    !navegando &&
+                    !popupAberto &&
+                    !isFinishing &&
+                    !isDestroyed
+                ) {
+
+                    mostrarPopupVitoria(
+                        root.width / 874f,
+                        root.height / 402f
+                    )
+                }
+            }
         }
     }
 
     // =====================================================
-    // PAUSAR ANIMAÇÕES E ÁUDIO
+    // PAUSAR ANIMAÇÕES E ÁUDIOS
     // =====================================================
 
     override fun onPause() {
 
+        telaAtiva = false
+
         pararTodasAnimacoes()
 
+        limparGlitter()
+
         pararAudio()
+
+        liberarAudioAcerto()
+
+        pausarAudioFundo()
 
         super.onPause()
     }
@@ -1241,7 +1715,13 @@ class OlhinhosCuriosos3Activity : Activity() {
 
         pararTodasAnimacoes()
 
+        limparGlitter()
+
         pararAudio()
+
+        liberarAudioAcerto()
+
+        liberarAudioFundo()
 
         super.onDestroy()
     }

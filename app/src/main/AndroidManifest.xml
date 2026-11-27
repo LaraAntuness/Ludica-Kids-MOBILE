@@ -216,6 +216,11 @@
             android:exported="true"
             android:screenOrientation="landscape" />
 
+        <activity
+            android:name=".RespirandoComDragaoActivity"
+            android:screenOrientation="landscape"
+            android:exported="true" />
+
     </application>
 
     <uses-permission android:name="android.permission.INTERNET" />

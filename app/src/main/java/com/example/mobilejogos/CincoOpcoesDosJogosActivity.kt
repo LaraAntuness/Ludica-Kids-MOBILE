@@ -7,7 +7,9 @@ import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.StateListDrawable
+import android.media.MediaPlayer
 import android.os.Bundle
+import android.util.Log
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.MotionEvent
@@ -24,23 +26,33 @@ class CincoOpcoesDosJogosActivity : Activity() {
     private val larguraBase = 874f
     private val alturaBase = 402f
 
+    private var navegando = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
+
         super.onCreate(savedInstanceState)
 
         // TELA HORIZONTAL
+
         requestedOrientation =
             ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
 
         // TELA CHEIA
+
         window.setFlags(
             WindowManager.LayoutParams.FLAG_FULLSCREEN,
             WindowManager.LayoutParams.FLAG_FULLSCREEN
         )
 
-        // MANTER O XML ORIGINAL
-        setContentView(R.layout.activity_cinco_opcoes_dos_jogos)
+        // MANTER XML ORIGINAL
 
-        tela = findViewById(R.id.telaCincoOpcoes)
+        setContentView(
+            R.layout.activity_cinco_opcoes_dos_jogos
+        )
+
+        tela = findViewById(
+            R.id.telaCincoOpcoes
+        )
 
         tela.post {
             montarTela()
@@ -58,9 +70,9 @@ class CincoOpcoesDosJogosActivity : Activity() {
         val sx = tela.width.toFloat() / larguraBase
         val sy = tela.height.toFloat() / alturaBase
 
-        // =====================================================
+        // =================================================
         // PLANO DE FUNDO
-        // =====================================================
+        // =================================================
 
         val fundo = ImageView(this).apply {
 
@@ -79,9 +91,9 @@ class CincoOpcoesDosJogosActivity : Activity() {
             )
         )
 
-        // =====================================================
+        // =================================================
         // BOTÃO RETORNO AZUL
-        // =====================================================
+        // =================================================
 
         val voltar = adicionarImagem(
             "botaoretornoazul",
@@ -92,14 +104,18 @@ class CincoOpcoesDosJogosActivity : Activity() {
         voltar.contentDescription = "Voltar"
 
         voltar.isClickable = true
+        voltar.isFocusable = true
+
+        voltar.isSoundEffectsEnabled = false
 
         voltar.setOnClickListener {
-            finish()
+
+            voltarTela()
         }
 
-        // =====================================================
+        // =================================================
         // TÍTULO CINCO SENTIDOS MÁGICOS
-        // =====================================================
+        // =================================================
 
         adicionarImagem(
             "cincosentidosmagicosazul",
@@ -107,9 +123,9 @@ class CincoOpcoesDosJogosActivity : Activity() {
             sx, sy
         )
 
-        // =====================================================
+        // =================================================
         // BOTÃO 1 - OLHINHOS CURIOSOS
-        // =====================================================
+        // =================================================
 
         criarBotao(
             "OLHINHOS CURIOSOS",
@@ -117,13 +133,14 @@ class CincoOpcoesDosJogosActivity : Activity() {
             sx, sy
         ) {
 
-            // CAMINHO ORIGINAL
-            abrirTela(MainActivity::class.java)
+            abrirTela(
+                MainActivity::class.java
+            )
         }
 
-        // =====================================================
+        // =================================================
         // BOTÃO 2 - MÃOZINHAS MÁGICAS
-        // =====================================================
+        // =================================================
 
         criarBotao(
             "MÃOZINHAS MÁGICAS",
@@ -131,13 +148,14 @@ class CincoOpcoesDosJogosActivity : Activity() {
             sx, sy
         ) {
 
-            // CAMINHO ORIGINAL
-            abrirTela(MaoszinhasMagicasActivity::class.java)
+            abrirTela(
+                MaoszinhasMagicasActivity::class.java
+            )
         }
 
-        // =====================================================
+        // =================================================
         // BOTÃO 3 - ESCUTE E DESCUBRA
-        // =====================================================
+        // =================================================
 
         criarBotao(
             "ESCUTE E DESCUBRA",
@@ -145,13 +163,14 @@ class CincoOpcoesDosJogosActivity : Activity() {
             sx, sy
         ) {
 
-            // CAMINHO ORIGINAL
-            abrirTela(BibliotecaSonoraActivity::class.java)
+            abrirTela(
+                BibliotecaSonoraActivity::class.java
+            )
         }
 
-        // =====================================================
+        // =================================================
         // BOTÃO 4 - O NARIZ DETETIVE
-        // =====================================================
+        // =================================================
 
         criarBotao(
             "O NARIZ DETETIVE",
@@ -159,13 +178,14 @@ class CincoOpcoesDosJogosActivity : Activity() {
             sx, sy
         ) {
 
-            // CAMINHO ORIGINAL
-            abrirTelaPorNome("DescubraOCheiroActivity")
+            abrirTelaPorNome(
+                "DescubraOCheiroActivity"
+            )
         }
 
-        // =====================================================
+        // =================================================
         // BOTÃO 5 - PROVE NA IMAGINAÇÃO
-        // =====================================================
+        // =================================================
 
         criarBotao(
             "PROVE NA IMAGINAÇÃO",
@@ -173,8 +193,77 @@ class CincoOpcoesDosJogosActivity : Activity() {
             sx, sy
         ) {
 
-            // CAMINHO ORIGINAL
-            abrirTelaPorNome("ProveNaImaginacaoActivity")
+            abrirTelaPorNome(
+                "ProveNaImaginacaoActivity"
+            )
+        }
+    }
+
+    // =====================================================
+    // SOM DE CLIQUE SUAVE
+    // =====================================================
+
+    private fun tocarSomClique() {
+
+        var player: MediaPlayer? = null
+
+        try {
+
+            val id = resources.getIdentifier(
+                "clique_suave",
+                "raw",
+                packageName
+            )
+
+            if (id == 0) {
+
+                Log.e(
+                    "CincoOpcoesDosJogos",
+                    "Áudio clique_suave não encontrado"
+                )
+
+                return
+            }
+
+            val som = MediaPlayer.create(
+                applicationContext,
+                id
+            ) ?: return
+
+            player = som
+
+            // VOLUME DO CLIQUE
+
+            som.setVolume(
+                0.45f,
+                0.45f
+            )
+
+            // LIBERAR APÓS TERMINAR
+
+            som.setOnCompletionListener {
+
+                it.release()
+            }
+
+            som.setOnErrorListener { mp, _, _ ->
+
+                mp.release()
+
+                true
+            }
+
+            som.start()
+
+        } catch (erro: Exception) {
+
+            player?.release()
+
+            Log.e(
+                "CincoOpcoesDosJogos",
+                "Erro ao reproduzir som de clique",
+                erro
+            )
         }
     }
 
@@ -250,9 +339,9 @@ class CincoOpcoesDosJogosActivity : Activity() {
         acao: () -> Unit
     ) {
 
-        // =====================================================
+        // =================================================
         // SOMBRA AMARELA
-        // =====================================================
+        // =================================================
 
         val sombra = GradientDrawable().apply {
 
@@ -288,9 +377,9 @@ class CincoOpcoesDosJogosActivity : Activity() {
             parametrosSombra
         )
 
-        // =====================================================
+        // =================================================
         // BOTÃO PRINCIPAL
-        // =====================================================
+        // =================================================
 
         val botao = TextView(this)
 
@@ -301,6 +390,7 @@ class CincoOpcoesDosJogosActivity : Activity() {
         botao.includeFontPadding = false
 
         // TEXTO LARANJA
+
         botao.setTextColor(
             Color.rgb(255, 165, 76)
         )
@@ -324,9 +414,9 @@ class CincoOpcoesDosJogosActivity : Activity() {
             0
         )
 
-        // =====================================================
+        // =================================================
         // FUNDO NORMAL
-        // =====================================================
+        // =================================================
 
         val fundoNormal = GradientDrawable().apply {
 
@@ -339,9 +429,9 @@ class CincoOpcoesDosJogosActivity : Activity() {
             )
         }
 
-        // =====================================================
-        // FUNDO AO PRESSIONAR
-        // =====================================================
+        // =================================================
+        // FUNDO PRESSIONADO
+        // =================================================
 
         val fundoPressionado = GradientDrawable().apply {
 
@@ -354,14 +444,16 @@ class CincoOpcoesDosJogosActivity : Activity() {
             )
         }
 
-        // =====================================================
+        // =================================================
         // ESTADOS DO BOTÃO
-        // =====================================================
+        // =================================================
 
         val estados = StateListDrawable().apply {
 
             addState(
-                intArrayOf(android.R.attr.state_pressed),
+                intArrayOf(
+                    android.R.attr.state_pressed
+                ),
                 fundoPressionado
             )
 
@@ -373,16 +465,19 @@ class CincoOpcoesDosJogosActivity : Activity() {
 
         botao.background = estados
 
-        // =====================================================
+        // =================================================
         // INTERAÇÃO
-        // =====================================================
+        // =================================================
 
         botao.isClickable = true
+
         botao.isFocusable = true
 
-        // =====================================================
+        botao.isSoundEffectsEnabled = false
+
+        // =================================================
         // POSICIONAMENTO
-        // =====================================================
+        // =================================================
 
         val parametros = FrameLayout.LayoutParams(
             (largura * sx).toInt(),
@@ -400,9 +495,9 @@ class CincoOpcoesDosJogosActivity : Activity() {
             parametros
         )
 
-        // =====================================================
+        // =================================================
         // ANIMAÇÃO AO CLICAR
-        // =====================================================
+        // =================================================
 
         botao.setOnTouchListener { view, evento ->
 
@@ -413,7 +508,7 @@ class CincoOpcoesDosJogosActivity : Activity() {
                     view.animate()
                         .scaleX(0.97f)
                         .scaleY(0.97f)
-                        .setDuration(100)
+                        .setDuration(100L)
                         .start()
                 }
 
@@ -423,20 +518,27 @@ class CincoOpcoesDosJogosActivity : Activity() {
                     view.animate()
                         .scaleX(1f)
                         .scaleY(1f)
-                        .setDuration(100)
+                        .setDuration(100L)
                         .start()
                 }
             }
 
-            // MANTER O CLIQUE FUNCIONANDO
             false
         }
 
-        // =====================================================
-        // NAVEGAÇÃO ORIGINAL
-        // =====================================================
+        // =================================================
+        // SOM E NAVEGAÇÃO
+        // =================================================
 
         botao.setOnClickListener {
+
+            if (navegando || isFinishing) {
+
+                return@setOnClickListener
+            }
+
+            tocarSomClique()
+
             acao()
         }
     }
@@ -449,6 +551,10 @@ class CincoOpcoesDosJogosActivity : Activity() {
         classe: Class<out Activity>
     ) {
 
+        if (navegando || isFinishing) return
+
+        navegando = true
+
         try {
 
             startActivity(
@@ -456,6 +562,8 @@ class CincoOpcoesDosJogosActivity : Activity() {
             )
 
         } catch (e: Exception) {
+
+            navegando = false
 
             Toast.makeText(
                 this,
@@ -483,11 +591,64 @@ class CincoOpcoesDosJogosActivity : Activity() {
 
         } catch (e: Exception) {
 
+            navegando = false
+
             Toast.makeText(
                 this,
                 "A tela $nomeClasse ainda não está disponível.",
                 Toast.LENGTH_LONG
             ).show()
         }
+    }
+
+    // =====================================================
+    // VOLTAR PARA A TELA DE OPÇÕES GERAL
+    // =====================================================
+
+    private fun voltarTela() {
+
+        if (navegando || isFinishing) return
+
+        navegando = true
+
+        // SOM DE CLIQUE
+
+        tocarSomClique()
+
+        // ABRIR TELA INICIAL GERAL DOS JOGOS
+
+        val intent = Intent(
+            this,
+            TelaInicialJogosGeral::class.java
+        )
+
+        intent.flags =
+            Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                    Intent.FLAG_ACTIVITY_SINGLE_TOP
+
+        startActivity(intent)
+
+        finish()
+    }
+
+    // =====================================================
+    // BOTÃO VOLTAR DO CELULAR
+    // =====================================================
+
+    @Suppress("DEPRECATION")
+    override fun onBackPressed() {
+
+        voltarTela()
+    }
+
+    // =====================================================
+    // LIBERAR NAVEGAÇÃO AO RETORNAR
+    // =====================================================
+
+    override fun onResume() {
+
+        super.onResume()
+
+        navegando = false
     }
 }

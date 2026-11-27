@@ -21,6 +21,7 @@ import android.view.Gravity
 import android.view.View
 import android.view.WindowManager
 import android.view.animation.AccelerateDecelerateInterpolator
+import android.view.animation.DecelerateInterpolator
 import android.view.animation.OvershootInterpolator
 import android.widget.FrameLayout
 import android.widget.ImageView
@@ -33,6 +34,10 @@ import com.bumptech.glide.Glide
 import com.bumptech.glide.load.resource.gif.GifDrawable
 import com.bumptech.glide.request.target.CustomTarget
 import com.bumptech.glide.request.transition.Transition
+
+import kotlin.math.cos
+import kotlin.math.sin
+import kotlin.random.Random
 
 class MaoszinhasMagicasActivity : Activity() {
 
@@ -59,6 +64,8 @@ class MaoszinhasMagicasActivity : Activity() {
     private val animacoesAnimais =
         mutableMapOf<String, ObjectAnimator>()
 
+    private val estrelasAtivas = mutableListOf<View>()
+
     private val totalAnimais = 4
 
     private var jogoFinalizado = false
@@ -67,6 +74,8 @@ class MaoszinhasMagicasActivity : Activity() {
     private var popupAberto = false
 
     private var audioAtual: MediaPlayer? = null
+    private var audioFundo: MediaPlayer? = null
+    private var audioBrilho: MediaPlayer? = null
 
     private val proximaFaseActivity =
         "MaoszinhasMagicas2Activity"
@@ -92,7 +101,11 @@ class MaoszinhasMagicasActivity : Activity() {
         )
 
         root.post {
-            montarJogo()
+
+            if (!isFinishing && !isDestroyed) {
+
+                montarJogo()
+            }
         }
     }
 
@@ -103,6 +116,8 @@ class MaoszinhasMagicasActivity : Activity() {
     private fun montarJogo() {
 
         pararTodasPulsacoes()
+
+        limparGlitter()
 
         limparGifs()
 
@@ -119,8 +134,10 @@ class MaoszinhasMagicasActivity : Activity() {
         val sx = root.width.toFloat() / larguraBase
         val sy = root.height.toFloat() / alturaBase
 
+        val escala = minOf(sx, sy)
+
         // =================================================
-        // PLANO DE FUNDO
+        // PLANO DE FUNDO ORIGINAL
         // =================================================
 
         val fundo = ImageView(this).apply {
@@ -159,6 +176,7 @@ class MaoszinhasMagicasActivity : Activity() {
 
         voltar.isClickable = true
         voltar.isFocusable = true
+        voltar.isSoundEffectsEnabled = false
 
         voltar.setOnClickListener {
 
@@ -166,39 +184,85 @@ class MaoszinhasMagicasActivity : Activity() {
         }
 
         // =================================================
-        // TÍTULO
+        // TÍTULO MENOR E MAIS ACIMA
         // =================================================
 
-        adicionarImagem(
+        val titulo = adicionarImagem(
             "titulodescubracomotoque",
-            205, 2, 490, 85,
+            251, -4, 420, 70,
             sx, sy
         )
 
         // =================================================
-        // INSTRUÇÃO
+        // BALÃO DE INSTRUÇÃO - TOQUE NOS ANIMAIS
         // =================================================
 
         val instrucao = TextView(this).apply {
 
             text = "Toque nos animais"
 
-            textSize = 22f
+            setTextSize(
+                TypedValue.COMPLEX_UNIT_PX,
+                19f * escala
+            )
 
             setTextColor(
-                Color.rgb(115, 95, 75)
+                Color.rgb(220, 140, 45)
             )
 
             typeface = Typeface.DEFAULT_BOLD
 
             gravity = Gravity.CENTER
+
+            includeFontPadding = false
+
+            background = GradientDrawable(
+                GradientDrawable.Orientation.TOP_BOTTOM,
+                intArrayOf(
+                    Color.rgb(255, 253, 235),
+                    Color.rgb(255, 239, 192)
+                )
+            ).apply {
+
+                cornerRadius = 22f * escala
+
+                setStroke(
+                    (2f * escala)
+                        .toInt()
+                        .coerceAtLeast(1),
+
+                    Color.rgb(245, 205, 125)
+                )
+            }
+
+            elevation = 5f * escala
+
+            isClickable = false
+            isFocusable = false
         }
 
         adicionarView(
             instrucao,
-            311, 75, 300, 40,
+            331, 65, 260, 35,
             sx, sy
         )
+
+        // ANIMAÇÃO DE ENTRADA DO BALÃO
+
+        instrucao.alpha = 0f
+
+        instrucao.scaleX = 0.7f
+        instrucao.scaleY = 0.7f
+
+        instrucao.animate()
+            .alpha(1f)
+            .scaleX(1f)
+            .scaleY(1f)
+            .setDuration(550L)
+            .setInterpolator(
+                OvershootInterpolator(1.3f)
+            )
+            .start()
 
         // =================================================
         // LOBO
@@ -244,7 +308,20 @@ class MaoszinhasMagicasActivity : Activity() {
             3
         )
 
+        // MANTER ELEMENTOS SUPERIORES VISÍVEIS
+
+        titulo.bringToFront()
+
+        instrucao.bringToFront()
+
         voltar.bringToFront()
+
+        // INICIAR MÚSICA DE FUNDO
+
+        if (telaAtiva) {
+
+            iniciarAudioFundo()
+        }
     }
 
     // =====================================================
@@ -272,6 +349,8 @@ class MaoszinhasMagicasActivity : Activity() {
 
             isClickable = false
             isFocusable = false
+
+            isSoundEffectsEnabled = false
         }
 
         adicionarView(
@@ -292,9 +371,11 @@ class MaoszinhasMagicasActivity : Activity() {
                 transition: Transition<in GifDrawable>?
             ) {
 
-                if (navegando || isFinishing || isDestroyed) {
-                    return
-                }
+                if (
+                    navegando ||
+                    isFinishing ||
+                    isDestroyed
+                ) return
 
                 // GIF COMEÇA PARADO
 
@@ -302,7 +383,7 @@ class MaoszinhasMagicasActivity : Activity() {
 
                 resource.setVisible(true, false)
 
-                // EXECUTAR APENAS UMA VEZ
+                // EXECUTAR GIF APENAS UMA VEZ
 
                 resource.setLoopCount(1)
 
@@ -315,9 +396,7 @@ class MaoszinhasMagicasActivity : Activity() {
                 animal.isClickable = true
                 animal.isFocusable = true
 
-                // =========================================
                 // PULSAÇÃO ANTES DO TOQUE
-                // =========================================
 
                 if (
                     telaAtiva &&
@@ -332,13 +411,12 @@ class MaoszinhasMagicasActivity : Activity() {
                     )
                 }
 
-                // =========================================
                 // IDENTIFICAR O FINAL DO GIF
-                // =========================================
 
                 resource.clearAnimationCallbacks()
 
                 resource.registerAnimationCallback(
+
                     object : Animatable2Compat.AnimationCallback() {
 
                         override fun onAnimationEnd(
@@ -371,6 +449,7 @@ class MaoszinhasMagicasActivity : Activity() {
                     if (
                         jogoFinalizado ||
                         navegando ||
+                        !telaAtiva ||
                         arquivo in animaisIniciados ||
                         arquivo in animaisConcluidos
                     ) {
@@ -385,20 +464,28 @@ class MaoszinhasMagicasActivity : Activity() {
 
                         animaisIniciados.add(arquivo)
 
-                        // PARAR A PULSAÇÃO
+                        // PARAR PULSAÇÃO
 
                         pararPulsacaoAnimal(
                             arquivo,
                             animal
                         )
 
-                        // REPRODUZIR SOM DO TOQUE
+                        // SOM DO TOQUE
 
                         tocarAudio(
                             R.raw.audio_toque
                         )
 
-                        // EXECUTAR O MOVIMENTO DO GIF
+                        // SOM MÁGICO DO GLITTER
+
+                        tocarSomBrilho()
+
+                        // EXPLOSÃO DE ESTRELINHAS
+
+                        criarGlitter(animal)
+
+                        // EXECUTAR MOVIMENTO DO ANIMAL
 
                         gif.start()
                     }
@@ -412,6 +499,7 @@ class MaoszinhasMagicasActivity : Activity() {
                 gifsAnimais.remove(arquivo)?.let {
 
                     it.stop()
+
                     it.clearAnimationCallbacks()
                 }
 
@@ -444,6 +532,356 @@ class MaoszinhasMagicasActivity : Activity() {
             .asGif()
             .load(caminho)
             .into(alvo)
+    }
+
+    // =====================================================
+    // GLITTER AO TOCAR NOS ANIMAIS
+    // =====================================================
+
+    private fun criarGlitter(animal: ImageView) {
+
+        val sx = root.width.toFloat() / larguraBase
+        val sy = root.height.toFloat() / alturaBase
+
+        val escala = minOf(sx, sy)
+
+        val centroX =
+            animal.x + animal.width / 2f
+
+        val centroY =
+            animal.y + animal.height / 2f
+
+        val cores = intArrayOf(
+
+            Color.rgb(255, 220, 110),
+
+            Color.rgb(255, 245, 175),
+
+            Color.rgb(255, 255, 255),
+
+            Color.rgb(255, 190, 220),
+
+            Color.rgb(198, 232, 255),
+
+            Color.rgb(224, 204, 255)
+        )
+
+        // QUANTIDADE DE ESTRELINHAS
+
+        repeat(32) { indice ->
+
+            val tamanho =
+                Random.nextInt(13, 29) * escala
+
+            val estrela = TextView(this).apply {
+
+                text = when (indice % 4) {
+
+                    0 -> "✦"
+                    1 -> "✧"
+                    2 -> "★"
+                    else -> "✦"
+                }
+
+                setTextSize(
+                    TypedValue.COMPLEX_UNIT_PX,
+                    tamanho
+                )
+
+                setTextColor(
+                    cores.random()
+                )
+
+                gravity = Gravity.CENTER
+
+                includeFontPadding = false
+
+                setShadowLayer(
+                    5f * escala,
+                    0f,
+                    0f,
+                    Color.WHITE
+                )
+
+                isClickable = false
+                isFocusable = false
+
+                elevation = 8f * escala
+
+                alpha = 1f
+
+                scaleX = 0.4f
+                scaleY = 0.4f
+            }
+
+            val lado =
+                (tamanho * 2.4f)
+                    .toInt()
+                    .coerceAtLeast(1)
+
+            val parametros = FrameLayout.LayoutParams(
+                lado,
+                lado
+            )
+
+            parametros.leftMargin =
+                (centroX - lado / 2f).toInt()
+
+            parametros.topMargin =
+                (centroY - lado / 2f).toInt()
+
+            root.addView(
+                estrela,
+                parametros
+            )
+
+            estrelasAtivas.add(estrela)
+
+            // DIREÇÃO ALEATÓRIA DAS ESTRELAS
+
+            val angulo =
+                Random.nextDouble(
+                    0.0,
+                    Math.PI * 2
+                )
+
+            val distancia =
+                Random.nextInt(40, 125) * escala
+
+            val destinoX =
+                cos(angulo).toFloat() * distancia
+
+            val destinoY =
+                sin(angulo).toFloat() * distancia
+
+            estrela.animate()
+                .translationX(destinoX)
+                .translationY(destinoY)
+                .rotation(
+                    Random.nextInt(-150, 150).toFloat()
+                )
+                .scaleX(1.3f)
+                .scaleY(1.3f)
+                .alpha(0f)
+                .setStartDelay(
+                    Random.nextLong(0L, 130L)
+                )
+                .setDuration(
+                    Random.nextLong(650L, 1050L)
+                )
+                .setInterpolator(
+                    DecelerateInterpolator()
+                )
+                .withEndAction {
+
+                    root.removeView(estrela)
+
+                    estrelasAtivas.remove(estrela)
+                }
+                .start()
+        }
+    }
+
+    // =====================================================
+    // LIMPAR EFEITOS DE GLITTER
+    // =====================================================
+
+    private fun limparGlitter() {
+
+        estrelasAtivas.toList().forEach {
+
+            it.animate().cancel()
+
+            root.removeView(it)
+        }
+
+        estrelasAtivas.clear()
+    }
+
+    // =====================================================
+    // MÚSICA DE FUNDO
+    // =====================================================
+
+    private fun iniciarAudioFundo() {
+
+        if (!telaAtiva || navegando) return
+
+        try {
+
+            if (audioFundo == null) {
+
+                val id = resources.getIdentifier(
+                    "audiodefundojogo",
+                    "raw",
+                    packageName
+                )
+
+                if (id == 0) return
+
+                val player = MediaPlayer.create(
+                    this,
+                    id
+                ) ?: return
+
+                audioFundo = player
+
+                // REPETIR CONTINUAMENTE
+
+                player.isLooping = true
+
+                // VOLUME SUAVE
+
+                player.setVolume(
+                    0.35f,
+                    0.35f
+                )
+
+                player.setOnErrorListener { _, _, _ ->
+
+                    liberarAudioFundo()
+
+                    true
+                }
+            }
+
+            audioFundo?.let {
+
+                if (!it.isPlaying) {
+
+                    it.start()
+                }
+            }
+
+        } catch (erro: Exception) {
+
+            liberarAudioFundo()
+
+            Log.e(
+                "MaoszinhasMagicas",
+                "Erro na música de fundo",
+                erro
+            )
+        }
+    }
+
+    // =====================================================
+    // PAUSAR MÚSICA DE FUNDO
+    // =====================================================
+
+    private fun pausarAudioFundo() {
+
+        try {
+
+            audioFundo?.let {
+
+                if (it.isPlaying) {
+
+                    it.pause()
+                }
+            }
+
+        } catch (_: Exception) {
+        }
+    }
+
+    // =====================================================
+    // LIBERAR MÚSICA DE FUNDO
+    // =====================================================
+
+    private fun liberarAudioFundo() {
+
+        val player = audioFundo
+
+        audioFundo = null
+
+        player?.let {
+
+            try {
+
+                it.setOnErrorListener(null)
+
+                it.release()
+
+            } catch (_: Exception) {
+            }
+        }
+    }
+
+    // =====================================================
+    // SOM MÁGICO DO GLITTER
+    // =====================================================
+
+    private fun tocarSomBrilho() {
+
+        liberarAudioBrilho()
+
+        try {
+
+            val id = resources.getIdentifier(
+                "brilho_suave",
+                "raw",
+                packageName
+            )
+
+            if (id == 0) return
+
+            val player = MediaPlayer.create(
+                this,
+                id
+            ) ?: return
+
+            audioBrilho = player
+
+            player.setVolume(
+                0.55f,
+                0.55f
+            )
+
+            player.setOnCompletionListener {
+
+                if (audioBrilho === player) {
+
+                    liberarAudioBrilho()
+                }
+            }
+
+            player.setOnErrorListener { _, _, _ ->
+
+                if (audioBrilho === player) {
+
+                    liberarAudioBrilho()
+                }
+
+                true
+            }
+
+            player.start()
+
+        } catch (_: Exception) {
+
+            liberarAudioBrilho()
+        }
+    }
+
+    private fun liberarAudioBrilho() {
+
+        val player = audioBrilho
+
+        audioBrilho = null
+
+        player?.let {
+
+            try {
+
+                it.setOnCompletionListener(null)
+
+                it.setOnErrorListener(null)
+
+                it.release()
+
+            } catch (_: Exception) {
+            }
+        }
     }
 
     // =====================================================
@@ -553,18 +991,12 @@ class MaoszinhasMagicasActivity : Activity() {
         arquivo: String
     ) {
 
-        if (jogoFinalizado || navegando) {
-
-            return
-        }
+        if (jogoFinalizado || navegando) return
 
         val novoAnimal =
             animaisConcluidos.add(arquivo)
 
-        if (!novoAnimal) {
-
-            return
-        }
+        if (!novoAnimal) return
 
         imagensAnimais[arquivo]?.let {
 
@@ -572,7 +1004,7 @@ class MaoszinhasMagicasActivity : Activity() {
             it.isFocusable = false
         }
 
-        // VERIFICAR SE OS QUATRO ANIMAIS TERMINARAM
+        // VERIFICAR SE TODOS OS ANIMAIS TERMINARAM
 
         if (animaisConcluidos.size == totalAnimais) {
 
@@ -595,7 +1027,7 @@ class MaoszinhasMagicasActivity : Activity() {
                     )
                 }
 
-            }, 500L)
+            }, 1200L)
         }
     }
 
@@ -612,9 +1044,13 @@ class MaoszinhasMagicasActivity : Activity() {
 
         popupAberto = true
 
+        limparGlitter()
+
         val escala = minOf(sx, sy)
 
-        // FUNDO LEVEMENTE ESCURECIDO
+        // =================================================
+        // FUNDO ESCURECIDO
+        // =================================================
 
         val fundoEscuro = View(this).apply {
 
@@ -625,6 +1061,8 @@ class MaoszinhasMagicasActivity : Activity() {
             alpha = 0f
 
             isClickable = true
+
+            elevation = 20f * escala
         }
 
         root.addView(
@@ -637,11 +1075,11 @@ class MaoszinhasMagicasActivity : Activity() {
 
         fundoEscuro.animate()
             .alpha(1f)
-            .setDuration(350)
+            .setDuration(350L)
             .start()
 
         // =================================================
-        // RETÂNGULO COM CORES PASTÉIS
+        // FUNDO DO POP-UP
         // =================================================
 
         val popup = FrameLayout(this).apply {
@@ -665,7 +1103,7 @@ class MaoszinhasMagicasActivity : Activity() {
                 )
             }
 
-            elevation = 12f
+            elevation = 25f * escala
 
             isClickable = true
         }
@@ -693,14 +1131,14 @@ class MaoszinhasMagicasActivity : Activity() {
             .scaleX(1f)
             .scaleY(1f)
             .alpha(1f)
-            .setDuration(500)
+            .setDuration(500L)
             .setInterpolator(
                 OvershootInterpolator(1.1f)
             )
             .start()
 
         // =================================================
-        // POSICIONAR ELEMENTOS DO POP-UP
+        // POSICIONAR ELEMENTOS
         // =================================================
 
         fun colocar(
@@ -733,7 +1171,7 @@ class MaoszinhasMagicasActivity : Activity() {
         }
 
         // =================================================
-        // CRIAR TEXTOS
+        // CRIAR TEXTOS DO POP-UP
         // =================================================
 
         fun criarTexto(
@@ -778,7 +1216,8 @@ class MaoszinhasMagicasActivity : Activity() {
                 setImageResource(imagemId)
             }
 
-            scaleType = ImageView.ScaleType.FIT_CENTER
+            scaleType =
+                ImageView.ScaleType.FIT_CENTER
         }
 
         colocar(
@@ -792,15 +1231,15 @@ class MaoszinhasMagicasActivity : Activity() {
         girafinha.animate()
             .scaleX(1f)
             .scaleY(1f)
-            .setStartDelay(200)
-            .setDuration(600)
+            .setStartDelay(200L)
+            .setDuration(600L)
             .setInterpolator(
                 OvershootInterpolator(1.8f)
             )
             .start()
 
         // =================================================
-        // ESTRELAS
+        // ESTRELINHAS
         // =================================================
 
         val estrelaEsquerda = criarTexto(
@@ -906,6 +1345,8 @@ class MaoszinhasMagicasActivity : Activity() {
 
                 isClickable = true
                 isFocusable = true
+
+                isSoundEffectsEnabled = false
             }
         }
 
@@ -951,20 +1392,18 @@ class MaoszinhasMagicasActivity : Activity() {
             abrirProximoNivel()
         }
 
-        // ANIMAÇÃO SUAVE DO BOTÃO
-
         botaoProximo.animate()
             .scaleX(1.03f)
             .scaleY(1.03f)
-            .setStartDelay(750)
-            .setDuration(450)
+            .setStartDelay(750L)
+            .setDuration(450L)
             .withEndAction {
 
                 botaoProximo.animate()
                     .scaleX(1f)
                     .scaleY(1f)
-                    .setStartDelay(0)
-                    .setDuration(400)
+                    .setStartDelay(0L)
+                    .setDuration(400L)
                     .start()
             }
             .start()
@@ -984,7 +1423,13 @@ class MaoszinhasMagicasActivity : Activity() {
 
         pararTodasPulsacoes()
 
+        limparGlitter()
+
         pararAudio()
+
+        liberarAudioFundo()
+
+        liberarAudioBrilho()
 
         gifsAnimais.values.forEach {
 
@@ -1029,7 +1474,13 @@ class MaoszinhasMagicasActivity : Activity() {
 
         pararTodasPulsacoes()
 
+        limparGlitter()
+
         pararAudio()
+
+        liberarAudioFundo()
+
+        liberarAudioBrilho()
 
         tocarSomNavegacao()
 
@@ -1050,6 +1501,8 @@ class MaoszinhasMagicasActivity : Activity() {
         } catch (erro: ActivityNotFoundException) {
 
             navegando = false
+
+            iniciarAudioFundo()
 
             Toast.makeText(
                 this,
@@ -1077,6 +1530,11 @@ class MaoszinhasMagicasActivity : Activity() {
             ) ?: return
 
             audioAtual = player
+
+            player.setVolume(
+                0.65f,
+                0.65f
+            )
 
             player.setOnCompletionListener {
 
@@ -1127,6 +1585,11 @@ class MaoszinhasMagicasActivity : Activity() {
                 R.raw.clique_pop
             )
 
+            player?.setVolume(
+                0.45f,
+                0.45f
+            )
+
             player?.setOnCompletionListener {
 
                 it.release()
@@ -1154,7 +1617,7 @@ class MaoszinhasMagicasActivity : Activity() {
     }
 
     // =====================================================
-    // PARAR ÁUDIO
+    // PARAR ÁUDIO DO TOQUE
     // =====================================================
 
     private fun pararAudio() {
@@ -1168,6 +1631,7 @@ class MaoszinhasMagicasActivity : Activity() {
             try {
 
                 it.setOnCompletionListener(null)
+
                 it.setOnErrorListener(null)
 
                 if (it.isPlaying) {
@@ -1289,7 +1753,7 @@ class MaoszinhasMagicasActivity : Activity() {
     }
 
     // =====================================================
-    // RETOMAR ANIMAÇÕES
+    // RETOMAR ANIMAÇÕES E MÚSICA
     // =====================================================
 
     override fun onResume() {
@@ -1299,6 +1763,8 @@ class MaoszinhasMagicasActivity : Activity() {
         telaAtiva = true
 
         if (navegando) return
+
+        iniciarAudioFundo()
 
         if (!jogoFinalizado) {
 
@@ -1334,7 +1800,10 @@ class MaoszinhasMagicasActivity : Activity() {
                 }
             }
 
-        } else if (!popupAberto && ::root.isInitialized) {
+        } else if (
+            !popupAberto &&
+            ::root.isInitialized
+        ) {
 
             mostrarPopupVitoria(
                 root.width.toFloat() / larguraBase,
@@ -1344,7 +1813,7 @@ class MaoszinhasMagicasActivity : Activity() {
     }
 
     // =====================================================
-    // PAUSAR ANIMAÇÕES E ÁUDIO
+    // PAUSAR ANIMAÇÕES E ÁUDIOS
     // =====================================================
 
     override fun onPause() {
@@ -1353,7 +1822,13 @@ class MaoszinhasMagicasActivity : Activity() {
 
         pararTodasPulsacoes()
 
+        limparGlitter()
+
         pararAudio()
+
+        pausarAudioFundo()
+
+        liberarAudioBrilho()
 
         gifsAnimais.values.forEach {
 
@@ -1364,16 +1839,24 @@ class MaoszinhasMagicasActivity : Activity() {
     }
 
     // =====================================================
-    // LIBERAR RECURSOS
+    // LIBERAR TODOS OS RECURSOS
     // =====================================================
 
     override fun onDestroy() {
+
+        navegando = true
 
         handler.removeCallbacksAndMessages(null)
 
         pararTodasPulsacoes()
 
+        limparGlitter()
+
         pararAudio()
+
+        liberarAudioFundo()
+
+        liberarAudioBrilho()
 
         limparGifs()
 
