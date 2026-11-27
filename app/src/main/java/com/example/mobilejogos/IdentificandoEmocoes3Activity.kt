@@ -158,7 +158,7 @@ class IdentificandoEmocoes3Activity : Activity() {
         // NUVEM DÚVIDA - RESPOSTA CORRETA
 
         criarNuvem(
-            R.drawable.nuvemduvida,
+            R.drawable.nuvemincerta,
             "duvida",
             666, 138, 140, 93,
             sx, sy
