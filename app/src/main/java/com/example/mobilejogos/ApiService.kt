@@ -54,7 +54,9 @@ object ApiService {
         val nomeCompleto: String,
         val email: String,
         val cpf: String,
-        val criancas: List<Crianca>
+        val criancas: List<Crianca>,
+        val rg: String = "",
+        val celular: String = ""
     )
 
     data class LoginResponse(
@@ -283,6 +285,8 @@ object ApiService {
             ),
             email = json.optString("email"),
             cpf = json.optString("cpf"),
+            rg = json.optString("rg"),
+            celular = json.optString("celular"),
             criancas = converterCriancas(
                 json.optJSONArray("criancas")
             )
@@ -540,6 +544,31 @@ object ApiService {
 
             converterCriancas(array)
 
+        }, callback)
+    }
+    fun consultarResponsavel(token: String, callback: (Result<Responsavel>) -> Unit) {
+        executar({
+            val lista = JSONArray(requisicao("/responsaveis", "GET", token = token))
+            converterResponsavel(lista.getJSONObject(0))
+        }, callback)
+    }
+
+    fun atualizarResponsavel(id: String, token: String, nome: String, email: String,
+                             celular: String, callback: (Result<Unit>) -> Unit) {
+        executar({
+            val corpo = JSONObject().put("nomeCompleto", nome).put("email", email).put("celular", celular)
+            requisicao("/responsaveis/$id", "PUT", corpo, token)
+            Unit
+        }, callback)
+    }
+
+    fun atualizarCrianca(id: String, token: String, crianca: Crianca, callback: (Result<Unit>) -> Unit) {
+        executar({
+            val corpo = JSONObject().put("nomeCompleto", crianca.nomeCompleto)
+                .put("cpf", crianca.cpf).put("nomeUsuario", crianca.nomeUsuario)
+                .put("dataNascimento", crianca.dataNascimento)
+            requisicao("/criancas/$id/${crianca.id}", "PUT", corpo, token)
+            Unit
         }, callback)
     }
 }

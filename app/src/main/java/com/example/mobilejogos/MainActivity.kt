@@ -1088,6 +1088,7 @@ class MainActivity : Activity() {
     ) {
 
         finalizado = true
+        HistoricoAtividades.registrar(this, "Olhinhos Curiosos", "Nível 1")
 
         pararTodasAnimacoes()
 
@@ -1628,6 +1629,7 @@ class MainActivity : Activity() {
     override fun onResume() {
 
         super.onResume()
+        HistoricoAtividades.iniciar(this)
 
         iniciarAudioFundo()
 
@@ -1667,6 +1669,7 @@ class MainActivity : Activity() {
         pausarAudioFundo()
 
         super.onPause()
+        HistoricoAtividades.pausar(this)
     }
 
     override fun onDestroy() {

@@ -1,32 +1,19 @@
+
 package com.example.mobilejogos
 
 import android.animation.ObjectAnimator
-import android.animation.PropertyValuesHolder
 import android.animation.ValueAnimator
 import android.content.Intent
 import android.content.pm.ActivityInfo
-import android.graphics.Canvas
 import android.graphics.Color
-import android.graphics.Paint
-import android.graphics.Path
-import android.graphics.Typeface
-import android.graphics.drawable.GradientDrawable
-import android.media.AudioAttributes
-import android.media.AudioFormat
-import android.media.AudioTrack
+import android.media.MediaPlayer
 import android.os.Bundle
-import android.util.TypedValue
 import android.view.Gravity
-import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
-import android.view.animation.AccelerateDecelerateInterpolator
-import android.view.animation.DecelerateInterpolator
+import android.view.animation.OvershootInterpolator
 import android.widget.FrameLayout
 import android.widget.ImageView
-import android.widget.TextView
-import android.widget.Toast
-import kotlin.math.*
 import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
 
@@ -34,101 +21,56 @@ class ProveNaImaginacaoActivity : ComponentActivity() {
 
     private lateinit var tela: FrameLayout
     private lateinit var conteudo: FrameLayout
-
-    private val larguraBase = 874f
-    private val alturaBase = 393f
+    private lateinit var visual: VisualJogosSensoriais
 
     private var escala = 1f
+
+    private var popupAtual: FrameLayout? = null
 
     private var popupAberto = false
     private var navegando = false
 
-    private var popupAtual: FrameLayout? = null
+    private var musica: MediaPlayer? = null
+    private var efeito: MediaPlayer? = null
 
-    private val animacoesTela = mutableListOf<ObjectAnimator>()
-    private val animacoesPopup = mutableListOf<ObjectAnimator>()
-
-    // ÁUDIOS
-
-    private var musicaAmbiente: AudioTrack? = null
-    private var somToque: AudioTrack? = null
-    private var somPopup: AudioTrack? = null
-
-    private val taxaAudio = 22050
-
-    // VOLUME DOS SONS
-
-    private val volumeMusica = 0.08f
-    private val volumeToque = 0.20f
-    private val volumePopup = 0.15f
-
-    // PALETA
-
-    private val creme = "#FFF9EF"
-    private val azulTexto = "#395681"
-    private val azulBorda = "#BCDDF1"
-    private val amarelo = "#F5D58A"
-    private val rosa = "#EDB0C2"
-
-    private val fonte = Typeface.create(
-        "sans-serif-rounded",
-        Typeface.BOLD
-    )
+    private var animacaoBalao: ObjectAnimator? = null
+    private var animacaoEstrela: ObjectAnimator? = null
 
     private data class Bebida(
         val imagem: String,
         val nome: String,
-        val cor: String,
-        val borda: String,
-        val etiqueta: String
+        val paleta: VisualJogosSensoriais.Paleta
     )
-
-    private val agua = Bebida(
-        "agua",
-        "Água",
-        "#D9F1FC",
-        "#91C9EC",
-        "#EDF9FF"
-    )
-
-    private val milkshake = Bebida(
-        "milkshake",
-        "Milkshake",
-        "#FBE0E9",
-        "#ECA8BE",
-        "#FFF0F5"
-    )
-
-    private val suco = Bebida(
-        "suco",
-        "Suco",
-        "#FFF0C9",
-        "#EBCB83",
-        "#FFF8E8"
-    )
-
-    private val refrigerante = Bebida(
-        "refrigerante",
-        "Refrigerante",
-        "#EAE0FA",
-        "#BCA6E7",
-        "#F5EEFF"
-    )
-
-    // ==========================================
-    // INICIAR TELA
-    // ==========================================
 
     override fun onCreate(savedInstanceState: Bundle?) {
 
         super.onCreate(savedInstanceState)
+
+        requestedOrientation =
+            ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+
+        window.setFlags(
+            WindowManager.LayoutParams.FLAG_FULLSCREEN,
+            WindowManager.LayoutParams.FLAG_FULLSCREEN
+        )
+
+        aplicarModoImersivo()
+
+        setContentView(
+            R.layout.activity_prove_na_imaginacao
+        )
+
+        tela = findViewById(
+            R.id.telaProveNaImaginacao
+        )
+
         onBackPressedDispatcher.addCallback(
             this,
             object : OnBackPressedCallback(true) {
 
                 override fun handleOnBackPressed() {
 
-                    tocarSomBolhinha()
+                    tocarClique()
 
                     if (popupAberto) {
                         fecharPopup()
@@ -138,72 +80,65 @@ class ProveNaImaginacaoActivity : ComponentActivity() {
                 }
             }
         )
-        requestedOrientation =
-            ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
-
-        window.setFlags(
-            WindowManager.LayoutParams.FLAG_FULLSCREEN,
-            WindowManager.LayoutParams.FLAG_FULLSCREEN
-        )
-
-        setContentView(R.layout.activity_prove_na_imaginacao)
-
-        tela = findViewById(R.id.telaProveNaImaginacao)
-
-        tela.clipChildren = false
-        tela.clipToPadding = false
 
         tela.post {
 
-            if (isFinishing || isDestroyed) return@post
+            if (!isFinishing && !isDestroyed) {
 
-            escala = minOf(
-                tela.width / larguraBase,
-                tela.height / alturaBase
-            ).coerceAtLeast(0.1f)
-
-            montarTela()
+                montarTela()
+                iniciarMusica()
+            }
         }
     }
 
-    // ==========================================
-    // TELA PRINCIPAL
-    // ==========================================
+    @Suppress("DEPRECATION")
+    private fun aplicarModoImersivo() {
+
+        window.decorView.systemUiVisibility =
+            View.SYSTEM_UI_FLAG_FULLSCREEN or
+                    View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
+                    View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY or
+                    View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
+                    View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or
+                    View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+    }
+
+    override fun onWindowFocusChanged(
+        hasFocus: Boolean
+    ) {
+
+        super.onWindowFocusChanged(hasFocus)
+
+        if (hasFocus) {
+            aplicarModoImersivo()
+        }
+    }
 
     private fun montarTela() {
 
-        cancelarAnimacoes(animacoesTela)
-        cancelarAnimacoes(animacoesPopup)
-
         tela.removeAllViews()
 
-        popupAberto = false
-        navegando = false
-        popupAtual = null
+        escala = minOf(
+            tela.width / 874f,
+            tela.height / 393f
+        ).coerceAtLeast(0.1f)
 
-        // FUNDO ORIGINAL
+        visual = VisualJogosSensoriais(
+            this,
+            escala
+        )
 
-        val fundo = ImageView(this).apply {
+        // PLANO DE FUNDO ORIGINAL
 
-            setImageResource(R.drawable.fundosabor)
+        val fundo = visual.imagem(
+            "fundosabor"
+        ).apply {
 
             scaleType = ImageView.ScaleType.FIT_XY
         }
 
         tela.addView(
             fundo,
-            FrameLayout.LayoutParams(-1, -1)
-        )
-
-        val camadaPastel = View(this).apply {
-
-            setBackgroundColor(
-                Color.parseColor("#25FFFFFF")
-            )
-        }
-
-        tela.addView(
-            camadaPastel,
             FrameLayout.LayoutParams(-1, -1)
         )
 
@@ -216,2425 +151,586 @@ class ProveNaImaginacaoActivity : ComponentActivity() {
         tela.addView(
             conteudo,
             FrameLayout.LayoutParams(
-                px(874),
-                px(393),
+                visual.px(874),
+                visual.px(393),
                 Gravity.CENTER
             )
         )
 
-        criarTitulo()
+        // BOTÃO DE RETORNO
 
-        // MENINO ORIGINAL
+        val voltar = visual.imagem(
+            "botaoretornoazul"
+        )
 
-        adicionarImagem(
+        visual.colocar(
             conteudo,
-            "menino",
-            30, 188, 225, 198
-        )
-
-        // NOVO BALÃO
-
-        criarBalao()
-
-        // TRACINHOS AMARELOS DO MENINO
-
-        val detalhesMenino = criarTracinhos(
-            "#F5D58A"
-        )
-
-        posicionar(
-            conteudo,
-            detalhesMenino,
-            220, 211, 38, 43
-        )
-
-        detalhesMenino.rotation = 12f
-
-        pulsar(
-            detalhesMenino,
-            animacoesTela,
-            300L,
-            1.12f
-        )
-
-        balancar(
-            detalhesMenino,
-            6f,
-            2100L,
-            animacoesTela
-        )
-
-        // CARTÕES
-
-        criarCartao(
-            agua,
-            300, 98,
-            0L
-        )
-
-        criarCartao(
-            milkshake,
-            550, 98,
-            700L
-        )
-
-        criarCartao(
-            suco,
-            300, 231,
-            1400L
-        )
-
-        criarCartao(
-            refrigerante,
-            550, 231,
-            2100L
-        )
-
-        // BOTÃO VOLTAR
-
-        val voltar = adicionarImagem(
-            conteudo,
-            "botaoretornoazul",
-            20, 18, 43, 43
+            voltar,
+            19, 20, 43, 43
         )
 
         voltar.contentDescription = "Voltar"
 
-        flutuar(
-            voltar,
-            1.5f,
-            2600L,
-            animacoesTela
-        )
+        visual.toque(voltar) {
 
-        animacaoToque(voltar) {
-
+            tocarClique()
             voltarParaCincoOpcoes()
         }
-    }
 
-    // ==========================================
-    // TÍTULO ORIGINAL
-    // ==========================================
+        // TÍTULO
 
-    private fun criarTitulo() {
-
-        val placa = FrameLayout(this).apply {
-
-            background = fundoArredondado(
-                creme,
-                26f,
-                azulBorda,
-                2f
-            )
-
-            elevation = px(2).toFloat()
-
-            clipChildren = false
-        }
-
-        posicionar(
-            conteudo,
-            placa,
-            237, 13, 400, 59
-        )
-
-        val contorno = View(this).apply {
-
-            background = fundoTracejado(
-                "#E7C9AE",
-                22f
-            )
-        }
-
-        posicionar(
-            placa,
-            contorno,
-            6, 5, 388, 49
-        )
-
-        val titulo = criarTexto(
+        val titulo = visual.texto(
             "Bebida Favorita",
-            29f,
-            azulTexto
-        )
+            28f,
+            "#395681"
+        ).apply {
 
-        posicionar(
-            placa,
+            background = visual.fundo(
+                "#FFFDF5",
+                "#FFF1D7",
+                26f,
+                "#E9CD91",
+                3
+            )
+
+            elevation = visual.px(5).toFloat()
+        }
+
+        visual.colocar(
+            conteudo,
             titulo,
-            43, 4, 314, 51
+            237, 10, 400, 56
         )
 
-        val estrela1 = criarForma(
-            "estrela",
-            amarelo
-        )
+        // MENININHO AUMENTADO
 
-        val estrela2 = criarForma(
-            "estrela",
-            amarelo
-        )
-
-        posicionar(
-            placa,
-            estrela1,
-            14, 14, 30, 30
-        )
-
-        posicionar(
-            placa,
-            estrela2,
-            356, 14, 30, 30
-        )
-
-        balancar(
-            estrela1,
-            5f,
-            2400L,
-            animacoesTela
-        )
-
-        balancar(
-            estrela2,
-            5f,
-            2600L,
-            animacoesTela,
-            600L
-        )
-    }
-
-    // ==========================================
-    // NOVO BALÃO EM FORMATO DE NUVEM
-    // ==========================================
-
-    private fun criarBalao() {
-
-        val grupo = FrameLayout(this).apply {
-
-            clipChildren = false
-            clipToPadding = false
-        }
-
-        posicionar(
+        visual.colocar(
             conteudo,
-            grupo,
-            30, 76, 240, 125
+            visual.imagem("menino"),
+            8, 155, 285, 238
         )
 
-        val balao = object : View(this) {
+        // BALÃO ANIMADO
 
-            private val paint = Paint(
-                Paint.ANTI_ALIAS_FLAG
-            )
-
-            init {
-
-                setLayerType(
-                    View.LAYER_TYPE_SOFTWARE,
-                    null
-                )
-            }
-
-            override fun onDraw(canvas: Canvas) {
-
-                super.onDraw(canvas)
-
-                canvas.save()
-
-                canvas.scale(
-                    width / 240f,
-                    height / 125f
-                )
-
-                val caminho = Path().apply {
-
-                    moveTo(24f, 35f)
-
-                    cubicTo(
-                        10f, 20f,
-                        37f, 8f,
-                        56f, 19f
-                    )
-
-                    cubicTo(
-                        66f, 2f,
-                        90f, 0f,
-                        104f, 12f
-                    )
-
-                    cubicTo(
-                        116f, -2f,
-                        139f, 0f,
-                        150f, 14f
-                    )
-
-                    cubicTo(
-                        174f, 4f,
-                        196f, 16f,
-                        198f, 29f
-                    )
-
-                    cubicTo(
-                        226f, 27f,
-                        236f, 48f,
-                        226f, 63f
-                    )
-
-                    cubicTo(
-                        244f, 88f,
-                        214f, 107f,
-                        184f, 103f
-                    )
-
-                    cubicTo(
-                        177f, 113f,
-                        163f, 120f,
-                        150f, 120f
-                    )
-
-                    quadTo(
-                        159f, 109f,
-                        150f, 104f
-                    )
-
-                    cubicTo(
-                        127f, 114f,
-                        101f, 111f,
-                        87f, 101f
-                    )
-
-                    cubicTo(
-                        60f, 110f,
-                        33f, 100f,
-                        28f, 90f
-                    )
-
-                    cubicTo(
-                        0f, 90f,
-                        0f, 52f,
-                        24f, 35f
-                    )
-
-                    close()
-                }
-
-                // SOMBRA EXTERNA SUAVE
-
-                paint.style = Paint.Style.FILL
-
-                paint.color =
-                    Color.parseColor("#9BBFD9")
-
-                paint.setShadowLayer(
-                    5f,
-                    0f,
-                    4f,
-                    Color.parseColor("#607DA6C8")
-                )
-
-                canvas.drawPath(
-                    caminho,
-                    paint
-                )
-
-                paint.clearShadowLayer()
-
-                // MOLDURA AZUL
-
-                paint.style = Paint.Style.STROKE
-
-                paint.strokeWidth = 7f
-
-                paint.strokeJoin = Paint.Join.ROUND
-
-                paint.color =
-                    Color.parseColor("#A9D1EC")
-
-                canvas.drawPath(
-                    caminho,
-                    paint
-                )
-
-                // INTERIOR CREME
-
-                paint.style = Paint.Style.FILL
-
-                paint.color =
-                    Color.parseColor("#FFF9EF")
-
-                canvas.drawPath(
-                    caminho,
-                    paint
-                )
-
-                // CONTORNO INTERNO
-
-                paint.style = Paint.Style.STROKE
-
-                paint.strokeWidth = 1.8f
-
-                paint.color =
-                    Color.parseColor("#FFFFFF")
-
-                canvas.drawPath(
-                    caminho,
-                    paint
-                )
-
-                canvas.restore()
-            }
-        }
-
-        posicionar(
-            grupo,
-            balao,
-            0, 0, 240, 125
-        )
-
-        // ESTRELA SUPERIOR
-
-        val estrela = criarForma(
-            "estrela",
-            amarelo
-        )
-
-        posicionar(
-            grupo,
-            estrela,
-            103, -4, 34, 34
-        )
-
-        // TEXTO
-
-        val pergunta = criarTexto(
+        val balao = visual.balao(
+            conteudo,
             "Qual é a sua\nbebida favorita?",
-            18f,
-            azulTexto
+            visual.azul
         )
 
-        posicionar(
-            grupo,
-            pergunta,
-            31, 32, 178, 59
-        )
+        animacaoBalao = ObjectAnimator.ofFloat(
+            balao,
+            View.TRANSLATION_Y,
+            0f,
+            -visual.px(5).toFloat(),
+            0f
+        ).apply {
 
-        // CORAÇÃO ESQUERDO
+            duration = 2600L
+            repeatCount = ValueAnimator.INFINITE
+            start()
+        }
 
-        val coracao1 = criarForma(
-            "coracao",
-            rosa
-        )
+        // BEBIDAS
 
-        coracao1.rotation = -18f
+        val bebidas = listOf(
 
-        posicionar(
-            grupo,
-            coracao1,
-            17, 68, 22, 22
-        )
+            Bebida(
+                "agua",
+                "Água",
+                visual.azul
+            ),
 
-        // CORAÇÃO DIREITO
+            Bebida(
+                "milkshake",
+                "Milkshake",
+                visual.rosa
+            ),
 
-        val coracao2 = criarForma(
-            "coracao",
-            rosa
-        )
+            Bebida(
+                "suco",
+                "Suco",
+                visual.amarelo
+            ),
 
-        coracao2.rotation = 18f
-
-        posicionar(
-            grupo,
-            coracao2,
-            200, 68, 22, 22
-        )
-
-        // TRACINHOS ROSAS
-
-        val detalhe1 = criarTracinhos(rosa)
-
-        detalhe1.rotation = -70f
-
-        posicionar(
-            grupo,
-            detalhe1,
-            35, 25, 20, 23
-        )
-
-        val detalhe2 = criarTracinhos(rosa)
-
-        detalhe2.rotation = 10f
-
-        posicionar(
-            grupo,
-            detalhe2,
-            185, 25, 20, 23
-        )
-
-        // ANIMAÇÕES DO BALÃO
-
-        flutuar(
-            grupo,
-            3f,
-            2500L,
-            animacoesTela
-        )
-
-        balancar(
-            estrela,
-            6f,
-            2300L,
-            animacoesTela
-        )
-
-        pulsar(
-            coracao1,
-            animacoesTela,
-            0L,
-            1.10f
-        )
-
-        pulsar(
-            coracao2,
-            animacoesTela,
-            900L,
-            1.10f
-        )
-
-        pulsar(
-            detalhe1,
-            animacoesTela,
-            400L,
-            1.08f
-        )
-
-        pulsar(
-            detalhe2,
-            animacoesTela,
-            1000L,
-            1.08f
-        )
-    }
-
-    // ==========================================
-    // TRACINHOS DECORATIVOS
-    // ==========================================
-
-    private fun criarTracinhos(
-        cor: String
-    ): View {
-
-        return object : View(this) {
-
-            private val paint = Paint(
-                Paint.ANTI_ALIAS_FLAG
+            Bebida(
+                "refrigerante",
+                "Refrigerante",
+                visual.roxo
             )
+        )
 
-            override fun onDraw(canvas: Canvas) {
+        bebidas.forEachIndexed { i, bebida ->
 
-                super.onDraw(canvas)
+            val x = if (i % 2 == 0) 315 else 568
 
-                canvas.save()
+            val y = if (i < 2) 87 else 215
 
-                canvas.scale(
-                    width / 100f,
-                    height / 100f
-                )
+            visual.cartao(
+                conteudo,
+                bebida.imagem,
+                bebida.nome,
+                bebida.paleta,
+                x,
+                y
+            ) {
 
-                val traco1 = Path().apply {
+                if (!popupAberto && !navegando) {
 
-                    moveTo(18f, 42f)
+                    tocarClique()
 
-                    quadTo(
-                        8f, 44f,
-                        13f, 30f
-                    )
-
-                    lineTo(26f, 8f)
-
-                    quadTo(
-                        39f, -1f,
-                        43f, 13f
-                    )
-
-                    quadTo(
-                        42f, 23f,
-                        18f, 42f
-                    )
-
-                    close()
+                    mostrarPopup(bebida)
                 }
-
-                val traco2 = Path().apply {
-
-                    moveTo(35f, 56f)
-
-                    quadTo(
-                        25f, 56f,
-                        34f, 44f
-                    )
-
-                    lineTo(67f, 25f)
-
-                    quadTo(
-                        83f, 22f,
-                        83f, 35f
-                    )
-
-                    quadTo(
-                        82f, 46f,
-                        35f, 56f
-                    )
-
-                    close()
-                }
-
-                val traco3 = Path().apply {
-
-                    moveTo(40f, 74f)
-
-                    quadTo(
-                        30f, 65f,
-                        47f, 62f
-                    )
-
-                    lineTo(79f, 61f)
-
-                    quadTo(
-                        96f, 65f,
-                        89f, 78f
-                    )
-
-                    quadTo(
-                        85f, 86f,
-                        40f, 74f
-                    )
-
-                    close()
-                }
-
-                listOf(
-                    traco1,
-                    traco2,
-                    traco3
-                ).forEach { caminho ->
-
-                    paint.style = Paint.Style.STROKE
-
-                    paint.strokeWidth = 7f
-
-                    paint.strokeJoin = Paint.Join.ROUND
-
-                    paint.color = Color.WHITE
-
-                    canvas.drawPath(
-                        caminho,
-                        paint
-                    )
-
-                    paint.style = Paint.Style.FILL
-
-                    paint.color =
-                        Color.parseColor(cor)
-
-                    canvas.drawPath(
-                        caminho,
-                        paint
-                    )
-                }
-
-                canvas.restore()
             }
         }
-    }
 
-    // ==========================================
-    // CARTÕES DAS BEBIDAS
-    // ==========================================
+        // NÍVEL NO RODAPÉ
 
-    private fun criarCartao(
-        bebida: Bebida,
-        x: Int,
-        y: Int,
-        atraso: Long
-    ) {
-
-        val largura = 220
-        val altura = 115
-
-        val grupo = FrameLayout(this).apply {
-
-            clipChildren = false
-            clipToPadding = false
-        }
-
-        posicionar(
+        visual.progresso(
             conteudo,
-            grupo,
-            x, y, largura, altura
+            1
         )
-
-        val cartao = FrameLayout(this).apply {
-
-            background = fundoArredondado(
-                bebida.borda,
-                22f
-            )
-
-            elevation = px(2).toFloat()
-
-            contentDescription =
-                "Selecionar ${bebida.nome}"
-        }
-
-        posicionar(
-            grupo,
-            cartao,
-            0, 0, largura, altura
-        )
-
-        val moldura = FrameLayout(this).apply {
-
-            background = fundoArredondado(
-                "#FFFFFF",
-                20f
-            )
-        }
-
-        posicionar(
-            cartao,
-            moldura,
-            2, 2, 216, 108
-        )
-
-        val interior = FrameLayout(this).apply {
-
-            background = fundoArredondado(
-                bebida.cor,
-                18f,
-                bebida.borda,
-                1f
-            )
-        }
-
-        posicionar(
-            moldura,
-            interior,
-            3, 3, 210, 102
-        )
-
-        val imagem = adicionarImagem(
-            interior,
-            bebida.imagem,
-            58, 3, 94, 73
-        )
-
-        val estrela = criarForma(
-            "estrela",
-            bebida.borda
-        )
-
-        posicionar(
-            interior,
-            estrela,
-            27, 25, 20, 20
-        )
-
-        val etiqueta = criarTexto(
-            bebida.nome,
-            17f,
-            azulTexto
-        )
-
-        etiqueta.background = fundoArredondado(
-            bebida.etiqueta,
-            14f,
-            bebida.borda,
-            1f
-        )
-
-        posicionar(
-            interior,
-            etiqueta,
-            22, 76, 166, 23
-        )
-
-        flutuar(
-            grupo,
-            2.5f,
-            2800L,
-            animacoesTela,
-            atraso
-        )
-
-        pulsar(
-            grupo,
-            animacoesTela,
-            atraso,
-            1.025f
-        )
-
-        flutuar(
-            imagem,
-            2f,
-            2200L,
-            animacoesTela,
-            atraso
-        )
-
-        balancar(
-            estrela,
-            6f,
-            2600L,
-            animacoesTela,
-            atraso
-        )
-
-        animacaoToque(cartao) {
-
-            if (!popupAberto && !navegando) {
-
-                mostrarPopup(bebida)
-            }
-        }
     }
 
-    // ==========================================
-    // POP-UP
-    // ==========================================
+    // =========================================
+    // POP-UP ROXO DE ESTRELINHAS
+    // =========================================
 
-    private fun mostrarPopup(
-        bebida: Bebida
-    ) {
+    private fun mostrarPopup(bebida: Bebida) {
 
-        if (
-            popupAberto ||
-            navegando ||
-            isFinishing ||
-            isDestroyed
-        ) return
+        if (popupAberto || navegando) return
 
         popupAberto = true
 
-        animacoesTela.forEach {
+        animacaoBalao?.pause()
 
-            if (it.isStarted && !it.isPaused) {
+        tocarEfeito("brilho_suave", 0.20f)
 
-                it.pause()
-            }
-        }
-
-        val sobreposicao = FrameLayout(this).apply {
+        val camada = FrameLayout(this).apply {
 
             setBackgroundColor(
-                Color.parseColor("#55405268")
+                Color.argb(150, 35, 25, 55)
             )
 
             isClickable = true
+            isFocusable = true
 
-            elevation = px(30).toFloat()
-
-            clipChildren = false
-            clipToPadding = false
+            elevation = visual.px(50).toFloat()
         }
 
-        popupAtual = sobreposicao
+        popupAtual = camada
 
         tela.addView(
-            sobreposicao,
+            camada,
             FrameLayout.LayoutParams(-1, -1)
         )
 
-        val container = FrameLayout(this).apply {
+        val conjunto = FrameLayout(this).apply {
 
             clipChildren = false
             clipToPadding = false
         }
 
-        sobreposicao.addView(
-            container,
+        camada.addView(
+            conjunto,
             FrameLayout.LayoutParams(
-                px(530),
-                px(310),
+                visual.px(560),
+                visual.px(320),
                 Gravity.CENTER
             )
         )
 
-        // MOLDURA
+        // SOMBRA SÓLIDA
 
-        val moldura = FrameLayout(this).apply {
+        val sombra = View(this).apply {
 
-            background = fundoArredondado(
-                azulBorda,
-                30f
+            background = visual.fundo(
+                "#9873C3",
+                "#7953AA",
+                34f,
+                "#7953AA",
+                3
             )
+        }
+
+        visual.colocar(
+            conjunto,
+            sombra,
+            5, 27, 550, 285
+        )
+
+        // CARTÃO PRINCIPAL
+
+        val popup = FrameLayout(this).apply {
+
+            background = visual.fundo(
+                "#FFFCFF",
+                "#F3E6FC",
+                34f,
+                "#A780D4",
+                5
+            )
+
+            elevation = visual.px(6).toFloat()
 
             clipChildren = false
             clipToPadding = false
-
-            isClickable = true
         }
 
-        posicionar(
-            container,
-            moldura,
-            0, 42, 530, 260
+        visual.colocar(
+            conjunto,
+            popup,
+            5, 20, 550, 285
         )
 
-        // NUVEM
+        // BORDA INTERNA
 
-        val nuvem = criarNuvemPopup()
+        val borda = View(this).apply {
 
-        posicionar(
-            container,
-            nuvem,
-            155, 8, 220, 60
-        )
-
-        // PAINEL CREME
-
-        val painel = FrameLayout(this).apply {
-
-            background = fundoArredondado(
-                creme,
-                24f
+            background = visual.fundo(
+                "#00FFFFFF",
+                "#00FFFFFF",
+                27f,
+                "#DEC7F5",
+                2
             )
-
-            clipChildren = false
-            clipToPadding = false
-
-            isClickable = true
         }
 
-        posicionar(
-            container,
-            painel,
-            8, 50, 514, 244
+        visual.colocar(
+            popup,
+            borda,
+            9, 9, 532, 267
+        )
+
+        // FAIXA ONDULADA
+
+        visual.colocar(
+            popup,
+            visual.cabecalhoRoxo(),
+            15, 6, 520, 75
         )
 
         // ESTRELA SUPERIOR
 
-        val estrela = criarForma(
-            "estrela",
-            amarelo
+        val estrelaTopo = visual.estrela().apply {
+
+            elevation = visual.px(15).toFloat()
+        }
+
+        visual.colocar(
+            conjunto,
+            estrelaTopo,
+            247, -4, 66, 66
         )
 
-        posicionar(
-            container,
-            estrela,
-            237, 0, 56, 56
+        // ESTRELINHAS LATERAIS
+
+        visual.colocar(
+            popup,
+            visual.estrela(),
+            45, 21, 42, 42
         )
 
-        // BOLINHAS DECORATIVAS
-
-        val bolinha1 = criarCirculo(rosa)
-
-        posicionar(
-            container,
-            bolinha1,
-            210, 30, 7, 7
+        visual.colocar(
+            popup,
+            visual.estrela(),
+            463, 21, 42, 42
         )
 
-        val bolinha2 = criarCirculo(rosa)
+        // TÍTULO DO POP-UP
 
-        posicionar(
-            container,
-            bolinha2,
-            313, 30, 7, 7
+        visual.colocar(
+            popup,
+            visual.texto(
+                "Muito bem!",
+                31f,
+                "#61378C"
+            ),
+            105, 30, 340, 43
         )
 
-        // TÍTULO
+        // ESTRELA GRANDE ATRÁS DA BEBIDA
 
-        val titulo = criarTexto(
-            "Que escolha gostosa!",
-            25f,
-            azulTexto
+        val estrelaGrande = visual.estrela()
+
+        visual.colocar(
+            popup,
+            estrelaGrande,
+            15, 83, 220, 190
         )
 
-        posicionar(
-            painel,
-            titulo,
-            65, 12, 384, 40
+        // BEBIDA ORIGINAL
+
+        val bebidaImagem = visual.imagem(
+            bebida.imagem
         )
 
-        // NOVOS TRACINHOS ROSAS
-
-        val detalheEsquerdo =
-            criarTracinhos(rosa)
-
-        detalheEsquerdo.rotation = -65f
-
-
-
-        // CÍRCULO DA BEBIDA
-
-        val circulo = criarCirculo(
-            bebida.cor
+        visual.colocar(
+            popup,
+            bebidaImagem,
+            65, 111, 120, 135
         )
 
-        posicionar(
-            painel,
-            circulo,
-            49, 62, 132, 132
+        // TEXTO
+
+        visual.colocar(
+            popup,
+            visual.texto(
+                "Você escolheu:",
+                20f,
+                "#61378C"
+            ),
+            240, 88, 280, 30
         )
 
-        // BEBIDA ESCOLHIDA
+        // CÁPSULA COM O NOME
 
-        val imagem = adicionarImagem(
-            painel,
-            bebida.imagem,
-            65, 58, 100, 137
-        )
-
-        // CORAÇÕES
-
-        val coracao1 = criarForma(
-            "coracao",
-            rosa
-        )
-
-        coracao1.rotation = -18f
-
-        posicionar(
-            painel,
-            coracao1,
-            25, 79, 30, 30
-        )
-
-        val coracao2 = criarForma(
-            "coracao",
-            rosa
-        )
-
-        coracao2.rotation = 15f
-
-        posicionar(
-            painel,
-            coracao2,
-            172, 146, 27, 27
-        )
-
-        val estrelaPequena = criarForma(
-            "estrela",
-            amarelo
-        )
-
-        posicionar(
-            painel,
-            estrelaPequena,
-            177, 67, 24, 24
-        )
-
-        // TEXTO DA ESCOLHA
-
-        val mensagem = criarTexto(
-            "Sua bebida favorita é...",
-            18f,
-            "#637B96"
-        )
-
-        posicionar(
-            painel,
-            mensagem,
-            218, 80, 270, 30
-        )
-
-        // NOME DA BEBIDA
-
-        val nome = criarTexto(
+        val nome = visual.texto(
             bebida.nome,
-            26f,
-            azulTexto
-        )
-
-        nome.background = fundoArredondado(
-            bebida.cor,
-            22f
-        )
-
-        posicionar(
-            painel,
-            nome,
-            220, 120, 266, 54
-        )
-
-        // FRASE ADICIONAL REMOVIDA
-
-        // BOTÃO FECHAR
-
-        val fechar = criarTexto(
-            "×",
             25f,
-            "#6086AC"
-        )
+            bebida.paleta.texto
+        ).apply {
 
-        fechar.background = fundoArredondado(
-            "#DFEDF7",
-            30f
-        )
-
-        fechar.contentDescription =
-            "Fechar resultado"
-
-        posicionar(
-            container,
-            fechar,
-            488, 34, 35, 35
-        )
-
-        animacaoToque(fechar) {
-
-            fecharPopup()
+            background = visual.fundo(
+                bebida.paleta.topo,
+                bebida.paleta.base,
+                23f,
+                bebida.paleta.borda,
+                2
+            )
         }
 
-        // BOTÃO VOLTAR
+        visual.colocar(
+            popup,
+            nome,
+            245, 122, 270, 43
+        )
 
-        val botaoVoltar = criarBotaoPopup(
-            painel,
-            "← Voltar",
-            28, 203, 216, 34,
-            "#D3E8F5",
-            "#395681"
+        // PRÓXIMO NÍVEL
+
+        visual.botao(
+            popup,
+            "Próximo nível →",
+            visual.verde,
+            245, 175, 270, 51
         ) {
 
-            voltarParaCincoOpcoes()
-        }
-
-        // BOTÃO CONTINUAR
-
-        val botaoContinuar = criarBotaoPopup(
-            painel,
-            "Continuar →",
-            270, 203, 216, 34,
-            "#D9EBC8",
-            "#54774B"
-        ) {
-
+            tocarClique()
             abrirProximoNivel()
         }
 
-        // ENTRADA SUAVE
+        // VOLTAR
 
-        container.alpha = 0f
+        visual.botao(
+            popup,
+            "← Voltar",
+            visual.azul,
+            270, 234, 220, 39
+        ) {
 
-        container.scaleX = 0.90f
-        container.scaleY = 0.90f
+            tocarClique()
+            voltarParaCincoOpcoes()
+        }
 
-        container.translationY =
-            px(10).toFloat()
+        // ANIMAÇÃO DE ENTRADA
 
-        container.animate()
-            .alpha(1f)
+        conjunto.scaleX = 0.78f
+        conjunto.scaleY = 0.78f
+        conjunto.alpha = 0f
+
+        conjunto.animate()
             .scaleX(1f)
             .scaleY(1f)
-            .translationY(0f)
-            .setDuration(320L)
+            .alpha(1f)
+            .setDuration(380L)
             .setInterpolator(
-                DecelerateInterpolator()
+                OvershootInterpolator(1.15f)
             )
             .start()
 
-        // ANIMAÇÕES
+        // ESTRELA BALANÇANDO SUAVEMENTE
 
-        balancar(
-            estrela,
-            5f,
-            2000L,
-            animacoesPopup
-        )
-
-        flutuar(
-            imagem,
-            3f,
-            2000L,
-            animacoesPopup
-        )
-
-        flutuar(
-            coracao1,
-            3f,
-            2400L,
-            animacoesPopup
-        )
-
-        flutuar(
-            coracao2,
-            3f,
-            2600L,
-            animacoesPopup,
-            600L
-        )
-
-        balancar(
-            estrelaPequena,
-            7f,
-            2300L,
-            animacoesPopup
-        )
-
-        flutuar(
-            botaoVoltar,
-            1.5f,
-            2400L,
-            animacoesPopup
-        )
-
-        flutuar(
-            botaoContinuar,
-            1.5f,
-            2400L,
-            animacoesPopup,
-            1200L
-        )
-
-        sobreposicao.postDelayed({
-
-            if (
-                popupAtual === sobreposicao &&
-                !navegando &&
-                !isFinishing &&
-                hasWindowFocus()
-            ) {
-
-                tocarSomPopup()
-            }
-
-        }, 220L)
-    }
-
-    // ==========================================
-    // NUVEM DO POP-UP
-    // ==========================================
-
-    private fun criarNuvemPopup(): View {
-
-        return object : View(this) {
-
-            private val paint = Paint(
-                Paint.ANTI_ALIAS_FLAG
-            )
-
-            override fun onDraw(canvas: Canvas) {
-
-                super.onDraw(canvas)
-
-                canvas.save()
-
-                canvas.scale(
-                    width / 220f,
-                    height / 60f
-                )
-
-                val caminho = Path().apply {
-
-                    moveTo(0f, 60f)
-
-                    lineTo(0f, 43f)
-
-                    cubicTo(
-                        0f, 28f,
-                        14f, 23f,
-                        30f, 25f
-                    )
-
-                    cubicTo(
-                        36f, 7f,
-                        59f, 4f,
-                        76f, 19f
-                    )
-
-                    cubicTo(
-                        87f, -3f,
-                        103f, 0f,
-                        110f, 10f
-                    )
-
-                    cubicTo(
-                        126f, -3f,
-                        142f, 3f,
-                        148f, 19f
-                    )
-
-                    cubicTo(
-                        167f, 4f,
-                        184f, 9f,
-                        190f, 25f
-                    )
-
-                    cubicTo(
-                        207f, 22f,
-                        220f, 30f,
-                        220f, 43f
-                    )
-
-                    lineTo(220f, 60f)
-
-                    close()
-                }
-
-                paint.style = Paint.Style.FILL
-
-                paint.color =
-                    Color.parseColor(azulBorda)
-
-                canvas.drawPath(
-                    caminho,
-                    paint
-                )
-
-                canvas.restore()
-            }
-        }
-    }
-
-    // ==========================================
-    // ESTRELAS E CORAÇÕES
-    // ==========================================
-
-    private fun criarForma(
-        tipo: String,
-        cor: String
-    ): View {
-
-        return object : View(this) {
-
-            private val paint = Paint(
-                Paint.ANTI_ALIAS_FLAG
-            )
-
-            override fun onDraw(canvas: Canvas) {
-
-                super.onDraw(canvas)
-
-                canvas.save()
-
-                canvas.scale(
-                    width / 100f,
-                    height / 100f
-                )
-
-                val caminho = Path()
-
-                when (tipo) {
-
-                    "estrela" -> {
-
-                        caminho.apply {
-
-                            moveTo(44f, 12f)
-
-                            quadTo(
-                                50f, 0f,
-                                56f, 12f
-                            )
-
-                            lineTo(66f, 33f)
-                            lineTo(89f, 36f)
-
-                            quadTo(
-                                100f, 38f,
-                                92f, 47f
-                            )
-
-                            lineTo(75f, 64f)
-                            lineTo(79f, 87f)
-
-                            quadTo(
-                                81f, 99f,
-                                70f, 93f
-                            )
-
-                            lineTo(50f, 82f)
-                            lineTo(30f, 93f)
-
-                            quadTo(
-                                19f, 99f,
-                                21f, 87f
-                            )
-
-                            lineTo(25f, 64f)
-                            lineTo(8f, 47f)
-
-                            quadTo(
-                                0f, 38f,
-                                11f, 36f
-                            )
-
-                            lineTo(34f, 33f)
-
-                            close()
-                        }
-                    }
-
-                    "coracao" -> {
-
-                        caminho.apply {
-
-                            moveTo(50f, 89f)
-
-                            cubicTo(
-                                35f, 78f,
-                                5f, 55f,
-                                5f, 31f
-                            )
-
-                            cubicTo(
-                                5f, 6f,
-                                36f, 1f,
-                                50f, 25f
-                            )
-
-                            cubicTo(
-                                64f, 1f,
-                                95f, 6f,
-                                95f, 31f
-                            )
-
-                            cubicTo(
-                                95f, 55f,
-                                65f, 78f,
-                                50f, 89f
-                            )
-
-                            close()
-                        }
-                    }
-                }
-
-                paint.style = Paint.Style.FILL
-
-                paint.color =
-                    Color.parseColor(cor)
-
-                canvas.drawPath(
-                    caminho,
-                    paint
-                )
-
-                canvas.restore()
-            }
-        }
-    }
-
-    // ==========================================
-    // CÍRCULOS
-    // ==========================================
-
-    private fun criarCirculo(
-        cor: String
-    ): View {
-
-        return View(this).apply {
-
-            background = GradientDrawable().apply {
-
-                shape = GradientDrawable.OVAL
-
-                setColor(
-                    Color.parseColor(cor)
-                )
-            }
-        }
-    }
-
-    // ==========================================
-    // BOTÕES DO POP-UP
-    // ==========================================
-
-    private fun criarBotaoPopup(
-        pai: FrameLayout,
-        texto: String,
-        x: Int,
-        y: Int,
-        largura: Int,
-        altura: Int,
-        cor: String,
-        corTexto: String,
-        acao: () -> Unit
-    ): View {
-
-        val grupo = FrameLayout(this).apply {
-
-            clipChildren = false
-            clipToPadding = false
-        }
-
-        posicionar(
-            pai,
-            grupo,
-            x, y, largura, altura
-        )
-
-        val botao = criarTexto(
-            texto,
-            17f,
-            corTexto
-        )
-
-        botao.background = fundoArredondado(
-            cor,
-            18f
-        )
-
-        botao.contentDescription = texto
-
-        posicionar(
-            grupo,
-            botao,
-            0, 0, largura, altura
-        )
-
-        animacaoToque(botao) {
-
-            if (popupAtual != null) {
-
-                acao()
-            }
-        }
-
-        return grupo
-    }
-
-    // ==========================================
-    // ANIMAÇÃO AO PRESSIONAR
-    // ==========================================
-
-    private fun animacaoToque(
-        view: View,
-        acao: () -> Unit
-    ) {
-
-        view.isClickable = true
-        view.isFocusable = true
-
-        view.setOnTouchListener { v, evento ->
-
-            when (evento.actionMasked) {
-
-                MotionEvent.ACTION_DOWN -> {
-
-                    v.animate().cancel()
-
-                    v.animate()
-                        .scaleX(0.94f)
-                        .scaleY(0.94f)
-                        .setDuration(110L)
-                        .start()
-                }
-
-                MotionEvent.ACTION_UP,
-                MotionEvent.ACTION_CANCEL -> {
-
-                    v.animate().cancel()
-
-                    v.animate()
-                        .scaleX(1f)
-                        .scaleY(1f)
-                        .setDuration(180L)
-                        .setInterpolator(
-                            DecelerateInterpolator()
-                        )
-                        .start()
-                }
-            }
-
-            false
-        }
-
-        view.isSoundEffectsEnabled = false
-
-        view.setOnClickListener {
-
-            if (
-                !navegando &&
-                !isFinishing &&
-                !isDestroyed
-            ) {
-
-                tocarSomBolhinha()
-
-                acao()
-            }
-        }
-    }
-
-    // ==========================================
-    // FLUTUAÇÃO
-    // ==========================================
-
-    private fun flutuar(
-        view: View,
-        distancia: Float,
-        duracao: Long,
-        lista: MutableList<ObjectAnimator>,
-        atraso: Long = 0L
-    ) {
-
-        val animacao = ObjectAnimator.ofFloat(
-            view,
-            View.TRANSLATION_Y,
-            0f,
-            -distancia * escala
-        )
-
-        animacao.duration = duracao
-        animacao.startDelay = atraso
-
-        animacao.repeatCount =
-            ValueAnimator.INFINITE
-
-        animacao.repeatMode =
-            ValueAnimator.REVERSE
-
-        animacao.interpolator =
-            AccelerateDecelerateInterpolator()
-
-        lista.add(animacao)
-
-        animacao.start()
-    }
-
-    // ==========================================
-    // PULSAÇÃO
-    // ==========================================
-
-    private fun pulsar(
-        view: View,
-        lista: MutableList<ObjectAnimator>,
-        atraso: Long = 0L,
-        intensidade: Float = 1.04f
-    ) {
-
-        val animacao =
-            ObjectAnimator.ofPropertyValuesHolder(
-
-                view,
-
-                PropertyValuesHolder.ofFloat(
-                    View.SCALE_X,
-                    1f,
-                    intensidade
-                ),
-
-                PropertyValuesHolder.ofFloat(
-                    View.SCALE_Y,
-                    1f,
-                    intensidade
-                )
-            )
-
-        animacao.duration = 2600L
-
-        animacao.startDelay = atraso
-
-        animacao.repeatCount =
-            ValueAnimator.INFINITE
-
-        animacao.repeatMode =
-            ValueAnimator.REVERSE
-
-        animacao.interpolator =
-            AccelerateDecelerateInterpolator()
-
-        lista.add(animacao)
-
-        animacao.start()
-    }
-
-    // ==========================================
-    // BALANÇO
-    // ==========================================
-
-    private fun balancar(
-        view: View,
-        angulo: Float,
-        duracao: Long,
-        lista: MutableList<ObjectAnimator>,
-        atraso: Long = 0L
-    ) {
-
-        val inicial = view.rotation
-
-        val animacao = ObjectAnimator.ofFloat(
-            view,
+        animacaoEstrela = ObjectAnimator.ofFloat(
+            estrelaTopo,
             View.ROTATION,
-            inicial,
-            inicial - angulo,
-            inicial + angulo,
-            inicial
-        )
+            -7f, 7f, -7f
+        ).apply {
 
-        animacao.duration = duracao
-
-        animacao.startDelay = atraso
-
-        animacao.repeatCount =
-            ValueAnimator.INFINITE
-
-        animacao.repeatMode =
-            ValueAnimator.RESTART
-
-        animacao.interpolator =
-            AccelerateDecelerateInterpolator()
-
-        lista.add(animacao)
-
-        animacao.start()
-    }
-
-    // ==========================================
-    // NOVO SOM DE BOLHINHA
-    // ==========================================
-
-    private fun gerarSomBolhinha(): ShortArray {
-
-        val duracao = 0.16
-
-        val quantidade =
-            (taxaAudio * duracao).toInt()
-
-        val dados = ShortArray(quantidade)
-
-        var fase = 0.0
-
-        for (i in dados.indices) {
-
-            val t = i.toDouble() / taxaAudio
-
-            val progresso = t / duracao
-
-            val frequencia =
-                480.0 + 260.0 * progresso
-
-            fase +=
-                2.0 * PI * frequencia / taxaAudio
-
-            val entrada =
-                minOf(1.0, t / 0.012)
-
-            val envelope =
-                entrada * exp(-progresso * 5.0)
-
-            val onda =
-                sin(fase) +
-                        0.08 * sin(fase * 2.0)
-
-            dados[i] = (
-                    onda * envelope * 16000
-                    ).toInt()
-                .coerceIn(-32768, 32767)
-                .toShort()
+            duration = 2400L
+            repeatCount = ValueAnimator.INFINITE
+            start()
         }
 
-        return dados
-    }
+        bebidaImagem.translationY =
+            visual.px(8).toFloat()
 
-    // ==========================================
-    // SOM SUAVE DE ABERTURA DO POP-UP
-    // ==========================================
-
-    private fun gerarSomPopup(): ShortArray {
-
-        val dados = DoubleArray(
-            (taxaAudio * 0.65).toInt()
-        )
-
-        adicionarNota(
-            dados,
-            523.25,
-            0.0,
-            0.25,
-            0.45
-        )
-
-        adicionarNota(
-            dados,
-            659.25,
-            0.12,
-            0.30,
-            0.35
-        )
-
-        adicionarNota(
-            dados,
-            783.99,
-            0.24,
-            0.38,
-            0.30
-        )
-
-        return converterAudio(dados)
-    }
-
-    // ==========================================
-    // MÚSICA AMBIENTE INFANTIL
-    // ==========================================
-
-    private fun gerarMusicaAmbiente(): ShortArray {
-
-        val duracao = 16.0
-
-        val dados = DoubleArray(
-            (taxaAudio * duracao).toInt()
-        )
-
-        // MELODIA ORIGINAL SUAVE
-
-        val notas = doubleArrayOf(
-            523.25,
-            659.25,
-            587.33,
-            523.25,
-            440.00,
-            523.25,
-            659.25,
-            587.33,
-            493.88,
-            587.33,
-            659.25,
-            523.25,
-            440.00,
-            493.88,
-            523.25
-        )
-
-        notas.forEachIndexed { indice, nota ->
-
-            adicionarNota(
-                dados,
-                nota,
-                indice * 1.0,
-                0.85,
-                0.32
+        bebidaImagem.animate()
+            .translationY(0f)
+            .setDuration(550L)
+            .setInterpolator(
+                OvershootInterpolator(1.4f)
             )
-        }
-
-        // ACOMPANHAMENTO DELICADO
-
-        val acompanhamento = doubleArrayOf(
-            261.63,
-            220.00,
-            196.00,
-            261.63
-        )
-
-        acompanhamento.forEachIndexed { indice, nota ->
-
-            adicionarNota(
-                dados,
-                nota,
-                indice * 4.0,
-                3.2,
-                0.16
-            )
-
-            adicionarNota(
-                dados,
-                nota * 1.5,
-                indice * 4.0 + 1.0,
-                2.5,
-                0.08
-            )
-        }
-
-        return converterAudio(dados)
+            .start()
     }
-
-    // ==========================================
-    // GERAR NOTAS COM TIMBRE SUAVE
-    // ==========================================
-
-    private fun adicionarNota(
-        dados: DoubleArray,
-        frequencia: Double,
-        inicio: Double,
-        duracao: Double,
-        intensidade: Double
-    ) {
-
-        val inicioAmostra =
-            (inicio * taxaAudio).toInt()
-
-        val quantidade =
-            (duracao * taxaAudio).toInt()
-
-        for (i in 0 until quantidade) {
-
-            val indice = inicioAmostra + i
-
-            if (indice !in dados.indices) break
-
-            val t = i.toDouble() / taxaAudio
-
-            val entrada =
-                minOf(1.0, t / 0.035)
-
-            val saida =
-                minOf(
-                    1.0,
-                    (duracao - t) / 0.12
-                ).coerceAtLeast(0.0)
-
-            val envelope =
-                entrada *
-                        saida *
-                        exp(-t * 2.5)
-
-            val onda =
-                sin(2.0 * PI * frequencia * t) +
-                        0.12 *
-                        sin(4.0 * PI * frequencia * t)
-
-            dados[indice] +=
-                onda * envelope * intensidade
-        }
-    }
-
-    private fun converterAudio(
-        dados: DoubleArray
-    ): ShortArray {
-
-        return ShortArray(dados.size) { indice ->
-
-            (
-                    dados[indice] * 24000
-                    ).toInt()
-                .coerceIn(-32768, 32767)
-                .toShort()
-        }
-    }
-
-    // ==========================================
-    // CRIAR REPRODUTOR DE ÁUDIO
-    // ==========================================
-
-    private fun criarAudio(
-        dados: ShortArray,
-        volume: Float,
-        repetir: Boolean
-    ): AudioTrack? {
-
-        var audio: AudioTrack? = null
-
-        return try {
-
-            val atributos =
-                AudioAttributes.Builder()
-                    .setUsage(
-                        AudioAttributes.USAGE_GAME
-                    )
-                    .setContentType(
-                        AudioAttributes.CONTENT_TYPE_MUSIC
-                    )
-                    .build()
-
-            val formato =
-                AudioFormat.Builder()
-                    .setSampleRate(taxaAudio)
-                    .setEncoding(
-                        AudioFormat.ENCODING_PCM_16BIT
-                    )
-                    .setChannelMask(
-                        AudioFormat.CHANNEL_OUT_MONO
-                    )
-                    .build()
-
-            audio = AudioTrack.Builder()
-                .setAudioAttributes(atributos)
-                .setAudioFormat(formato)
-                .setBufferSizeInBytes(
-                    dados.size * 2
-                )
-                .setTransferMode(
-                    AudioTrack.MODE_STATIC
-                )
-                .build()
-
-            if (
-                audio.write(
-                    dados,
-                    0,
-                    dados.size
-                ) != dados.size
-            ) {
-
-                audio.release()
-
-                return null
-            }
-
-            audio.setVolume(volume)
-
-            if (repetir) {
-
-                audio.setLoopPoints(
-                    0,
-                    dados.size,
-                    -1
-                )
-            }
-
-            audio
-
-        } catch (_: Exception) {
-
-            audio?.release()
-
-            null
-        }
-    }
-
-    // ==========================================
-    // REPRODUZIR MÚSICA
-    // ==========================================
-
-    private fun iniciarMusicaAmbiente() {
-
-        try {
-
-            if (musicaAmbiente == null) {
-
-                musicaAmbiente = criarAudio(
-                    gerarMusicaAmbiente(),
-                    volumeMusica,
-                    true
-                )
-            }
-
-            musicaAmbiente?.play()
-
-        } catch (_: Exception) {
-        }
-    }
-
-    // ==========================================
-    // REPRODUZIR BOLHINHA
-    // ==========================================
-
-    private fun tocarSomBolhinha() {
-
-        try {
-
-            liberarAudio(somToque)
-
-            somToque = criarAudio(
-                gerarSomBolhinha(),
-                volumeToque,
-                false
-            )
-
-            somToque?.play()
-
-        } catch (_: Exception) {
-        }
-    }
-
-    // ==========================================
-    // REPRODUZIR SOM DO POP-UP
-    // ==========================================
-
-    private fun tocarSomPopup() {
-
-        try {
-
-            liberarAudio(somPopup)
-
-            somPopup = criarAudio(
-                gerarSomPopup(),
-                volumePopup,
-                false
-            )
-
-            somPopup?.play()
-
-        } catch (_: Exception) {
-        }
-    }
-
-    private fun liberarAudio(
-        audio: AudioTrack?
-    ) {
-
-        try {
-
-            audio?.release()
-
-        } catch (_: Exception) {
-        }
-    }
-
-    // ==========================================
-    // FECHAR POP-UP
-    // ==========================================
 
     private fun fecharPopup() {
 
-        val popup = popupAtual ?: return
+        animacaoEstrela?.cancel()
+        animacaoEstrela = null
 
-        popupAtual = null
-
-        cancelarAnimacoes(animacoesPopup)
-
-        popup.animate()
-            .alpha(0f)
-            .setDuration(180L)
-            .withEndAction {
-
-                tela.removeView(popup)
-
-                popupAberto = false
-
-                if (!navegando && hasWindowFocus()) {
-
-                    animacoesTela.forEach {
-
-                        if (it.isPaused) {
-
-                            it.resume()
-                        }
-                    }
-                }
-            }
-            .start()
-    }
-
-    private fun cancelarAnimacoes(
-        lista: MutableList<ObjectAnimator>
-    ) {
-
-        lista.forEach {
-
-            it.cancel()
+        popupAtual?.let {
+            tela.removeView(it)
         }
 
-        lista.clear()
+        popupAtual = null
+        popupAberto = false
+
+        animacaoBalao?.resume()
     }
-
-    // ==========================================
-    // VOLTAR PARA OS CINCO JOGOS
-    // ==========================================
-
-    private fun voltarParaCincoOpcoes() {
-
-        if (navegando || isFinishing) return
-
-        navegando = true
-
-        cancelarAnimacoes(animacoesTela)
-        cancelarAnimacoes(animacoesPopup)
-
-        val intent = Intent(
-            this,
-            CincoOpcoesDosJogosActivity::class.java
-        )
-
-        intent.flags =
-            Intent.FLAG_ACTIVITY_CLEAR_TOP or
-                    Intent.FLAG_ACTIVITY_SINGLE_TOP
-
-        startActivity(intent)
-
-        finish()
-
-        aplicarTransicao()
-    }
-
-    // ==========================================
-    // PRÓXIMO NÍVEL
-    // ==========================================
 
     private fun abrirProximoNivel() {
 
-        if (navegando || isFinishing) return
+        if (navegando) return
 
         navegando = true
 
+        startActivity(
+            Intent(
+                this,
+                ProveNaImaginacao2Activity::class.java
+            )
+        )
+
+        finish()
+    }
+
+    private fun voltarParaCincoOpcoes() {
+
+        if (navegando) return
+
+        navegando = true
+
+        startActivity(
+            Intent(
+                this,
+                CincoOpcoesDosJogosActivity::class.java
+            ).apply {
+
+                flags =
+                    Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                            Intent.FLAG_ACTIVITY_SINGLE_TOP
+            }
+        )
+
+        finish()
+    }
+
+    // =========================================
+    // ÁUDIOS
+    // =========================================
+
+    private fun iniciarMusica() {
+
+        if (musica != null) return
+
         try {
 
-            val classe = Class.forName(
-                "$packageName.ProveNaImaginacao2Activity"
-            )
+            musica = MediaPlayer.create(
+                this,
+                R.raw.opcaodesomfundo2
+            )?.apply {
 
-            startActivity(
-                Intent(this, classe)
-            )
+                isLooping = true
 
-            cancelarAnimacoes(animacoesTela)
-            cancelarAnimacoes(animacoesPopup)
+                setVolume(0.07f, 0.07f)
 
-            finish()
-
-            aplicarTransicao()
+                start()
+            }
 
         } catch (_: Exception) {
-
-            navegando = false
-
-            Toast.makeText(
-                this,
-                "Próximo nível indisponível.",
-                Toast.LENGTH_SHORT
-            ).show()
         }
     }
-    @Suppress("DEPRECATION")
-    private fun aplicarTransicao() {
 
-        overridePendingTransition(
-            android.R.anim.fade_in,
-            android.R.anim.fade_out
+    private fun tocarClique() {
+
+        tocarEfeito(
+            "clique_suave",
+            0.20f
         )
     }
 
-    // ==========================================
-    // CRIAR TEXTOS
-    // ==========================================
-
-    private fun criarTexto(
-        conteudo: String,
-        tamanho: Float,
-        cor: String
-    ): TextView {
-
-        return TextView(this).apply {
-
-            text = conteudo
-
-            gravity = Gravity.CENTER
-
-            setTextColor(
-                Color.parseColor(cor)
-            )
-
-            setTextSize(
-                TypedValue.COMPLEX_UNIT_PX,
-                tamanho * escala
-            )
-
-            typeface = fonte
-
-            includeFontPadding = false
-
-            isClickable = false
-            isFocusable = false
-        }
-    }
-
-    // ==========================================
-    // FUNDOS ARREDONDADOS
-    // ==========================================
-
-    private fun fundoArredondado(
-        cor: String,
-        raio: Float,
-        borda: String? = null,
-        espessura: Float = 0f
-    ): GradientDrawable {
-
-        return GradientDrawable().apply {
-
-            setColor(
-                Color.parseColor(cor)
-            )
-
-            cornerRadius = raio * escala
-
-            if (
-                borda != null &&
-                espessura > 0
-            ) {
-
-                setStroke(
-                    (espessura * escala)
-                        .toInt()
-                        .coerceAtLeast(1),
-
-                    Color.parseColor(borda)
-                )
-            }
-        }
-    }
-
-    private fun fundoTracejado(
-        cor: String,
-        raio: Float
-    ): GradientDrawable {
-
-        return GradientDrawable().apply {
-
-            setColor(Color.TRANSPARENT)
-
-            cornerRadius = raio * escala
-
-            setStroke(
-                (1.3f * escala)
-                    .toInt()
-                    .coerceAtLeast(1),
-
-                Color.parseColor(cor),
-
-                6f * escala,
-
-                4f * escala
-            )
-        }
-    }
-
-    // ==========================================
-    // ADICIONAR IMAGENS
-    // ==========================================
-
-    private fun adicionarImagem(
-        pai: FrameLayout,
+    private fun tocarEfeito(
         nome: String,
-        x: Int,
-        y: Int,
-        largura: Int,
-        altura: Int
-    ): ImageView {
-
-        val imagem = ImageView(this)
-
-        val recurso = resources.getIdentifier(
-            nome,
-            "drawable",
-            packageName
-        )
-
-        if (recurso != 0) {
-
-            imagem.setImageResource(recurso)
-
-        } else {
-
-            Toast.makeText(
-                this,
-                "Imagem não encontrada: $nome",
-                Toast.LENGTH_SHORT
-            ).show()
-        }
-
-        imagem.scaleType =
-            ImageView.ScaleType.FIT_CENTER
-
-        imagem.isClickable = false
-        imagem.isFocusable = false
-
-        posicionar(
-            pai,
-            imagem,
-            x, y, largura, altura
-        )
-
-        return imagem
-    }
-
-    // ==========================================
-    // POSICIONAMENTO
-    // ==========================================
-
-    private fun px(valor: Int): Int {
-
-        return (valor * escala).toInt()
-    }
-
-    private fun posicionar(
-        pai: FrameLayout,
-        view: View,
-        x: Int,
-        y: Int,
-        largura: Int,
-        altura: Int
+        volume: Float
     ) {
 
-        val parametros = FrameLayout.LayoutParams(
-            px(largura).coerceAtLeast(1),
-            px(altura).coerceAtLeast(1)
-        )
+        try {
 
-        parametros.leftMargin = px(x)
+            val id = resources.getIdentifier(
+                nome,
+                "raw",
+                packageName
+            )
 
-        parametros.topMargin = px(y)
+            if (id == 0) return
 
-        pai.addView(
-            view,
-            parametros
-        )
-    }
+            efeito?.release()
 
-    // ==========================================
-    // CICLO DE VIDA
-    // ==========================================
+            efeito = MediaPlayer.create(
+                this, id
+            )?.apply {
 
-    override fun onResume() {
+                setVolume(volume, volume)
 
-        super.onResume()
+                setOnCompletionListener {
 
-        iniciarMusicaAmbiente()
+                    if (efeito === it) {
+                        efeito = null
+                    }
 
-        val lista = if (popupAberto) {
+                    it.release()
+                }
 
-            animacoesPopup
-
-        } else {
-
-            animacoesTela
-        }
-
-        lista.forEach {
-
-            if (it.isPaused) {
-
-                it.resume()
+                start()
             }
+
+        } catch (_: Exception) {
         }
     }
 
     override fun onPause() {
 
-        try {
+        musica?.pause()
 
-            musicaAmbiente?.pause()
-
-        } catch (_: Exception) {
-        }
-
-        liberarAudio(somToque)
-        liberarAudio(somPopup)
-
-        somToque = null
-        somPopup = null
-
-        animacoesTela.forEach {
-
-            if (it.isStarted && !it.isPaused) {
-
-                it.pause()
-            }
-        }
-
-        animacoesPopup.forEach {
-
-            if (it.isStarted && !it.isPaused) {
-
-                it.pause()
-            }
-        }
+        animacaoBalao?.pause()
+        animacaoEstrela?.pause()
 
         super.onPause()
     }
 
+    override fun onResume() {
+
+        super.onResume()
+
+        musica?.start()
+
+        if (!popupAberto) {
+            animacaoBalao?.resume()
+        }
+
+        animacaoEstrela?.resume()
+    }
+
     override fun onDestroy() {
 
-        cancelarAnimacoes(animacoesTela)
-        cancelarAnimacoes(animacoesPopup)
+        animacaoBalao?.cancel()
+        animacaoEstrela?.cancel()
 
-        liberarAudio(musicaAmbiente)
-        liberarAudio(somToque)
-        liberarAudio(somPopup)
+        musica?.release()
+        efeito?.release()
 
-        musicaAmbiente = null
-        somToque = null
-        somPopup = null
+        musica = null
+        efeito = null
 
         super.onDestroy()
     }

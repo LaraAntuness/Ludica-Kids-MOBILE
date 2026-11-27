@@ -1863,6 +1863,7 @@ class QuemVaiJogarActivity : Activity() {
         }
 
         preferencias.edit()
+            .putString("responsavelDaCriancaSelecionada", LudicaSessao.obter(this)?.second)
             .putString(
                 "criancaSelecionada",
                 objeto.toString()

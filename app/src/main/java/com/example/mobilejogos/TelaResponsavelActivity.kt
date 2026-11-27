@@ -2,6 +2,7 @@ package com.example.mobilejogos
 
 import android.app.Activity
 import android.app.AlertDialog
+import android.app.DatePickerDialog
 import android.content.pm.ActivityInfo
 import android.content.res.ColorStateList
 import android.graphics.Color
@@ -37,7 +38,7 @@ class TelaResponsavelActivity : Activity() {
     private val botoesMenu =
         mutableMapOf<String, LinearLayout>()
 
-    private var paginaAtual = "Jogos"
+    private var paginaAtual = "Perfil"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -51,7 +52,7 @@ class TelaResponsavelActivity : Activity() {
                     View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
 
         montarEstrutura()
-        abrirJogos()
+        abrirPerfil()
     }
 
     // ==========================================
@@ -245,7 +246,7 @@ class TelaResponsavelActivity : Activity() {
         raiz.addView(
             criarMenu(),
             LinearLayout.LayoutParams(
-                dp(166),
+                dp(176),
                 -1
             )
         )
@@ -311,7 +312,7 @@ class TelaResponsavelActivity : Activity() {
 
         lateral.addView(
             voltar,
-            LinearLayout.LayoutParams(-1, dp(35))
+            LinearLayout.LayoutParams(-1, dp(33))
         )
 
         lateral.addView(espaco(12))
@@ -365,7 +366,7 @@ class TelaResponsavelActivity : Activity() {
         )
 
         val logoId = resources.getIdentifier(
-            "logoludicakids",
+            "logoinferior",
             "drawable",
             packageName
         )
@@ -410,23 +411,10 @@ class TelaResponsavelActivity : Activity() {
             setPadding(dp(10), 0, dp(6), 0)
         }
 
-        val icone = texto(
-            simbolo,
-            19f,
-            branco,
-            true
-        ).apply {
-            gravity = Gravity.CENTER
-        }
-
-        botao.addView(
-            icone,
-            LinearLayout.LayoutParams(dp(29), -1)
-        )
-
-        botao.addView(
-            texto(nome, 13f, branco, true)
-        )
+        val icone = IconeMenu(nome)
+        botao.addView(icone, LinearLayout.LayoutParams(dp(25), dp(25)))
+        val rotulo = texto(nome, 13f, branco, true)
+        botao.addView(rotulo, LinearLayout.LayoutParams(-2, -2).apply { marginStart = dp(8) })
 
         botao.setOnClickListener {
 
@@ -452,7 +440,7 @@ class TelaResponsavelActivity : Activity() {
 
         menuContainer.addView(
             botao,
-            LinearLayout.LayoutParams(-1, dp(38)).apply {
+            LinearLayout.LayoutParams(-1, dp(37)).apply {
                 bottomMargin = dp(4)
             }
         )
@@ -466,13 +454,11 @@ class TelaResponsavelActivity : Activity() {
 
         botoesMenu.forEach { (titulo, botao) ->
 
-            botao.background = arredondado(
-                if (titulo == nome)
-                    Color.parseColor("#40FFFFFF")
-                else
-                    Color.TRANSPARENT,
-                12
-            )
+            val selecionado = titulo == nome
+            botao.background = arredondado(if (selecionado) branco else Color.TRANSPARENT, 12)
+            (botao.getChildAt(0) as IconeMenu).apply { cor = if (selecionado) azulTitulo else branco; invalidate() }
+            (botao.getChildAt(1) as TextView).setTextColor(if (selecionado) azulTitulo else branco)
+
         }
     }
 
@@ -674,52 +660,163 @@ class TelaResponsavelActivity : Activity() {
     // PERFIL
     // ==========================================
 
+    private fun acao(titulo: String, executar: () -> Unit): TextView = texto(titulo, 13f, branco, true).apply {
+        gravity = Gravity.CENTER
+        background = arredondado(azulTitulo, 12)
+        setPadding(dp(15), dp(12), dp(15), dp(12))
+        setOnClickListener { executar() }
+    }
+
     private fun abrirPerfil() {
-
         val pagina = criarPagina("Perfil")
+        cabecalho(pagina, "Minha família", "Gerencie sua conta e acompanhe as descobertas das crianças.")
+        val sessao = LudicaSessao.obter(this)
+        if (sessao == null) {
+            adicionarBloco(pagina, card("Entre na sua conta", "Faça login para visualizar seus dados."))
+            return
+        }
+        val espera = ProgressBar(this)
+        pagina.addView(espera, LinearLayout.LayoutParams(dp(36), dp(36)))
+        ApiService.consultarResponsavel(sessao.first) { resultado ->
+            if (isFinishing || isDestroyed || !pagina.isAttachedToWindow || LudicaSessao.obter(this)?.second != sessao.second) return@consultarResponsavel
+            pagina.removeView(espera)
+            resultado.onSuccess { r ->
+                if (r.id != sessao.second) return@onSuccess
+                adicionarBloco(pagina, card("Olá, ${r.nomeCompleto.substringBefore(' ')}!", "Que bom ter você aqui. Este é o seu espaço para cuidar da experiência da família.", azulClaro))
+                tituloSecao(pagina, "Meus dados")
+                val dados = card("Informações de cadastro", "Nome: ${r.nomeCompleto}\nE-mail: ${r.email}\nCelular: ${r.celular}\nCPF: ${r.cpf}\nRG: ${r.rg}")
+                dados.addView(espaco(12)); dados.addView(acao("Editar meus dados") { editarResponsavel(r, sessao) })
+                adicionarBloco(pagina, dados)
+                tituloSecao(pagina, "Minhas crianças")
+                if (r.criancas.isEmpty()) adicionarBloco(pagina, card("Nenhum perfil", "Ainda não há crianças cadastradas."))
+                r.criancas.forEach { c ->
+                    val p = card(c.nomeUsuario.ifBlank { c.nomeCompleto }, "Nome: ${c.nomeCompleto}\nCPF: ${c.cpf}\nNascimento: ${dataBrasil(c.dataNascimento)}")
+                    p.addView(espaco(10)); p.addView(acao("Editar perfil infantil") { editarCrianca(c, sessao) })
+                    p.addView(espaco(8)); p.addView(acao("Ver atividades") { abrirAtividades(c, sessao.second) })
+                    adicionarBloco(pagina, p)
+                }
+                tituloSecao(pagina, "Atividade das crianças")
+                pagina.addView(texto("Acompanhe o progresso registrado neste dispositivo.", 12f, textoCinza))
+                pagina.addView(espaco(10))
+                r.criancas.forEach { c ->
+                    val (j,n,t) = HistoricoAtividades.resumo(this, sessao.second, c.id)
+                    val p = card(c.nomeUsuario.ifBlank { c.nomeCompleto }, "$j atividades diferentes • $n etapas concluídas • $t min em jogo", verde)
+                    p.setOnClickListener { abrirAtividades(c, sessao.second) }
+                    adicionarBloco(pagina, p)
+                }
+            }.onFailure {
+                adicionarBloco(pagina, card("Não foi possível carregar", "Confira a conexão ou entre novamente na conta."))
+                pagina.addView(acao("Tentar novamente") { abrirPerfil() })
+            }
+        }
+    }
 
-        cabecalho(
-            pagina,
-            "Meu perfil",
-            "Cuide da sua conta e dos pequenos que aprendem com a gente."
-        )
+    private fun dataBrasil(valor: String): String {
+        val partes = valor.take(10).split("-")
+        return if (partes.size == 3) "${partes[2]}/${partes[1]}/${partes[0]}" else valor
+    }
 
-        adicionarBloco(
-            pagina,
-            cardHorizontal(
-                "Olá, responsável!",
-                "Este espaço foi criado para você acompanhar a experiência das crianças no LúdicaKids.",
-                "fotoperfilresponsavel",
-                azulClaro
-            )
-        )
+    private fun campo(p: LinearLayout, titulo: String, valor: String, tipo: Int = 1): EditText {
+        p.addView(texto(titulo, 13f, azulTitulo, true))
+        val e = EditText(this).apply {
+            setText(valor); textSize = 14f; inputType = tipo; setSingleLine(true)
+            setPadding(dp(12), dp(9), dp(12), dp(9))
+            background = arredondado(branco, 12, Color.parseColor("#CBDCEC"))
+        }
+        p.addView(e, LinearLayout.LayoutParams(-1, -2)); p.addView(espaco(12)); return e
+    }
 
-        tituloSecao(pagina, "Minha conta")
+    private fun editarResponsavel(r: ApiService.Responsavel, sessao: Pair<String,String>) {
+        val p = criarPagina("Perfil")
+        cabecalho(p, "Editar meus dados", "Atualize suas informações de contato.")
+        val nome = campo(p, "Nome completo", r.nomeCompleto)
+        val email = campo(p, "E-mail", r.email, 33)
+        val celular = campo(p, "Celular", r.celular, 3)
+        p.addView(texto("CPF e RG não podem ser alterados por esta tela.", 12f, textoCinza))
+        p.addView(espaco(12))
+        lateinit var salvar: TextView
+        salvar = acao("Salvar alterações") {
+            val n = nome.text.toString().trim(); val e = email.text.toString().trim(); val c = celular.text.toString().trim()
+            if (n.isBlank() || !android.util.Patterns.EMAIL_ADDRESS.matcher(e).matches() || c.isBlank()) {
+                Toast.makeText(this, "Confira os campos.", Toast.LENGTH_SHORT).show()
+            } else {
+                salvar.isEnabled = false
+                ApiService.atualizarResponsavel(r.id, sessao.first, n, e, c) { res -> finalizarEdicao(p, salvar, res) }
+            }
+        }
+        p.addView(salvar); p.addView(espaco(8)); p.addView(acao("Cancelar") { abrirPerfil() })
+    }
 
-        adicionarBloco(
-            pagina,
-            card(
-                "Informações pessoais",
-                "Consulte as informações da sua conta de responsável."
-            )
-        )
+    private fun editarCrianca(c: ApiService.Crianca, sessao: Pair<String,String>) {
+        val p = criarPagina("Perfil")
+        cabecalho(p, "Editar perfil infantil", "Atualize os dados da criança.")
+        val nome = campo(p, "Nome completo", c.nomeCompleto)
+        val usuario = campo(p, "Nome de usuário", c.nomeUsuario)
+        val cpf = campo(p, "CPF", c.cpf, 3)
+        val data = campo(p, "Nascimento (DD/MM/AAAA)", dataBrasil(c.dataNascimento))
+        data.isFocusable = false
+        data.setOnClickListener {
+            val cal = java.util.Calendar.getInstance()
+            val f = java.text.SimpleDateFormat("dd/MM/yyyy", java.util.Locale("pt", "BR")).apply { isLenient = false }
+            runCatching { f.parse(data.text.toString()) }.getOrNull()?.let { cal.time = it }
+            DatePickerDialog(this, { _, a, m, d -> data.setText(String.format(java.util.Locale.US, "%02d/%02d/%04d", d,m+1,a)) }, cal.get(java.util.Calendar.YEAR), cal.get(java.util.Calendar.MONTH), cal.get(java.util.Calendar.DAY_OF_MONTH)).apply { datePicker.maxDate = System.currentTimeMillis() }.show()
+        }
+        lateinit var salvar: TextView
+        salvar = acao("Salvar alterações") {
+            val f = java.text.SimpleDateFormat("dd/MM/yyyy", java.util.Locale("pt", "BR")).apply { isLenient = false }
+            val dia = runCatching { f.parse(data.text.toString()) }.getOrNull()
+            if (nome.text.isBlank() || usuario.text.isBlank() || cpf.text.isBlank() || dia == null || dia.time > System.currentTimeMillis()) {
+                Toast.makeText(this, "Confira os dados da criança.", Toast.LENGTH_SHORT).show()
+            } else {
+                val iso = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(dia)
+                salvar.isEnabled = false
+                ApiService.atualizarCrianca(sessao.second, sessao.first, c.copy(nomeCompleto = nome.text.toString().trim(), nomeUsuario = usuario.text.toString().trim(), cpf = cpf.text.toString().trim(), dataNascimento = iso)) { res -> finalizarEdicao(p, salvar, res) }
+            }
+        }
+        p.addView(salvar); p.addView(espaco(8)); p.addView(acao("Cancelar") { abrirPerfil() })
+    }
 
-        adicionarBloco(
-            pagina,
-            card(
-                "Crianças cadastradas",
-                "Os perfis infantis vinculados à sua conta fazem parte de um espaço de aprendizagem individual."
-            )
-        )
+    private fun finalizarEdicao(p: LinearLayout, salvar: TextView, res: Result<Unit>) {
+        if (isFinishing || isDestroyed || !p.isAttachedToWindow) return
+        salvar.isEnabled = true
+        res.onSuccess { Toast.makeText(this, "Dados atualizados!", Toast.LENGTH_SHORT).show(); abrirPerfil() }
+            .onFailure { Toast.makeText(this, it.message ?: "Não foi possível salvar.", Toast.LENGTH_LONG).show() }
+    }
 
-        adicionarBloco(
-            pagina,
-            card(
-                "Uma experiência em família",
-                "Acompanhe a criança durante as atividades e incentive conversas sobre seus sentimentos.",
-                verde
-            )
-        )
+    private fun abrirAtividades(c: ApiService.Crianca, id: String) {
+        val p = criarPagina("Perfil")
+        cabecalho(p, "Atividades de ${c.nomeUsuario.ifBlank { c.nomeCompleto }}", "Histórico registrado neste dispositivo.")
+        val (j,n,t) = HistoricoAtividades.resumo(this,id,c.id)
+        val resumo = linha().apply { gravity = Gravity.TOP }
+        listOf(Triple("$j", "Atividades", azulClaro), Triple("$n", "Etapas concluídas", amarelo), Triple("$t min", "Tempo em jogo", verde)).forEach { (v,l,cor) ->
+            resumo.addView(card(v,l,cor), LinearLayout.LayoutParams(0,-2,1f).apply { marginEnd = dp(5) })
+        }
+        p.addView(resumo); tituloSecao(p,"Atividades recentes")
+        val registros = HistoricoAtividades.listar(this,id,c.id)
+        if (registros.isEmpty()) adicionarBloco(p, card("Ainda não há registros", "As atividades aparecerão aqui depois que a criança jogar."))
+        val formato = java.text.SimpleDateFormat("dd/MM/yyyy • HH:mm", java.util.Locale("pt","BR"))
+        registros.take(30).forEach { adicionarBloco(p, card(it.jogo, "${it.nivel} • ${formato.format(java.util.Date(it.data))}")) }
+        p.addView(acao("Voltar ao perfil") { abrirPerfil() })
+    }
+
+    private inner class IconeMenu(private val nome: String) : View(this@TelaResponsavelActivity) {
+        var cor = branco
+        private val pincel = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+            style = android.graphics.Paint.Style.STROKE; strokeWidth = 1.7f; strokeCap = android.graphics.Paint.Cap.ROUND; strokeJoin = android.graphics.Paint.Join.ROUND
+        }
+        override fun onDraw(c: android.graphics.Canvas) {
+            super.onDraw(c); c.save(); c.scale(width/24f,height/24f); pincel.color = cor
+            fun l(x:Float,y:Float,a:Float,b:Float) = c.drawLine(x,y,a,b,pincel)
+            fun o(x:Float,y:Float,r:Float) = c.drawCircle(x,y,r,pincel)
+            fun path(vararg v: Float) { val p = android.graphics.Path(); p.moveTo(v[0],v[1]); for(i in 2 until v.size step 2) p.lineTo(v[i],v[i+1]); c.drawPath(p,pincel) }
+            when(nome) {
+                "Perfil" -> { o(12f,7f,3.5f); c.drawArc(5f,13f,19f,25f,180f,180f,false,pincel) }
+                "Jogos" -> { c.drawRoundRect(3f,7f,21f,18f,5f,5f,pincel); l(6f,12f,11f,12f); l(8.5f,9.5f,8.5f,14.5f); o(16f,11f,0.6f); o(18f,14f,0.6f) }
+                "Sobre nós" -> { val p=android.graphics.Path(); p.moveTo(12f,20f); p.cubicTo(0f,12f,2f,3f,8f,5f); p.quadTo(11f,5f,12f,8f); p.quadTo(15f,3f,19f,5f); p.cubicTo(25f,9f,19f,16f,12f,20f); c.drawPath(p,pincel) }
+                "Configurações" -> { o(12f,12f,7f); o(12f,12f,3f); for(i in 0..7) { val a=i*Math.PI/4; l(12f+7f*kotlin.math.cos(a).toFloat(),12f+7f*kotlin.math.sin(a).toFloat(),12f+10f*kotlin.math.cos(a).toFloat(),12f+10f*kotlin.math.sin(a).toFloat()) } }
+                else -> { o(12f,12f,9f); c.drawArc(9f,6f,15f,12f,180f,250f,false,pincel); path(13f,12f,12f,14f); o(12f,17f,0.5f) }
+            }; c.restore()
+        }
     }
 
     // ==========================================
@@ -741,7 +838,7 @@ class TelaResponsavelActivity : Activity() {
             cardHorizontal(
                 "Identificando as Emoções",
                 "Com a ajuda da Bubba, a criança aprende a identificar expressões, reconhecer sentimentos e compreender suas emoções de maneira divertida.",
-                "jogoemocoes",
+                "girafafeliz",
                 verde
             ),
             17
@@ -752,7 +849,7 @@ class TelaResponsavelActivity : Activity() {
             cardHorizontal(
                 "Cinco Sentidos Mágicos",
                 "Atividades interativas que estimulam a percepção da visão, audição, olfato, paladar e tato.",
-                "jogocincosentidos",
+                "cincosentidosmagicosazul",
                 amarelo,
                 false
             ),
@@ -764,7 +861,7 @@ class TelaResponsavelActivity : Activity() {
             cardHorizontal(
                 "Respirando com o Dragão",
                 "Exercícios lúdicos de respiração que incentivam momentos de tranquilidade e autorregulação emocional.",
-                "jogodragao",
+                "rostodragao",
                 rosa
             ),
             17
@@ -874,7 +971,7 @@ class TelaResponsavelActivity : Activity() {
             linhaValores,
             "Ética e cuidado",
             "Trabalhamos para cuidar do bem-estar da criança.",
-            "iconeetica",
+            "selomaocoracao",
             Color.parseColor("#FFD784")
         )
 
@@ -882,7 +979,7 @@ class TelaResponsavelActivity : Activity() {
             linhaValores,
             "Segurança",
             "Experiência sem anúncios e com atenção à privacidade.",
-            "iconeseguranca",
+            "seloseguranca",
             Color.parseColor("#FFC8CF")
         )
 
@@ -890,7 +987,7 @@ class TelaResponsavelActivity : Activity() {
             linhaValores,
             "Aprendizado",
             "Jogos que ensinam a reconhecer e lidar com emoções.",
-            "iconeaprendizado",
+            "selovideogame",
             Color.parseColor("#D8EF9B")
         )
 
@@ -898,7 +995,7 @@ class TelaResponsavelActivity : Activity() {
             linhaValores,
             "Inovação",
             "Soluções criativas inspiradas em evidências.",
-            "iconeinovacao",
+            "selolampada",
             Color.parseColor("#B9DEEF")
         )
 
@@ -915,7 +1012,7 @@ class TelaResponsavelActivity : Activity() {
             cardHorizontal(
                 "Bubba, a girafinha",
                 "Carinhosa, curiosa e acolhedora, a Bubba representa o cuidado que desejamos transmitir às crianças. Ela acompanha os pequenos em suas descobertas e aprendizados.",
-                "bubba",
+                "selobubbasorrindo",
                 amarelo
             )
         )
@@ -930,8 +1027,8 @@ class TelaResponsavelActivity : Activity() {
         adicionarBloco(
             pagina,
             card(
-                "Educação emocional",
-                "As atividades incentivam o reconhecimento dos sentimentos e a construção de habilidades emocionais desde a infância."
+                "Cuidado profissional",
+                "O projeto considera conhecimentos de psicologia e educação para orientar a criação das atividades."
             )
         )
 
@@ -957,26 +1054,26 @@ class TelaResponsavelActivity : Activity() {
         adicionarColaborador(
             equipe,
             "Giovanna Montoro Barbosa",
-            "fotogiovanna"
+            "selogato"
         )
 
         adicionarColaborador(
             equipe,
             "Lara Antunes Soares Brito",
-            "fotolara"
+            "selopato"
         )
 
         adicionarColaborador(
             equipe,
             "Maria Aparecida Bezerra de Noronha",
-            "fotomaria"
+            "seloesquilo"
         )
 
         pagina.addView(equipe)
 
         tituloSecao(
             pagina,
-            "Privacidade e cuidado"
+            "Privacidade e contato"
         )
 
         adicionarBloco(
@@ -986,6 +1083,8 @@ class TelaResponsavelActivity : Activity() {
                 "A criação de contas é destinada aos responsáveis adultos. A privacidade e a proteção das informações infantis são prioridades do projeto."
             )
         )
+
+        adicionarBloco(pagina, card("Fale conosco", "E-mail: ludicakidsFatec@gmail.com\nTelefone: (11) 94724-6510"))
 
         adicionarBloco(
             pagina,
@@ -1366,7 +1465,7 @@ class TelaResponsavelActivity : Activity() {
                         "Caso a recuperação de senha esteja disponível na tela de login, utilize essa opção. Se não estiver, procure o canal de suporte da plataforma.",
 
                 "Posso editar ou excluir meus dados?" to
-                        "As opções disponíveis podem variar conforme a versão do aplicativo. O responsável pode solicitar orientações à equipe sobre atualização ou exclusão das informações pessoais."
+                        "Na aba Perfil, você pode atualizar seus dados de contato e os dados das crianças. Para solicitar a exclusão da conta, entre em contato com a equipe."
             )
         )
 
