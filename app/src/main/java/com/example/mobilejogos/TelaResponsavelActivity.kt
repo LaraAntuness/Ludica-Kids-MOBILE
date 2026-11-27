@@ -3,34 +3,41 @@ package com.example.mobilejogos
 import android.app.Activity
 import android.app.AlertDialog
 import android.content.pm.ActivityInfo
+import android.content.res.ColorStateList
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
+import android.transition.AutoTransition
+import android.transition.TransitionManager
 import android.view.Gravity
 import android.view.View
 import android.widget.*
-import android.content.res.ColorStateList
 
 class TelaResponsavelActivity : Activity() {
 
-    // CORES DO LÚDICAKIDS
+    // CORES
 
-    private val azulMenu = Color.rgb(94, 145, 207)
-    private val azulTitulo = Color.rgb(79, 137, 225)
-    private val azulClaro = Color.rgb(221, 239, 251)
+    private val azulMenu = Color.parseColor("#6498D5")
+    private val azulTitulo = Color.parseColor("#4679B8")
+    private val azulClaro = Color.parseColor("#E5F1FC")
 
-    private val fundo = Color.rgb(244, 244, 244)
+    private val fundo = Color.parseColor("#F6F8FC")
     private val branco = Color.WHITE
-    private val textoEscuro = Color.rgb(65, 65, 65)
-    private val textoCinza = Color.rgb(100, 100, 100)
+    private val textoEscuro = Color.parseColor("#354458")
+    private val textoCinza = Color.parseColor("#697586")
+
+    private val rosa = Color.parseColor("#FBE1E7")
+    private val amarelo = Color.parseColor("#FFF0C9")
+    private val verde = Color.parseColor("#E5F3CE")
 
     private lateinit var areaConteudo: FrameLayout
     private lateinit var menuContainer: LinearLayout
 
-    private var paginaAtual = "Jogos"
+    private val botoesMenu =
+        mutableMapOf<String, LinearLayout>()
 
-    private val botoesMenu = mutableMapOf<String, LinearLayout>()
+    private var paginaAtual = "Jogos"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -47,27 +54,41 @@ class TelaResponsavelActivity : Activity() {
         abrirJogos()
     }
 
-    // =====================================================
+    // ==========================================
     // FUNÇÕES AUXILIARES
-    // =====================================================
+    // ==========================================
 
     private fun dp(valor: Int): Int {
         return (valor * resources.displayMetrics.density).toInt()
     }
 
-    private fun fundoArredondado(
+    private fun arredondado(
         cor: Int,
-        raio: Int = 18,
-        corBorda: Int? = null
+        raio: Int = 20,
+        borda: Int? = null
     ): GradientDrawable {
 
         return GradientDrawable().apply {
             setColor(cor)
             cornerRadius = dp(raio).toFloat()
 
-            if (corBorda != null) {
-                setStroke(dp(1), corBorda)
+            borda?.let {
+                setStroke(dp(1), it)
             }
+        }
+    }
+
+    private fun degradê(
+        primeira: Int,
+        segunda: Int,
+        raio: Int = 20
+    ): GradientDrawable {
+
+        return GradientDrawable(
+            GradientDrawable.Orientation.TL_BR,
+            intArrayOf(primeira, segunda)
+        ).apply {
+            cornerRadius = dp(raio).toFloat()
         }
     }
 
@@ -79,17 +100,25 @@ class TelaResponsavelActivity : Activity() {
     ): TextView {
 
         return TextView(this).apply {
+
             text = conteudo
             textSize = tamanho
             setTextColor(cor)
 
-            if (negrito) {
-                setTypeface(null, Typeface.BOLD)
-            }
+            typeface = Typeface.create(
+                "sans-serif",
+                if (negrito)
+                    Typeface.BOLD
+                else
+                    Typeface.NORMAL
+            )
+
+            setLineSpacing(dp(3).toFloat(), 1f)
         }
     }
 
-    private fun espacamento(altura: Int): View {
+    private fun espaco(altura: Int): View {
+
         return View(this).apply {
             layoutParams = LinearLayout.LayoutParams(
                 1,
@@ -98,36 +127,138 @@ class TelaResponsavelActivity : Activity() {
         }
     }
 
-    // =====================================================
+    private fun coluna(): LinearLayout {
+
+        return LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            clipChildren = false
+            clipToPadding = false
+        }
+    }
+
+    private fun linha(): LinearLayout {
+
+        return LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            clipChildren = false
+            clipToPadding = false
+        }
+    }
+
+    private fun adicionarBloco(
+        destino: LinearLayout,
+        bloco: View,
+        margem: Int = 12
+    ) {
+
+        destino.addView(
+            bloco,
+            LinearLayout.LayoutParams(-1, -2).apply {
+                bottomMargin = dp(margem)
+                marginStart = dp(3)
+                marginEnd = dp(3)
+            }
+        )
+    }
+
+    // ==========================================
+    // IMAGENS AUTOMÁTICAS
+    // ==========================================
+
+    private fun imagem(
+        nome: String,
+        altura: Int,
+        corFundo: Int = azulClaro,
+        circular: Boolean = false
+    ): FrameLayout {
+
+        val container = FrameLayout(this).apply {
+
+            background = arredondado(
+                corFundo,
+                if (circular) altura else 18
+            )
+
+            minimumHeight = dp(altura)
+            clipToOutline = true
+        }
+
+        val idImagem = resources.getIdentifier(
+            nome,
+            "drawable",
+            packageName
+        )
+
+        if (idImagem != 0) {
+
+            val figura = ImageView(this).apply {
+
+                setImageResource(idImagem)
+
+                scaleType = ImageView.ScaleType.FIT_CENTER
+
+                val margem = if (circular) 7 else 3
+
+                setPadding(
+                    dp(margem),
+                    dp(margem),
+                    dp(margem),
+                    dp(margem)
+                )
+            }
+
+            container.addView(
+                figura,
+                FrameLayout.LayoutParams(-1, -1)
+            )
+
+        } else if (!circular) {
+
+            val placeholder = texto(
+                nome.replace("_", " "),
+                11f,
+                azulTitulo
+            ).apply {
+                gravity = Gravity.CENTER
+            }
+
+            container.addView(
+                placeholder,
+                FrameLayout.LayoutParams(-1, -1)
+            )
+        }
+
+        return container
+    }
+
+    // ==========================================
     // ESTRUTURA PRINCIPAL
-    // =====================================================
+    // ==========================================
 
     private fun montarEstrutura() {
 
-        val raiz = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
+        val raiz = linha().apply {
             setBackgroundColor(fundo)
         }
 
-        val lateral = criarMenu()
+        raiz.addView(
+            criarMenu(),
+            LinearLayout.LayoutParams(
+                dp(166),
+                -1
+            )
+        )
 
         areaConteudo = FrameLayout(this).apply {
             setBackgroundColor(fundo)
         }
 
         raiz.addView(
-            lateral,
-            LinearLayout.LayoutParams(
-                dp(175),
-                LinearLayout.LayoutParams.MATCH_PARENT
-            )
-        )
-
-        raiz.addView(
             areaConteudo,
             LinearLayout.LayoutParams(
                 0,
-                LinearLayout.LayoutParams.MATCH_PARENT,
+                -1,
                 1f
             )
         )
@@ -135,29 +266,30 @@ class TelaResponsavelActivity : Activity() {
         setContentView(raiz)
     }
 
-    // =====================================================
+    // ==========================================
     // MENU LATERAL
-    // =====================================================
+    // ==========================================
 
-    private fun criarMenu(): FrameLayout {
+    private fun criarMenu(): LinearLayout {
 
-        val lateral = FrameLayout(this).apply {
-            setBackgroundColor(azulMenu)
-        }
+        val lateral = coluna().apply {
 
-        menuContainer = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
+            background = degradê(
+                Color.parseColor("#78AFE7"),
+                Color.parseColor("#558AC9"),
+                0
+            )
 
             setPadding(
                 dp(12),
-                dp(17),
+                dp(12),
                 dp(12),
                 dp(12)
             )
         }
 
         val voltar = texto(
-            "‹     Voltar",
+            "‹    Voltar",
             14f,
             branco,
             true
@@ -165,15 +297,10 @@ class TelaResponsavelActivity : Activity() {
 
             gravity = Gravity.CENTER_VERTICAL
 
-            setPadding(
-                dp(13),
-                0,
-                0,
-                0
-            )
+            setPadding(dp(14), 0, 0, 0)
 
-            background = fundoArredondado(
-                Color.rgb(113, 160, 216),
+            background = arredondado(
+                Color.parseColor("#33FFFFFF"),
                 12
             )
 
@@ -182,135 +309,151 @@ class TelaResponsavelActivity : Activity() {
             }
         }
 
-        menuContainer.addView(
+        lateral.addView(
             voltar,
-            LinearLayout.LayoutParams(
-                -1,
-                dp(38)
+            LinearLayout.LayoutParams(-1, dp(35))
+        )
+
+        lateral.addView(espaco(12))
+
+        val scrollMenu = ScrollView(this).apply {
+            isVerticalScrollBarEnabled = false
+        }
+
+        menuContainer = coluna()
+
+        menuContainer.addView(
+            texto(
+                "ÁREA DO RESPONSÁVEL",
+                9f,
+                Color.parseColor("#E4F0FF"),
+                true
             )
         )
 
-        menuContainer.addView(espacamento(18))
+        menuContainer.addView(espaco(10))
 
-        adicionarItemMenu("Perfil", "♙") {
+        itemMenu("Perfil", "♙") {
             abrirPerfil()
         }
 
-        adicionarItemMenu("Jogos", "▣") {
+        itemMenu("Jogos", "▣") {
             abrirJogos()
         }
 
-        adicionarItemMenu("Sobre nós", "ⓘ") {
+        itemMenu("Sobre nós", "ⓘ") {
             abrirSobre()
         }
 
-        adicionarItemMenu("Configurações", "⚙") {
+        itemMenu("Configurações", "⚙") {
             abrirConfiguracoes()
         }
 
-        adicionarItemMenu("FAQ", "?") {
+        itemMenu("FAQ", "?") {
             abrirFAQ()
         }
 
+        scrollMenu.addView(menuContainer)
+
         lateral.addView(
-            menuContainer,
-            FrameLayout.LayoutParams(
+            scrollMenu,
+            LinearLayout.LayoutParams(
                 -1,
-                -2,
-                Gravity.TOP
+                0,
+                1f
             )
         )
 
-        // ESPAÇO PARA A LOGO NA PARTE INFERIOR
+        val logoId = resources.getIdentifier(
+            "logoludicakids",
+            "drawable",
+            packageName
+        )
 
-        val espacoLogo = TextView(this).apply {
+        if (logoId != 0) {
 
-            text = "LOGO\nLÚDICAKIDS"
+            val logo = ImageView(this).apply {
+                setImageResource(logoId)
+                scaleType = ImageView.ScaleType.FIT_CENTER
+            }
 
-            textSize = 11f
-            gravity = Gravity.CENTER
-            setTextColor(branco)
+            lateral.addView(
+                logo,
+                LinearLayout.LayoutParams(-1, dp(42))
+            )
 
-            background = fundoArredondado(
-                Color.rgb(113, 160, 216),
-                12
+        } else {
+
+            lateral.addView(
+                texto("LúdicaKids", 19f, branco, true).apply {
+                    gravity = Gravity.CENTER
+                }
             )
         }
-
-        lateral.addView(
-            espacoLogo,
-            FrameLayout.LayoutParams(
-                dp(125),
-                dp(45),
-                Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
-            ).apply {
-                bottomMargin = dp(14)
-            }
-        )
 
         return lateral
     }
 
-    private fun adicionarItemMenu(
+    private fun itemMenu(
         nome: String,
-        icone: String,
+        simbolo: String,
         acao: () -> Unit
     ) {
 
-        val botao = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
+        val botao = linha().apply {
 
-            setPadding(
-                dp(12),
-                0,
-                dp(8),
-                0
-            )
-
-            background = fundoArredondado(
-                azulMenu,
+            background = arredondado(
+                Color.TRANSPARENT,
                 12
             )
 
-            setOnClickListener {
-                acao()
-            }
+            setPadding(dp(10), 0, dp(6), 0)
         }
 
-        val textoIcone = texto(
-            icone,
-            18f,
-            branco
+        val icone = texto(
+            simbolo,
+            19f,
+            branco,
+            true
         ).apply {
             gravity = Gravity.CENTER
         }
 
-        val nomeBotao = texto(
-            nome,
-            13f,
-            branco
-        ).apply {
-            gravity = Gravity.CENTER_VERTICAL
-        }
-
         botao.addView(
-            textoIcone,
-            LinearLayout.LayoutParams(
-                dp(28),
-                -1
-            )
+            icone,
+            LinearLayout.LayoutParams(dp(29), -1)
         )
 
-        botao.addView(nomeBotao)
+        botao.addView(
+            texto(nome, 13f, branco, true)
+        )
+
+        botao.setOnClickListener {
+
+            if (paginaAtual != nome) {
+
+                botao.animate()
+                    .scaleX(0.96f)
+                    .scaleY(0.96f)
+                    .setDuration(65)
+                    .withEndAction {
+
+                        botao.animate()
+                            .scaleX(1f)
+                            .scaleY(1f)
+                            .setDuration(90)
+                            .start()
+
+                        acao()
+                    }
+                    .start()
+            }
+        }
 
         menuContainer.addView(
             botao,
-            LinearLayout.LayoutParams(
-                -1,
-                dp(39)
-            ).apply {
-                bottomMargin = dp(7)
+            LinearLayout.LayoutParams(-1, dp(38)).apply {
+                bottomMargin = dp(4)
             }
         )
 
@@ -323,273 +466,187 @@ class TelaResponsavelActivity : Activity() {
 
         botoesMenu.forEach { (titulo, botao) ->
 
-            botao.background = fundoArredondado(
+            botao.background = arredondado(
                 if (titulo == nome)
-                    Color.rgb(126, 175, 230)
+                    Color.parseColor("#40FFFFFF")
                 else
-                    azulMenu,
+                    Color.TRANSPARENT,
                 12
             )
         }
     }
 
-    // =====================================================
-    // PÁGINA COM ROLAGEM
-    // =====================================================
+    // ==========================================
+    // PÁGINAS E TRANSIÇÕES
+    // ==========================================
 
-    private fun criarPagina(
-        tituloPagina: String
-    ): LinearLayout {
+    private fun criarPagina(nome: String): LinearLayout {
 
         areaConteudo.removeAllViews()
 
-        selecionarMenu(tituloPagina)
+        selecionarMenu(nome)
 
         val scroll = ScrollView(this).apply {
-            isFillViewport = true
-            isVerticalScrollBarEnabled = true
-            setBackgroundColor(fundo)
 
+            isFillViewport = true
+            isVerticalScrollBarEnabled = false
             clipToPadding = false
+
+            overScrollMode = View.OVER_SCROLL_NEVER
         }
 
-        val coluna = LinearLayout(this).apply {
-
-            orientation = LinearLayout.VERTICAL
+        val pagina = coluna().apply {
 
             setPadding(
-                dp(27),
-                dp(28),
-                dp(27),
-                dp(35)
+                dp(24),
+                dp(20),
+                dp(24),
+                dp(30)
             )
-
-            clipChildren = false
-            clipToPadding = false
         }
 
-        scroll.addView(coluna)
+        scroll.addView(
+            pagina,
+            FrameLayout.LayoutParams(-1, -2)
+        )
 
         areaConteudo.addView(
             scroll,
-            FrameLayout.LayoutParams(
-                -1,
-                -1
-            )
+            FrameLayout.LayoutParams(-1, -1)
         )
 
-        return coluna
+        // Transição suave entre as abas
+
+        scroll.alpha = 0f
+        scroll.translationX = dp(12).toFloat()
+
+        scroll.animate()
+            .alpha(1f)
+            .translationX(0f)
+            .setDuration(210)
+            .start()
+
+        return pagina
     }
 
-    private fun tituloSecao(
-        nome: String
-    ): TextView {
-
-        return texto(
-            nome,
-            19f,
-            azulTitulo,
-            true
-        ).apply {
-
-            setPadding(
-                0,
-                dp(8),
-                0,
-                dp(15)
-            )
-        }
-    }
-
-    // =====================================================
-    // CARDS MELHORADOS
-    // =====================================================
-
-    private fun criarCard(
-        titulo: String,
-        descricao: String
-    ): LinearLayout {
-
-        val card = LinearLayout(this).apply {
-
-            orientation = LinearLayout.VERTICAL
-
-            setPadding(
-                dp(18),
-                dp(16),
-                dp(18),
-                dp(18)
-            )
-
-            background = fundoArredondado(
-                branco,
-                17
-            )
-
-            elevation = dp(4).toFloat()
-        }
-
-        card.addView(
-            texto(
-                titulo,
-                15f,
-                textoEscuro,
-                true
-            )
-        )
-
-        card.addView(espacamento(8))
-
-        card.addView(
-            texto(
-                descricao,
-                12.5f,
-                textoCinza
-            )
-        )
-
-        return card
-    }
-
-    private fun adicionarCard(
-        coluna: LinearLayout,
+    private fun cabecalho(
+        pagina: LinearLayout,
         titulo: String,
         descricao: String
     ) {
 
-        coluna.addView(
-            criarCard(titulo, descricao),
-            LinearLayout.LayoutParams(
-                -1,
-                -2
-            ).apply {
-
-                topMargin = dp(9)
-                bottomMargin = dp(12)
-
-                marginStart = dp(5)
-                marginEnd = dp(5)
-            }
+        pagina.addView(
+            texto(titulo, 26f, azulTitulo, true)
         )
+
+        pagina.addView(espaco(4))
+
+        pagina.addView(
+            texto(descricao, 13f, textoCinza)
+        )
+
+        pagina.addView(espaco(18))
     }
 
-    // =====================================================
-    // ESPAÇO PARA IMAGENS
-    // =====================================================
+    private fun tituloSecao(
+        pagina: LinearLayout,
+        titulo: String
+    ) {
 
-    private fun criarImagem(
-        nome: String,
-        altura: Int = 130
-    ): TextView {
+        pagina.addView(espaco(15))
 
-        return TextView(this).apply {
+        pagina.addView(
+            texto(titulo, 19f, azulTitulo, true)
+        )
 
-            text = "ESPAÇO PARA IMAGEM\n$nome"
+        pagina.addView(espaco(12))
+    }
 
-            textSize = 11f
+    // ==========================================
+    // MODELOS DE CARDS
+    // ==========================================
 
-            gravity = Gravity.CENTER
+    private fun card(
+        titulo: String,
+        descricao: String,
+        cor: Int = branco
+    ): LinearLayout {
 
-            setTextColor(
-                Color.rgb(117, 153, 177)
+        return coluna().apply {
+
+            background = arredondado(cor, 20)
+
+            elevation = dp(3).toFloat()
+
+            setPadding(
+                dp(17),
+                dp(16),
+                dp(17),
+                dp(16)
             )
 
-            background = GradientDrawable().apply {
+            addView(
+                texto(titulo, 15f, textoEscuro, true)
+            )
 
-                setColor(
-                    Color.rgb(229, 241, 250)
-                )
+            addView(espaco(7))
 
-                cornerRadius = dp(15).toFloat()
-
-                setStroke(
-                    dp(1),
-                    Color.rgb(195, 219, 236)
-                )
-            }
-
-            minHeight = dp(altura)
+            addView(
+                texto(descricao, 13f, textoCinza)
+            )
         }
     }
-
-    // =====================================================
-    // CARD HORIZONTAL COM IMAGEM
-    // =====================================================
 
     private fun cardHorizontal(
         titulo: String,
         descricao: String,
         nomeImagem: String,
+        cor: Int = branco,
         imagemEsquerda: Boolean = true
     ): LinearLayout {
 
-        val corCard = when (titulo) {
-            "Identificando Emoções" -> Color.rgb(205, 232, 165)
-            "Cinco Sentidos Mágicos" -> Color.rgb(255, 222, 133)
-            "Respirando com o Dragão" -> Color.rgb(247, 183, 190)
-            else -> Color.WHITE
-        }
+        val painel = linha().apply {
 
-        val card = LinearLayout(this).apply {
-
-            orientation = LinearLayout.HORIZONTAL
-
-            gravity = Gravity.CENTER_VERTICAL
+            background = arredondado(cor, 22)
+            elevation = dp(3).toFloat()
 
             setPadding(
                 dp(13),
-                dp(12),
                 dp(13),
-                dp(12)
+                dp(13),
+                dp(13)
             )
-
-            background = fundoArredondado(
-                corCard,
-                17
-            )
-
-            elevation = dp(4).toFloat()
         }
 
-        val imagem = criarImagem(
+        val ilustracao = imagem(
             nomeImagem,
-            125
+            135,
+            Color.TRANSPARENT
         )
 
-        val informacoes = LinearLayout(this).apply {
-
-            orientation = LinearLayout.VERTICAL
+        val informacoes = coluna().apply {
 
             setPadding(
-                dp(15),
+                dp(16),
                 dp(8),
-                dp(10),
+                dp(12),
                 dp(8)
             )
+
+            addView(
+                texto(titulo, 18f, textoEscuro, true)
+            )
+
+            addView(espaco(8))
+
+            addView(
+                texto(descricao, 13f, textoCinza)
+            )
         }
-
-        informacoes.addView(
-            texto(
-                titulo,
-                16f,
-                textoEscuro,
-                true
-            )
-        )
-
-        informacoes.addView(espacamento(9))
-
-        informacoes.addView(
-            texto(
-                descricao,
-                12f,
-                textoCinza
-            )
-        )
 
         val paramsImagem = LinearLayout.LayoutParams(
             0,
-            dp(125),
+            dp(135),
             0.43f
         )
 
@@ -601,370 +658,498 @@ class TelaResponsavelActivity : Activity() {
 
         if (imagemEsquerda) {
 
-            card.addView(
-                imagem,
-                paramsImagem
-            )
-
-            card.addView(
-                informacoes,
-                paramsTexto
-            )
+            painel.addView(ilustracao, paramsImagem)
+            painel.addView(informacoes, paramsTexto)
 
         } else {
 
-            card.addView(
-                informacoes,
-                paramsTexto
-            )
-
-            card.addView(
-                imagem,
-                paramsImagem
-            )
+            painel.addView(informacoes, paramsTexto)
+            painel.addView(ilustracao, paramsImagem)
         }
 
-        return card
+        return painel
     }
 
-    private fun adicionarCardHorizontal(
-        coluna: LinearLayout,
-        titulo: String,
-        descricao: String,
-        imagem: String,
-        imagemEsquerda: Boolean = true
-    ) {
+    // ==========================================
+    // PERFIL
+    // ==========================================
 
-        coluna.addView(
+    private fun abrirPerfil() {
+
+        val pagina = criarPagina("Perfil")
+
+        cabecalho(
+            pagina,
+            "Meu perfil",
+            "Cuide da sua conta e dos pequenos que aprendem com a gente."
+        )
+
+        adicionarBloco(
+            pagina,
             cardHorizontal(
-                titulo,
-                descricao,
-                imagem,
-                imagemEsquerda
+                "Olá, responsável!",
+                "Este espaço foi criado para você acompanhar a experiência das crianças no LúdicaKids.",
+                "fotoperfilresponsavel",
+                azulClaro
+            )
+        )
+
+        tituloSecao(pagina, "Minha conta")
+
+        adicionarBloco(
+            pagina,
+            card(
+                "Informações pessoais",
+                "Consulte as informações da sua conta de responsável."
+            )
+        )
+
+        adicionarBloco(
+            pagina,
+            card(
+                "Crianças cadastradas",
+                "Os perfis infantis vinculados à sua conta fazem parte de um espaço de aprendizagem individual."
+            )
+        )
+
+        adicionarBloco(
+            pagina,
+            card(
+                "Uma experiência em família",
+                "Acompanhe a criança durante as atividades e incentive conversas sobre seus sentimentos.",
+                verde
+            )
+        )
+    }
+
+    // ==========================================
+    // JOGOS
+    // ==========================================
+
+    private fun abrirJogos() {
+
+        val pagina = criarPagina("Jogos")
+
+        cabecalho(
+            pagina,
+            "Conheça nossos jogos",
+            "Pequenas brincadeiras para grandes descobertas."
+        )
+
+        adicionarBloco(
+            pagina,
+            cardHorizontal(
+                "Identificando as Emoções",
+                "Com a ajuda da Bubba, a criança aprende a identificar expressões, reconhecer sentimentos e compreender suas emoções de maneira divertida.",
+                "jogoemocoes",
+                verde
+            ),
+            17
+        )
+
+        adicionarBloco(
+            pagina,
+            cardHorizontal(
+                "Cinco Sentidos Mágicos",
+                "Atividades interativas que estimulam a percepção da visão, audição, olfato, paladar e tato.",
+                "jogocincosentidos",
+                amarelo,
+                false
+            ),
+            17
+        )
+
+        adicionarBloco(
+            pagina,
+            cardHorizontal(
+                "Respirando com o Dragão",
+                "Exercícios lúdicos de respiração que incentivam momentos de tranquilidade e autorregulação emocional.",
+                "jogodragao",
+                rosa
+            ),
+            17
+        )
+
+        adicionarBloco(
+            pagina,
+            card(
+                "Aprender brincando",
+                "As atividades respeitam o ritmo da criança e incentivam a descoberta sem pressão.",
+                branco
+            )
+        )
+    }
+
+    // ==========================================
+    // SOBRE NÓS
+    // ==========================================
+
+    private fun abrirSobre() {
+
+        val pagina = criarPagina("Sobre nós")
+
+        // NOSSA MISSÃO
+
+        val missao = coluna().apply {
+
+            background = degradê(
+                branco,
+                Color.parseColor("#EAF4FF"),
+                25
+            )
+
+            elevation = dp(3).toFloat()
+
+            setPadding(
+                dp(20),
+                dp(20),
+                dp(20),
+                dp(15)
+            )
+
+            gravity = Gravity.CENTER_HORIZONTAL
+        }
+
+        missao.addView(
+            texto("Nossa missão", 26f, azulTitulo, true)
+                .apply {
+                    gravity = Gravity.CENTER
+                }
+        )
+
+        missao.addView(espaco(5))
+
+        missao.addView(
+            texto(
+                "Brincar para acalmar, aprender para crescer!",
+                14f,
+                azulTitulo,
+                true
+            ).apply {
+                gravity = Gravity.CENTER
+            }
+        )
+
+        missao.addView(espaco(10))
+
+        // IMAGEM GERADA PARA A MISSÃO
+
+        missao.addView(
+            imagem(
+                "nossamissao",
+                205,
+                Color.TRANSPARENT
             ),
             LinearLayout.LayoutParams(
                 -1,
-                -2
+                dp(205)
+            )
+        )
+
+        missao.addView(espaco(10))
+
+        missao.addView(
+            texto(
+                "O LúdicaKids nasceu para promover o bem-estar infantil por meio da tecnologia, da ludicidade e da educação emocional. Criamos experiências que incentivam as crianças a reconhecer seus sentimentos, explorar seus sentidos e desenvolver habilidades de autorregulação.",
+                13f,
+                textoCinza
             ).apply {
+                gravity = Gravity.CENTER
+            }
+        )
 
-                topMargin = dp(12)
-                bottomMargin = dp(12)
+        adicionarBloco(pagina, missao, 20)
 
+        // ======================================
+        // O QUE NOS GUIA
+        // ======================================
+
+        tituloSecao(pagina, "O que nos guia")
+
+        val linhaValores = linha().apply {
+            gravity = Gravity.TOP
+        }
+
+        adicionarValor(
+            linhaValores,
+            "Ética e cuidado",
+            "Trabalhamos para cuidar do bem-estar da criança.",
+            "iconeetica",
+            Color.parseColor("#FFD784")
+        )
+
+        adicionarValor(
+            linhaValores,
+            "Segurança",
+            "Experiência sem anúncios e com atenção à privacidade.",
+            "iconeseguranca",
+            Color.parseColor("#FFC8CF")
+        )
+
+        adicionarValor(
+            linhaValores,
+            "Aprendizado",
+            "Jogos que ensinam a reconhecer e lidar com emoções.",
+            "iconeaprendizado",
+            Color.parseColor("#D8EF9B")
+        )
+
+        adicionarValor(
+            linhaValores,
+            "Inovação",
+            "Soluções criativas inspiradas em evidências.",
+            "iconeinovacao",
+            Color.parseColor("#B9DEEF")
+        )
+
+        pagina.addView(linhaValores)
+
+        pagina.addView(espaco(12))
+
+        // MASCOTE
+
+        tituloSecao(pagina, "Conheça nossa mascote")
+
+        adicionarBloco(
+            pagina,
+            cardHorizontal(
+                "Bubba, a girafinha",
+                "Carinhosa, curiosa e acolhedora, a Bubba representa o cuidado que desejamos transmitir às crianças. Ela acompanha os pequenos em suas descobertas e aprendizados.",
+                "bubba",
+                amarelo
+            )
+        )
+
+        // CIÊNCIA
+
+        tituloSecao(
+            pagina,
+            "Feito com cuidado e ciência"
+        )
+
+        adicionarBloco(
+            pagina,
+            card(
+                "Educação emocional",
+                "As atividades incentivam o reconhecimento dos sentimentos e a construção de habilidades emocionais desde a infância."
+            )
+        )
+
+        adicionarBloco(
+            pagina,
+            card(
+                "Base científica",
+                "O desenvolvimento do projeto considera estudos sobre ludicidade, ansiedade infantil, percepção sensorial e técnicas de respiração."
+            )
+        )
+
+        // COLABORADORAS
+
+        tituloSecao(
+            pagina,
+            "Conheça nossa equipe"
+        )
+
+        val equipe = linha().apply {
+            gravity = Gravity.TOP
+        }
+
+        adicionarColaborador(
+            equipe,
+            "Giovanna Montoro Barbosa",
+            "fotogiovanna"
+        )
+
+        adicionarColaborador(
+            equipe,
+            "Lara Antunes Soares Brito",
+            "fotolara"
+        )
+
+        adicionarColaborador(
+            equipe,
+            "Maria Aparecida Bezerra de Noronha",
+            "fotomaria"
+        )
+
+        pagina.addView(equipe)
+
+        tituloSecao(
+            pagina,
+            "Privacidade e cuidado"
+        )
+
+        adicionarBloco(
+            pagina,
+            card(
+                "Proteção das crianças",
+                "A criação de contas é destinada aos responsáveis adultos. A privacidade e a proteção das informações infantis são prioridades do projeto."
+            )
+        )
+
+        adicionarBloco(
+            pagina,
+            card(
+                "Importante",
+                "O LúdicaKids é uma ferramenta complementar de apoio ao desenvolvimento infantil e não substitui o acompanhamento de profissionais de saúde.",
+                rosa
+            )
+        )
+    }
+
+    // ==========================================
+    // CARDS DOS QUATRO VALORES
+    // ==========================================
+
+    private fun adicionarValor(
+        destino: LinearLayout,
+        titulo: String,
+        descricao: String,
+        nomeIcone: String,
+        corIcone: Int
+    ) {
+
+        val painel = coluna().apply {
+
+            background = arredondado(branco, 18)
+            elevation = dp(3).toFloat()
+
+            minimumHeight = dp(185)
+
+            setPadding(
+                dp(11),
+                dp(12),
+                dp(11),
+                dp(12)
+            )
+        }
+
+        // ESPAÇO CIRCULAR PARA SEU ÍCONE
+
+        painel.addView(
+            imagem(
+                nomeIcone,
+                43,
+                corIcone,
+                true
+            ),
+            LinearLayout.LayoutParams(
+                dp(43),
+                dp(43)
+            )
+        )
+
+        painel.addView(espaco(10))
+
+        painel.addView(
+            texto(titulo, 13f, textoEscuro, true)
+        )
+
+        painel.addView(espaco(5))
+
+        painel.addView(
+            texto(descricao, 11.5f, textoCinza)
+        )
+
+        destino.addView(
+            painel,
+            LinearLayout.LayoutParams(
+                0,
+                -2,
+                1f
+            ).apply {
+                marginStart = dp(4)
+                marginEnd = dp(4)
+            }
+        )
+    }
+
+    // ==========================================
+    // COLABORADORES
+    // ==========================================
+
+    private fun adicionarColaborador(
+        destino: LinearLayout,
+        nome: String,
+        foto: String
+    ) {
+
+        val painel = coluna().apply {
+
+            background = arredondado(branco, 20)
+            elevation = dp(3).toFloat()
+
+            gravity = Gravity.CENTER_HORIZONTAL
+
+            setPadding(
+                dp(10),
+                dp(14),
+                dp(10),
+                dp(14)
+            )
+
+            minimumHeight = dp(170)
+        }
+
+        painel.addView(
+            imagem(
+                foto,
+                78,
+                azulClaro,
+                true
+            ),
+            LinearLayout.LayoutParams(
+                dp(78),
+                dp(78)
+            )
+        )
+
+        painel.addView(espaco(12))
+
+        painel.addView(
+            texto(nome, 12f, textoEscuro, true)
+                .apply {
+                    gravity = Gravity.CENTER
+                }
+        )
+
+        painel.addView(espaco(4))
+
+        painel.addView(
+            texto(
+                "Equipe LúdicaKids",
+                10f,
+                textoCinza
+            ).apply {
+                gravity = Gravity.CENTER
+            }
+        )
+
+        destino.addView(
+            painel,
+            LinearLayout.LayoutParams(
+                0,
+                -2,
+                1f
+            ).apply {
                 marginStart = dp(5)
                 marginEnd = dp(5)
             }
         )
     }
 
-    // =====================================================
-    // PERFIL
-    // =====================================================
-
-    private fun abrirPerfil() {
-
-        val pagina = criarPagina("Perfil")
-
-        pagina.addView(
-            tituloSecao("Meu Perfil")
-        )
-
-        adicionarCardHorizontal(
-            pagina,
-            "Perfil do responsável",
-            "Gerencie suas informações pessoais e acompanhe as atividades das crianças cadastradas.",
-            "Foto do responsável"
-        )
-
-        pagina.addView(espacamento(15))
-
-        adicionarCard(
-            pagina,
-            "Informações pessoais",
-            "Aqui estarão os dados do responsável cadastrado."
-        )
-
-        adicionarCard(
-            pagina,
-            "Crianças cadastradas",
-            "Visualize e gerencie os perfis das crianças vinculadas à sua conta."
-        )
-    }
-
-    // =====================================================
-    // JOGOS
-    // =====================================================
-
-    private fun abrirJogos() {
-
-        val pagina = criarPagina("Jogos")
-
-        pagina.addView(
-            tituloSecao("Conheça nossos jogos")
-        )
-
-        adicionarCardHorizontal(
-            pagina,
-            "Identificando Emoções",
-            "As crianças associam as expressões e sentimentos da girafa a emoções como raiva, tristeza, angústia e tédio, aprendendo a reconhecê-las e lidar com elas.",
-            "Identificando Emoções",
-            true
-        )
-
-        adicionarCardHorizontal(
-            pagina,
-            "Cinco Sentidos Mágicos",
-            "A criança explora os cinco sentidos: visão, audição, olfato, paladar e tato por meio de atividades lúdicas.",
-            "Cinco Sentidos Mágicos",
-            true
-        )
-
-        adicionarCardHorizontal(
-            pagina,
-            "Respirando com o Dragão",
-            "O dragão ajuda a criança a aprender técnicas de respiração e a desenvolver o autocontrole.",
-            "Respirando com o Dragão",
-            false
-        )
-    }
-
-    // =====================================================
-    // SOBRE NÓS
-    // =====================================================
-
-    private fun abrirSobre() {
-
-        val pagina = criarPagina("Sobre nós")
-
-        val tituloMissao = texto(
-            "Nossa Missão",
-            20f,
-            textoEscuro,
-            true
-        ).apply {
-            gravity = Gravity.CENTER
-        }
-
-        pagina.addView(tituloMissao)
-
-        pagina.addView(espacamento(7))
-
-        val frase = texto(
-            "Brincar para acalmar, aprender para crescer!",
-            14f,
-            azulTitulo,
-            true
-        ).apply {
-            gravity = Gravity.CENTER
-        }
-
-        pagina.addView(frase)
-
-        adicionarCard(
-            pagina,
-            "Nossa missão",
-            "Criamos o LúdicaKids para levar mais bem-estar e qualidade de vida às crianças que convivem, ou podem vir a conviver, com a ansiedade infantil. Nossos jogos terapêuticos ajudam a criança a identificar suas emoções e desenvolver o autocontrole em um ambiente digital seguro e sem anúncios."
-        )
-
-        pagina.addView(espacamento(15))
-
-        pagina.addView(
-            criarImagem(
-                "Ilustração da missão",
-                145
-            )
-        )
-
-        pagina.addView(espacamento(27))
-
-        pagina.addView(
-            tituloSecao("O que nos guia")
-        )
-
-        // QUATRO CARDS LADO A LADO
-
-        val linhaValores = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            clipChildren = false
-        }
-
-        val valores = listOf(
-            "Ética e cuidado" to
-                    "Cuidamos do bem-estar da criança.",
-
-            "Segurança" to
-                    "Sem anúncios e com proteção de dados.",
-
-            "Aprendizado" to
-                    "Jogos que ensinam sobre emoções.",
-
-            "Inovação" to
-                    "Soluções criativas baseadas em evidências."
-        )
-
-        valores.forEach { (titulo, descricao) ->
-
-            linhaValores.addView(
-                criarCard(titulo, descricao),
-                LinearLayout.LayoutParams(
-                    0,
-                    dp(145),
-                    1f
-                ).apply {
-
-                    marginStart = dp(4)
-                    marginEnd = dp(4)
-                }
-            )
-        }
-
-        pagina.addView(linhaValores)
-
-        pagina.addView(espacamento(30))
-
-        pagina.addView(
-            tituloSecao("Conheça nosso mascote")
-        )
-
-        adicionarCardHorizontal(
-            pagina,
-            "Bubba, a girafinha",
-            "Para nossa mascote escolhemos a girafa por ser um animal calmo e amigável. A Bubba acompanha a criança em todos os jogos.",
-            "Bubba",
-            true
-        )
-
-        pagina.addView(espacamento(25))
-
-        pagina.addView(
-            tituloSecao("Feito com cuidado e ciência")
-        )
-
-        adicionarCard(
-            pagina,
-            "Validação profissional",
-            "Todos os jogos são analisados por um profissional de psicologia antes de chegarem às crianças."
-        )
-
-        adicionarCard(
-            pagina,
-            "Base científica",
-            "Técnicas de respiração, atenção aos sentidos e reconhecimento de emoções apoiadas em estudos sobre ansiedade infantil."
-        )
-
-        pagina.addView(espacamento(25))
-
-        pagina.addView(
-            tituloSecao("Conheça os colaboradores desse projeto")
-        )
-
-        val colaboradores = listOf(
-            "Giovanna Montoro Barbosa",
-            "Lara Antunes Soares Brito",
-            "Maria Aparecida Bezerra de Noronha"
-        )
-
-        val linhaEquipe = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            clipChildren = false
-        }
-
-        colaboradores.forEach { nome ->
-
-            val card = LinearLayout(this).apply {
-
-                orientation = LinearLayout.VERTICAL
-                gravity = Gravity.CENTER
-
-                setPadding(
-                    dp(10),
-                    dp(12),
-                    dp(10),
-                    dp(12)
-                )
-
-                background = fundoArredondado(
-                    branco,
-                    17
-                )
-
-                elevation = dp(4).toFloat()
-            }
-
-            card.addView(
-                criarImagem(
-                    nome,
-                    85
-                ),
-                LinearLayout.LayoutParams(
-                    -1,
-                    dp(85)
-                )
-            )
-
-            card.addView(espacamento(10))
-
-            card.addView(
-                texto(
-                    nome,
-                    12f,
-                    textoEscuro,
-                    true
-                ).apply {
-                    gravity = Gravity.CENTER
-                }
-            )
-
-            linhaEquipe.addView(
-                card,
-                LinearLayout.LayoutParams(
-                    0,
-                    dp(155),
-                    1f
-                ).apply {
-
-                    marginStart = dp(7)
-                    marginEnd = dp(7)
-                }
-            )
-        }
-
-        pagina.addView(linhaEquipe)
-
-        pagina.addView(espacamento(30))
-
-        pagina.addView(
-            tituloSecao("Privacidade e contato")
-        )
-
-        adicionarCard(
-            pagina,
-            "Privacidade",
-            "De acordo com a LGPD e o ECA, só maiores de 18 anos criam contas. A proteção das informações é uma prioridade do projeto."
-        )
-
-        adicionarCard(
-            pagina,
-            "Fale conosco",
-            "Dúvidas, ideias ou feedback? Entre em contato com a equipe LúdicaKids."
-        )
-
-        adicionarCard(
-            pagina,
-            "Importante",
-            "O LúdicaKids é um apoio e não substitui o acompanhamento de um profissional de saúde."
-        )
-    }
-
-    // =====================================================
+    // ==========================================
     // CONFIGURAÇÕES
-    // =====================================================
+    // ==========================================
 
     private fun abrirConfiguracoes() {
 
         val pagina = criarPagina("Configurações")
 
-        pagina.addView(
-            tituloSecao("Configurações")
+        cabecalho(
+            pagina,
+            "Configurações",
+            "Personalize a experiência do LúdicaKids."
         )
 
         val preferencias = getSharedPreferences(
@@ -972,39 +1157,44 @@ class TelaResponsavelActivity : Activity() {
             MODE_PRIVATE
         )
 
-        val card = LinearLayout(this).apply {
+        val painel = coluna().apply {
 
-            orientation = LinearLayout.VERTICAL
+            background = arredondado(branco, 20)
+
+            elevation = dp(3).toFloat()
 
             setPadding(
-                dp(18),
+                dp(17),
                 dp(12),
-                dp(18),
+                dp(17),
                 dp(12)
             )
-
-            background = fundoArredondado(
-                branco,
-                17
-            )
-
-            elevation = dp(4).toFloat()
         }
 
-        fun opcao(
+        fun adicionarOpcao(
             nome: String,
+            descricao: String,
             chave: String
         ) {
 
-            val linha = LinearLayout(this).apply {
-                orientation = LinearLayout.HORIZONTAL
-                gravity = Gravity.CENTER_VERTICAL
+            val linhaOpcao = linha().apply {
+
+                setPadding(
+                    0,
+                    dp(12),
+                    0,
+                    dp(12)
+                )
             }
 
-            val nomeOpcao = texto(
-                nome,
-                14f,
-                textoEscuro
+            val informacoes = coluna()
+
+            informacoes.addView(
+                texto(nome, 15f, textoEscuro, true)
+            )
+
+            informacoes.addView(
+                texto(descricao, 12f, textoCinza)
             )
 
             val controle = Switch(this).apply {
@@ -1014,8 +1204,15 @@ class TelaResponsavelActivity : Activity() {
                     true
                 )
 
-                thumbTintList = ColorStateList.valueOf(
-                    azulMenu
+                thumbTintList = ColorStateList(
+                    arrayOf(
+                        intArrayOf(android.R.attr.state_checked),
+                        intArrayOf()
+                    ),
+                    intArrayOf(
+                        azulMenu,
+                        Color.LTGRAY
+                    )
                 )
 
                 setOnCheckedChangeListener { _, marcado ->
@@ -1026,282 +1223,375 @@ class TelaResponsavelActivity : Activity() {
                 }
             }
 
-            linha.addView(
-                nomeOpcao,
-                LinearLayout.LayoutParams(
-                    0,
-                    dp(43),
-                    1f
+            linhaOpcao.addView(
+                informacoes,
+                LinearLayout.LayoutParams(0, -2, 1f)
+            )
+
+            linhaOpcao.addView(controle)
+
+            painel.addView(linhaOpcao)
+        }
+
+        adicionarOpcao(
+            "Música ambiente",
+            "Ativar músicas durante as atividades.",
+            "musica"
+        )
+
+        painel.addView(
+            View(this).apply {
+                setBackgroundColor(fundo)
+            },
+            LinearLayout.LayoutParams(-1, dp(1))
+        )
+
+        adicionarOpcao(
+            "Efeitos sonoros",
+            "Ativar sons de interação nos jogos.",
+            "efeitos"
+        )
+
+        adicionarBloco(pagina, painel)
+
+        tituloSecao(pagina, "Notificações")
+
+        val notificacoes = card(
+            "Permissões do aplicativo",
+            "Gerencie as permissões de notificações do dispositivo."
+        )
+
+        notificacoes.setOnClickListener {
+
+            AlertDialog.Builder(this)
+                .setTitle("Notificações")
+                .setMessage(
+                    "Acesse as configurações do seu dispositivo, selecione LúdicaKids e consulte as permissões de notificações."
                 )
-            )
-
-            linha.addView(controle)
-
-            card.addView(linha)
+                .setPositiveButton("Entendi", null)
+                .show()
         }
 
-        opcao("Música", "musica")
-
-        val divisoria = View(this).apply {
-            setBackgroundColor(
-                Color.rgb(233, 233, 233)
-            )
-        }
-
-        card.addView(
-            divisoria,
-            LinearLayout.LayoutParams(
-                -1,
-                dp(1)
-            )
-        )
-
-        opcao("Efeitos Sonoros", "efeitos")
-
-        pagina.addView(
-            card,
-            LinearLayout.LayoutParams(
-                -1,
-                -2
-            ).apply {
-
-                topMargin = dp(15)
-                marginStart = dp(5)
-                marginEnd = dp(5)
-            }
-        )
-
-        val notificacoes = texto(
-            "Permissão de notificações",
-            13f,
-            azulTitulo
-        ).apply {
-
-            paintFlags = paintFlags or
-                    android.graphics.Paint.UNDERLINE_TEXT_FLAG
-
-            setPadding(
-                dp(15),
-                dp(18),
-                0,
-                dp(10)
-            )
-
-            setOnClickListener {
-
-                AlertDialog.Builder(this@TelaResponsavelActivity)
-                    .setTitle("Notificações")
-                    .setMessage(
-                        "Você pode gerenciar as notificações nas configurações do dispositivo."
-                    )
-                    .setPositiveButton("OK", null)
-                    .show()
-            }
-        }
-
-        pagina.addView(notificacoes)
+        adicionarBloco(pagina, notificacoes)
     }
 
-    // =====================================================
-    // FAQ
-    // =====================================================
+    // ==========================================
+    // FAQ COMPLETO
+    // ==========================================
 
     private fun abrirFAQ() {
 
         val pagina = criarPagina("FAQ")
 
-        pagina.addView(
-            tituloSecao("FAQ")
+        cabecalho(
+            pagina,
+            "Como podemos ajudar?",
+            "Encontre respostas para as principais dúvidas sobre o LúdicaKids."
         )
 
-        adicionarGrupoFAQ(
+        adicionarBloco(
+            pagina,
+            card(
+                "Central de ajuda",
+                "Toque em uma pergunta para visualizar sua resposta.",
+                azulClaro
+            )
+        )
+
+        grupoFAQ(
             pagina,
             "Sobre o LúdicaKids",
             listOf(
-                "O que é o LúdicaKids?",
-                "Para qual idade os jogos são indicados?",
-                "Quem é a Bubba?",
-                "Existem acompanhamentos de especialistas no projeto?",
-                "Além das crianças, o site também orienta os pais sobre a ansiedade infantil?"
+
+                "O que é o LúdicaKids?" to
+                        "O LúdicaKids é uma plataforma educativa web e mobile que utiliza jogos lúdicos para incentivar o desenvolvimento emocional, a percepção sensorial e a autorregulação infantil.",
+
+                "Para qual idade os jogos são indicados?" to
+                        "As atividades foram desenvolvidas especialmente para crianças de 4 a 8 anos, respeitando características dessa etapa do desenvolvimento infantil.",
+
+                "Quem é a Bubba?" to
+                        "A Bubba é a girafinha mascote do LúdicaKids. Ela representa o acolhimento e acompanha as crianças em diferentes atividades educativas.",
+
+                "O projeto possui acompanhamento de especialistas?" to
+                        "O projeto considera conhecimentos da psicologia, educação e desenvolvimento infantil. As atividades possuem finalidade educativa e não substituem avaliações ou tratamentos realizados por profissionais.",
+
+                "O LúdicaKids também orienta os responsáveis?" to
+                        "Sim. A área do responsável apresenta informações sobre a proposta dos jogos, educação emocional e formas de acompanhar a experiência da criança.",
+
+                "O aplicativo substitui um psicólogo?" to
+                        "Não. O LúdicaKids é uma ferramenta complementar de apoio. Caso a criança apresente sintomas persistentes de ansiedade ou sofrimento emocional, procure orientação profissional."
             )
         )
 
-        adicionarGrupoFAQ(
+        grupoFAQ(
             pagina,
-            "Jogos",
+            "Jogos e atividades",
             listOf(
-                "Quais jogos estão disponíveis?",
-                "Os jogos têm violência, anúncios ou compras?",
-                "Antes de jogar a criança recebe alguma explicação sobre o jogo?",
-                "Serão lançados novos jogos no futuro?"
+
+                "Quais jogos estão disponíveis?" to
+                        "Identificando as Emoções, Cinco Sentidos Mágicos e Respirando com o Dragão. Cada atividade trabalha diferentes habilidades relacionadas ao desenvolvimento infantil.",
+
+                "Os jogos possuem violência ou anúncios?" to
+                        "A proposta do LúdicaKids é oferecer atividades educativas sem conteúdos violentos e sem anúncios publicitários durante as brincadeiras.",
+
+                "Todos os jogos são gratuitos?" to
+                        "A disponibilidade das atividades pode variar conforme o acesso oferecido pela plataforma. Qualquer opção paga deve ser apresentada ao responsável antes da contratação.",
+
+                "A criança recebe instruções antes de jogar?" to
+                        "Os jogos utilizam orientações visuais e instruções simples para ajudar a criança a compreender as atividades propostas.",
+
+                "Quanto tempo a criança deve jogar?" to
+                        "Recomendamos sessões curtas, acompanhadas pelo responsável e intercaladas com brincadeiras fora das telas, atividades físicas e momentos de descanso.",
+
+                "Serão lançados novos jogos?" to
+                        "O projeto poderá receber novas atividades e melhorias conforme seu desenvolvimento e as necessidades identificadas pela equipe."
             )
         )
 
-        adicionarGrupoFAQ(
+        grupoFAQ(
             pagina,
             "Cadastro e conta",
             listOf(
-                "Quem pode criar a conta?",
-                "Como faço o cadastro?",
-                "Posso cadastrar mais de uma criança?",
-                "Esqueci minha senha. E agora?",
-                "Posso editar meus dados ou excluir minha conta?"
+
+                "Quem pode criar uma conta?" to
+                        "A conta deve ser criada por um responsável adulto. Os perfis infantis ficam vinculados à conta desse responsável.",
+
+                "Como faço o cadastro?" to
+                        "Na tela inicial, selecione a opção Criar conta e preencha as informações solicitadas. Após o cadastro, utilize suas credenciais para entrar na plataforma.",
+
+                "Posso cadastrar mais de uma criança?" to
+                        "A plataforma foi planejada para permitir perfis infantis individuais vinculados à conta do responsável.",
+
+                "Esqueci minha senha. O que fazer?" to
+                        "Caso a recuperação de senha esteja disponível na tela de login, utilize essa opção. Se não estiver, procure o canal de suporte da plataforma.",
+
+                "Posso editar ou excluir meus dados?" to
+                        "As opções disponíveis podem variar conforme a versão do aplicativo. O responsável pode solicitar orientações à equipe sobre atualização ou exclusão das informações pessoais."
             )
         )
 
-        adicionarGrupoFAQ(
+        grupoFAQ(
             pagina,
             "Segurança e privacidade",
             listOf(
-                "Quais dados da criança a plataforma coleta?",
-                "Os dados são compartilhados com terceiros?",
-                "A criança pode usar o site sozinha, sem a supervisão do responsável?",
-                "O site segue a LGPD?"
+
+                "Quais dados da criança são solicitados?" to
+                        "O cadastro infantil deve solicitar apenas as informações necessárias para a criação e identificação do perfil. Consulte os campos apresentados durante o cadastro.",
+
+                "Os dados são compartilhados com terceiros?" to
+                        "O tratamento e eventual compartilhamento de dados devem respeitar as finalidades informadas na política de privacidade da plataforma.",
+
+                "A criança pode utilizar o aplicativo sozinha?" to
+                        "A interface foi desenvolvida para facilitar a interação infantil. Mesmo assim, recomendamos que um responsável acompanhe a utilização das atividades.",
+
+                "O aplicativo considera a LGPD?" to
+                        "A proteção de dados pessoais, especialmente de crianças, é uma preocupação do projeto. O tratamento dessas informações deve respeitar a legislação aplicável e o melhor interesse infantil."
             )
         )
 
-        adicionarGrupoFAQ(
+        grupoFAQ(
             pagina,
             "Uso e acessibilidade",
             listOf(
-                "Por que o site usa cores e sons suaves?",
-                "O aplicativo pensa em acessibilidade e inclusão para todas as crianças?",
-                "A interface é fácil para uma criança pequena usar?"
+
+                "Por que o aplicativo utiliza cores suaves?" to
+                        "As cores suaves, os elementos arredondados e os sons delicados foram escolhidos para criar uma experiência visual acolhedora e reduzir estímulos excessivos.",
+
+                "O aplicativo considera a acessibilidade?" to
+                        "O projeto busca facilitar a interação por meio de elementos visuais, instruções simples e botões de fácil identificação. Melhorias de acessibilidade podem ser incorporadas continuamente.",
+
+                "A interface é fácil para crianças pequenas?" to
+                        "As telas utilizam ilustrações, personagens e elementos interativos que procuram facilitar a compreensão das atividades pelas crianças.",
+
+                "Como desativar os sons?" to
+                        "Na área do responsável, abra Configurações. Nessa página estão disponíveis as preferências de música ambiente e efeitos sonoros."
             )
         )
 
-        pagina.addView(espacamento(20))
+        pagina.addView(espaco(12))
 
-        val aviso = texto(
-            "Não encontrou sua dúvida? Envie uma sugestão ou fale com a equipe LúdicaKids pelo nosso canal de contato.",
-            13f,
-            textoEscuro
-        ).apply {
+        adicionarBloco(
+            pagina,
+            card(
+                "Ainda tem dúvidas?",
+                "Entre em contato com a equipe responsável pelo LúdicaKids para enviar dúvidas, sugestões ou comentários sobre sua experiência.",
+                azulClaro
+            )
+        )
+    }
 
-            gravity = Gravity.CENTER
+    // ==========================================
+    // GRUPOS DO FAQ
+    // ==========================================
 
-            setPadding(
-                dp(22),
-                dp(20),
-                dp(22),
-                dp(20)
+    private fun grupoFAQ(
+        pagina: LinearLayout,
+        titulo: String,
+        perguntas: List<Pair<String, String>>
+    ) {
+
+        tituloSecao(pagina, titulo)
+
+        perguntas.forEach { (pergunta, resposta) ->
+
+            adicionarPergunta(
+                pagina,
+                pergunta,
+                resposta
+            )
+        }
+    }
+
+    // ==========================================
+    // FAQ EXPANSÍVEL COM ANIMAÇÃO
+    // ==========================================
+
+    private fun adicionarPergunta(
+        pagina: LinearLayout,
+        pergunta: String,
+        resposta: String
+    ) {
+
+        val painel = coluna().apply {
+
+            background = arredondado(
+                branco,
+                16,
+                Color.parseColor("#E6EDF5")
             )
 
-            background = fundoArredondado(
-                azulClaro,
-                14
+            elevation = dp(2).toFloat()
+
+            setPadding(
+                dp(15),
+                dp(12),
+                dp(12),
+                dp(12)
             )
         }
 
-        pagina.addView(aviso)
-    }
+        val cabecalho = linha()
 
-    private fun adicionarGrupoFAQ(
-        pagina: LinearLayout,
-        titulo: String,
-        perguntas: List<String>
-    ) {
-
-        val subtitulo = texto(
-            "▏ $titulo",
-            15f,
+        val perguntaText = texto(
+            pergunta,
+            13f,
             textoEscuro,
             true
         )
 
-        pagina.addView(
-            subtitulo,
+        cabecalho.addView(
+            perguntaText,
             LinearLayout.LayoutParams(
-                -1,
-                -2
+                0,
+                -2,
+                1f
             ).apply {
-
-                topMargin = dp(17)
-                bottomMargin = dp(13)
+                marginEnd = dp(12)
             }
         )
 
-        perguntas.forEach { pergunta ->
+        val botao = texto(
+            "+",
+            20f,
+            azulTitulo,
+            true
+        ).apply {
 
-            val container = LinearLayout(this).apply {
+            gravity = Gravity.CENTER
 
-                orientation = LinearLayout.HORIZONTAL
-                gravity = Gravity.CENTER_VERTICAL
-
-                setPadding(
-                    dp(15),
-                    dp(8),
-                    dp(10),
-                    dp(8)
-                )
-
-                background = fundoArredondado(
-                    branco,
-                    13
-                )
-            }
-
-            val textoPergunta = texto(
-                pergunta,
-                12.5f,
-                textoEscuro
-            )
-
-            val botaoMais = texto(
-                "+",
-                18f,
-                azulMenu,
-                true
-            ).apply {
-
-                gravity = Gravity.CENTER
-
-                background = fundoArredondado(
-                    azulClaro,
-                    30
-                )
-            }
-
-            container.addView(
-                textoPergunta,
-                LinearLayout.LayoutParams(
-                    0,
-                    -2,
-                    1f
-                )
-            )
-
-            container.addView(
-                botaoMais,
-                LinearLayout.LayoutParams(
-                    dp(26),
-                    dp(26)
-                )
-            )
-
-            container.setOnClickListener {
-
-                AlertDialog.Builder(this)
-                    .setTitle(pergunta)
-                    .setMessage(
-                        "A resposta desta pergunta será adicionada aqui."
-                    )
-                    .setPositiveButton("Entendi", null)
-                    .show()
-            }
-
-            pagina.addView(
-                container,
-                LinearLayout.LayoutParams(
-                    -1,
-                    -2
-                ).apply {
-
-                    bottomMargin = dp(8)
-                    marginStart = dp(5)
-                    marginEnd = dp(5)
-                }
+            background = arredondado(
+                azulClaro,
+                30
             )
         }
+
+        cabecalho.addView(
+            botao,
+            LinearLayout.LayoutParams(
+                dp(29),
+                dp(29)
+            )
+        )
+
+        val areaResposta = coluna().apply {
+
+            visibility = View.GONE
+
+            addView(espaco(12))
+
+            addView(
+                View(this@TelaResponsavelActivity).apply {
+
+                    setBackgroundColor(
+                        Color.parseColor("#E7EDF4")
+                    )
+                },
+                LinearLayout.LayoutParams(-1, dp(1))
+            )
+
+            addView(espaco(12))
+
+            addView(
+                texto(
+                    resposta,
+                    13f,
+                    textoCinza
+                )
+            )
+
+            addView(espaco(4))
+        }
+
+        painel.addView(cabecalho)
+        painel.addView(areaResposta)
+
+        var aberto = false
+
+        cabecalho.setOnClickListener {
+
+            aberto = !aberto
+
+            TransitionManager.beginDelayedTransition(
+                painel,
+                AutoTransition().apply {
+                    duration = 180
+                }
+            )
+
+            areaResposta.visibility =
+                if (aberto)
+                    View.VISIBLE
+                else
+                    View.GONE
+
+            painel.background = arredondado(
+                branco,
+                16,
+                if (aberto)
+                    Color.parseColor("#9CC6F3")
+                else
+                    Color.parseColor("#E6EDF5")
+            )
+
+            botao.animate()
+                .rotation(
+                    if (aberto) 45f else 0f
+                )
+                .setDuration(160)
+                .start()
+
+            perguntaText.setTextColor(
+                if (aberto)
+                    azulTitulo
+                else
+                    textoEscuro
+            )
+        }
+
+        adicionarBloco(
+            pagina,
+            painel,
+            9
+        )
     }
 }

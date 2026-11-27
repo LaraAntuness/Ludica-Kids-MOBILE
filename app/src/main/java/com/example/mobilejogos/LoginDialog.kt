@@ -17,6 +17,9 @@ import android.media.MediaPlayer
 import android.os.Build
 import android.os.Bundle
 import android.text.InputType
+import android.text.Editable
+import android.text.TextWatcher
+import android.text.InputFilter
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -35,6 +38,7 @@ import android.widget.TextView
 import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.random.Random
+
 
 class LoginDialog(
     private val activity: Activity,
@@ -2127,9 +2131,10 @@ class LoginDialog(
             cartao,
             "🎂",
             "Nascimento (DD/MM/AAAA)",
-            InputType.TYPE_CLASS_DATETIME or
-                    InputType.TYPE_DATETIME_VARIATION_DATE
+            InputType.TYPE_CLASS_NUMBER
         )
+
+        aplicarMascaraData(nascimento)
 
         camposCriancas.add(
             listOf(
@@ -2252,7 +2257,9 @@ class LoginDialog(
     // LOGIN REALIZADO COM SUCESSO
     // ==========================================
 
-    private fun mostrarSucessoLogin() {
+    private fun mostrarSucessoLogin(
+        mensagem: String = "Login realizado com sucesso!"
+    ) {
         if (sucessoVisivel || !dialog.isShowing) return
 
         sucessoVisivel = true
@@ -2295,7 +2302,7 @@ class LoginDialog(
 
         cartao.addView(
             TextView(activity).apply {
-                text = "Login realizado com sucesso!"
+                text = mensagem
                 textSize = 17f
                 typeface = redonda(true)
                 gravity = Gravity.CENTER
@@ -2360,7 +2367,206 @@ class LoginDialog(
             }, 2300L)
         }
     }
+    private fun aplicarMascaraData(campo: EditText) {
 
+        campo.filters = arrayOf(
+            InputFilter.LengthFilter(10)
+        )
+
+        campo.addTextChangedListener(object : TextWatcher {
+
+            private var formatando = false
+
+            override fun beforeTextChanged(
+                s: CharSequence?,
+                start: Int,
+                count: Int,
+                after: Int
+            ) {}
+
+            override fun onTextChanged(
+                s: CharSequence?,
+                start: Int,
+                before: Int,
+                count: Int
+            ) {}
+
+            override fun afterTextChanged(s: Editable?) {
+
+                if (formatando) return
+
+                formatando = true
+
+                val numeros = s.toString()
+                    .filter { it.isDigit() }
+                    .take(8)
+
+                val data = StringBuilder()
+
+                numeros.forEachIndexed { indice, numero ->
+
+                    if (indice == 2 || indice == 4) {
+                        data.append("/")
+                    }
+
+                    data.append(numero)
+                }
+
+                campo.setText(data.toString())
+
+                campo.setSelection(campo.text.length)
+
+                formatando = false
+            }
+        })
+    }
+    private fun realizarCadastro() {
+
+        if (enviandoLogin) return
+
+        val criancas = mutableListOf<ApiService.Crianca>()
+
+        val formatoEntrada = java.text.SimpleDateFormat(
+            "dd/MM/yyyy",
+            java.util.Locale("pt", "BR")
+        ).apply {
+            isLenient = false
+        }
+
+        val formatoApi = java.text.SimpleDateFormat(
+            "yyyy-MM-dd",
+            java.util.Locale.US
+        )
+
+        // CARREGAR TODAS AS CRIANÇAS DO FORMULÁRIO
+
+        for (campos in camposCriancas) {
+
+            val nascimento = campos[3].text.toString().trim()
+
+            val dataFormatada = try {
+
+                val data = formatoEntrada.parse(nascimento)
+
+                if (
+                    data == null ||
+                    formatoEntrada.format(data) != nascimento ||
+                    data.after(java.util.Date())
+                ) {
+                    erro("Informe uma data de nascimento válida.")
+                    return
+                }
+
+                formatoApi.format(data)
+
+            } catch (e: Exception) {
+
+                erro("Informe a data no formato DD/MM/AAAA.")
+                return
+            }
+
+            criancas.add(
+
+                ApiService.Crianca(
+
+                    nomeCompleto =
+                        campos[0].text.toString().trim(),
+
+                    cpf =
+                        campos[1].text.toString().trim(),
+
+                    nomeUsuario =
+                        campos[2].text.toString().trim(),
+
+                    dataNascimento =
+                        dataFormatada
+                )
+            )
+        }
+
+        // DADOS DO RESPONSÁVEL
+
+        val dadosCadastro = ApiService.CadastroResponsavel(
+
+            nomeCompleto =
+                cadNome.text.toString().trim(),
+
+            cpf =
+                cadCpf.text.toString().trim(),
+
+            rg =
+                cadRg.text.toString().trim(),
+
+            email =
+                cadEmail.text.toString().trim(),
+
+            celular =
+                cadCelular.text.toString().trim(),
+
+            senhaResponsavel =
+                cadSenha.text.toString(),
+
+            criancas = criancas
+        )
+
+        // BLOQUEAR CLIQUES DUPLICADOS
+
+        enviandoLogin = true
+
+        botaoPrincipal.text = "Cadastrando..."
+        botaoPrincipal.isEnabled = false
+        botaoVoltar.isEnabled = false
+
+        dialog.setCancelable(false)
+        dialog.setCanceledOnTouchOutside(false)
+
+        esconderTeclado()
+
+        // ENVIAR CADASTRO PARA O BACKEND
+
+        ApiService.cadastrar(dadosCadastro) { resultado ->
+
+            enviandoLogin = false
+
+            if (
+                activity.isFinishing ||
+                activity.isDestroyed ||
+                !dialog.isShowing
+            ) {
+                return@cadastrar
+            }
+
+            botaoPrincipal.isEnabled = true
+            botaoVoltar.isEnabled = true
+            botaoPrincipal.text = "Cadastrar"
+
+            dialog.setCancelable(true)
+
+            resultado.onSuccess { dados ->
+
+                // GUARDAR TOKEN DO RESPONSÁVEL
+
+                tokenAtual = dados.token
+
+                idResponsavelAtual =
+                    dados.responsavel.id
+
+                // MOSTRAR POP-UP DE SUCESSO
+
+                mostrarSucessoLogin(
+                    "Cadastro realizado com sucesso!"
+                )
+            }
+
+            resultado.onFailure { falha ->
+
+                erro(
+                    falha.message
+                        ?: "Não foi possível realizar o cadastro."
+                )
+            }
+        }
+    }
     // ==========================================
     // LOGIN COM RAILWAY
     // ==========================================
@@ -2511,9 +2717,7 @@ class LoginDialog(
 
                 } else {
 
-                    erro(
-                        "Cadastro ainda não conectado à API."
-                    )
+                    realizarCadastro()
                 }
             }
         }
