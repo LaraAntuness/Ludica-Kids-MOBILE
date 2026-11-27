@@ -42,7 +42,7 @@ import kotlin.random.Random
  * parquinho, girafafeliz, girafatriste, girafabrava, girafaassustada,
  * girafaduvida, girafauau, nuvemfeliz, nuvemtriste, nuvembrava, nuvemmedo,
  * nuvemincerta, nuvemuau, coelho, capivara, bola, botaoverde.
- * SOM EM res/raw: clique_suave. Opcional: brilho_suave, sominicio, som_erro, som_ambiente.
+ * SOM EM res/raw: clique_suave. Opcional: brilho_suave, sominicio, som_erro. Ambiente: fundoemocoes.
  */
 class IdentificandoEmocoesActivity : Activity() {
 
@@ -403,17 +403,15 @@ class IdentificandoEmocoesActivity : Activity() {
         val capivara = imagem(R.drawable.capivara, "Capivara")
         palco.add(capivara, posCapivara[0], posCapivara[1], posCapivara[2], posCapivara[3])
 
-        val bola = imagem(R.drawable.bola, "Bola de futebol")
+        // Somente na rodada triste (índice 1), usamos a imagem da bola murcha.
+        val bola = imagem(
+            if (rodadaAtual == 1) R.drawable.bolamurcha else R.drawable.bola,
+            if (rodadaAtual == 1) "Bola murcha" else "Bola de futebol"
+        )
         when (rodadaAtual) {
             2 -> palco.add(bola, posCoelho[0] + 75, posBola[1], posBola[2], posBola[3]) // bola próxima ao coelho
-            1 -> {
-                palco.add(bola, posBola[0], posBola[1], posBola[2], posBola[3])
-                bola.alpha = 0.6f
-                bola.rotation = -15f // bola furada
-            }
-            else -> {
-                palco.add(bola, posBola[0], posBola[1], posBola[2], posBola[3])
-            }
+            1 -> palco.add(bola, posBola[0] - 5, posBola[1] - 5, posBola[2] + 10, posBola[3] + 10) // somente bola murcha um pouco maior
+            else -> palco.add(bola, posBola[0], posBola[1], posBola[2], posBola[3])
         }
 
         // Balãozinho da situação: não aparece na rodada triste,
@@ -893,12 +891,12 @@ class IdentificandoEmocoesActivity : Activity() {
     }
 
     private fun iniciarAmbienteOpcional() {
-        val id = resources.getIdentifier("som_ambiente", "raw", packageName)
+        val id = resources.getIdentifier("fundoemocoes", "raw", packageName)
         if (id == 0) return
         try {
             ambiente = MediaPlayer.create(this, id)?.apply {
                 isLooping = true
-                setVolume(0.14f, 0.14f)
+                setVolume(0.08f, 0.08f)
                 start()
             }
         } catch (_: Exception) { }

@@ -239,7 +239,7 @@ class TelaInicialJogosGeral : AppCompatActivity() {
         ) {
 
             abrirTela(
-                InicialRespirandoComODragaoActivy::class.java
+                RespirandoComDragaoActivity::class.java
             )
         }
 
