@@ -158,7 +158,7 @@ class IdentificandoEmocoes2Activity : Activity() {
         // NUVEM DÚVIDA - INCORRETA
 
         criarNuvem(
-            R.drawable.nuvemduvida,
+            R.drawable.nuvemincerta,
             "duvida",
             666, 138, 140, 93,
             sx, sy
