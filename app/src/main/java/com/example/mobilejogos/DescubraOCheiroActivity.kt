@@ -246,7 +246,7 @@ open class DescubraOCheiroActivity : ComponentActivity() {
         navegando = false
 
         val fundoTela = imagem(
-            "fundodescubra"
+            "fundoimaginacaoatualizado"
         ).apply {
 
             scaleType = ImageView.ScaleType.FIT_XY
@@ -323,11 +323,27 @@ open class DescubraOCheiroActivity : ComponentActivity() {
             250, 5, 470, 67
         )
 
-        // PERSONAGEM ESTÁTICA
+        // PERSONAGEM ESTÁTICA EM TONS PASTEL
 
         val crianca = imagem(personagem).apply {
 
             scaleType = ImageView.ScaleType.FIT_END
+
+            val saturacao = ColorMatrix().apply {
+                setSaturation(0.75f)
+            }
+
+            val suavizacao = ColorMatrix(
+                floatArrayOf(
+                    0.90f, 0f, 0f, 0f, 22f,
+                    0f, 0.90f, 0f, 0f, 22f,
+                    0f, 0f, 0.90f, 0f, 22f,
+                    0f, 0f, 0f, 1f, 0f
+                )
+            )
+
+            saturacao.postConcat(suavizacao)
+            colorFilter = ColorMatrixColorFilter(saturacao)
         }
 
         colocar(
