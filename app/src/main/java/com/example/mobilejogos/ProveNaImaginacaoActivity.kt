@@ -203,7 +203,7 @@ open class ProveNaImaginacaoActivity : ComponentActivity() {
         popupAtual = null
         navegando = false
 
-        val fundoTela = imagem("telaimaginacao").apply {
+        val fundoTela = imagem("fundoimaginacaoatualizado").apply {
 
             scaleType = ImageView.ScaleType.FIT_XY
         }
@@ -286,7 +286,27 @@ open class ProveNaImaginacaoActivity : ComponentActivity() {
 
         // CRIANÇAS ESTÁTICAS
 
-        val criancas = imagem(imagemCriancas)
+        // CRIANÇAS ESTÁTICAS EM TONS PASTEL
+
+        val criancas = imagem(imagemCriancas).apply {
+
+            val saturacao = ColorMatrix().apply {
+                setSaturation(0.75f)
+            }
+
+            val suavizacao = ColorMatrix(
+                floatArrayOf(
+                    0.90f, 0f, 0f, 0f, 22f,
+                    0f, 0.90f, 0f, 0f, 22f,
+                    0f, 0f, 0.90f, 0f, 22f,
+                    0f, 0f, 0f, 1f, 0f
+                )
+            )
+
+            saturacao.postConcat(suavizacao)
+
+            colorFilter = ColorMatrixColorFilter(saturacao)
+        }
 
         val posicaoY = if (nivel == 2) {
             194
