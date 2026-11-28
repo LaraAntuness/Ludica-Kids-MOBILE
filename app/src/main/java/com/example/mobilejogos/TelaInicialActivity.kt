@@ -262,7 +262,7 @@ class TelaInicialActivity : Activity() {
         if (audioAmbiente == null) {
             audioAmbiente = MediaPlayer.create(
                 this,
-                R.raw.fundo
+                R.raw.fundo2
             )?.apply {
                 isLooping = true
                 setVolume(0.17f, 0.17f)
