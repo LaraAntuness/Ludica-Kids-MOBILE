@@ -1,18 +1,14 @@
 package com.example.mobilejogos
 
 import android.animation.ObjectAnimator
-import android.animation.PropertyValuesHolder
-import android.app.Activity
+import android.animation.ValueAnimator
 import android.content.Intent
 import android.content.pm.ActivityInfo
-import android.graphics.Color
-import android.graphics.Typeface
+import android.graphics.*
 import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.LayerDrawable
 import android.media.MediaPlayer
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
-import android.util.Log
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
@@ -21,26 +17,166 @@ import android.view.animation.OvershootInterpolator
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.activity.ComponentActivity
+import androidx.activity.OnBackPressedCallback
+import kotlin.math.cos
+import kotlin.math.sin
 
-class DescubraOCheiroActivity : Activity() {
+open class DescubraOCheiroActivity : ComponentActivity() {
+
+    protected open val nivel = 1
 
     private lateinit var tela: FrameLayout
+    private lateinit var conteudo: FrameLayout
 
-    private val larguraBase = 874f
-    private val alturaBase = 393f
-
-    private val handler = Handler(Looper.getMainLooper())
-
-    private var jogoFinalizado = false
-    private var popupAberto = false
-    private var processandoClique = false
+    private var escala = 1f
     private var navegando = false
+    private var popupAtual: FrameLayout? = null
 
     private var audioAtual: MediaPlayer? = null
 
-    private val animacoes = mutableMapOf<View, ObjectAnimator>()
+    private val animacoes = mutableListOf<ObjectAnimator>()
+    private val animacoesPopup = mutableListOf<ObjectAnimator>()
+
+    private data class Paleta(
+        val topo: String,
+        val base: String,
+        val sombra: String,
+        val texto: String
+    )
+
+    private val azul = Paleta(
+        "#DDF3FF", "#B7DFF5",
+        "#82BBDD", "#285B85"
+    )
+
+    private val rosa = Paleta(
+        "#FFE5F1", "#F5C8E0",
+        "#D99CBE", "#884A76"
+    )
+
+    private val amarelo = Paleta(
+        "#FFF7D8", "#FFE9AA",
+        "#DDBF70", "#927025"
+    )
+
+    private val verde = Paleta(
+        "#E4F7D8", "#C2E8AF",
+        "#8FC47D", "#386C35"
+    )
+
+    private val roxo = Paleta(
+        "#EFE5FF", "#D8C9F5",
+        "#B09AD9", "#685096"
+    )
+
+    private val laranja = Paleta(
+        "#FFEBD6", "#FFD7AC",
+        "#E4AF79", "#9C622D"
+    )
+
+    // VERMELHO CORAL SUAVE
+
+    private val vermelho = Paleta(
+        "#FFD8D0", "#F5ADA3",
+        "#D77D72", "#963E36"
+    )
+
+    private data class Opcao(
+        val imagem: String,
+        val nome: String,
+        val paleta: Paleta,
+        val correta: Boolean = false
+    )
+
+    private val tema: Paleta
+        get() = when (nivel) {
+            2 -> rosa
+            3 -> amarelo
+            else -> azul
+        }
+
+    private val pergunta: String
+        get() = when (nivel) {
+
+            2 -> "Qual alimento tem\num cheiro de fruta?"
+
+            3 -> "O que tem um\ncheiro ruim?"
+
+            else -> "Qual alimento tem\num cheiro doce?"
+        }
+
+    private val personagem: String
+        get() = when (nivel) {
+
+            2 -> "meninoregando"
+
+            3 -> "meninoruivo"
+
+            else -> "meninadesenhando"
+        }
+
+    private val imagemRetorno: String
+        get() = when (nivel) {
+
+            2 -> "botaoretornorosa"
+
+            3 -> "botaoretornoamarelo"
+
+            else -> "botaoretornoazul"
+        }
+
+    private val explicacao: String
+        get() = when (nivel) {
+
+            2 -> "O maracujá tem um cheirinho de fruta!"
+
+            3 -> "O lixo pode ter um cheiro desagradável!"
+
+            else -> "Ele tem um cheirinho doce!"
+        }
+
+    private fun opcoes(): List<Opcao> {
+
+        return when (nivel) {
+
+            2 -> listOf(
+
+                Opcao("chocolate", "Chocolate", rosa),
+
+                Opcao("pao", "Pão", amarelo),
+
+                Opcao("maracuja", "Maracujá", verde, true),
+
+                Opcao("batatafrita", "Batata frita", laranja)
+            )
+
+            3 -> listOf(
+
+                Opcao("tambor", "Tambor", azul),
+
+                Opcao("urso2", "Ursinho", rosa),
+
+                Opcao("lixo", "Lixo", verde, true),
+
+                Opcao("mochila", "Mochila", roxo)
+            )
+
+            else -> listOf(
+
+                Opcao("brigadeiro", "Brigadeiro", rosa, true),
+
+                Opcao("pizza", "Pizza", amarelo),
+
+                Opcao("brocolis", "Brócolis", verde),
+
+                Opcao("macarrao", "Macarrão", laranja)
+            )
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+
         super.onCreate(savedInstanceState)
 
         requestedOrientation =
@@ -51,1099 +187,2305 @@ class DescubraOCheiroActivity : Activity() {
             WindowManager.LayoutParams.FLAG_FULLSCREEN
         )
 
-        setContentView(R.layout.activity_descubra_o_cheiro)
+        aplicarModoImersivo()
 
-        tela = findViewById(R.id.telaDescubraCheiro)
-
-        tela.post {
-            montarTela()
-        }
-    }
-
-    // =====================================================
-    // MONTAR TELA
-    // =====================================================
-
-    private fun montarTela() {
-
-        tela.removeAllViews()
-
-        jogoFinalizado = false
-        popupAberto = false
-        processandoClique = false
-        navegando = false
-
-        val sx = tela.width.toFloat() / larguraBase
-        val sy = tela.height.toFloat() / alturaBase
-
-        // PLANO DE FUNDO ATUALIZADO
-
-        val fundo = ImageView(this).apply {
-
-            setImageResource(
-                R.drawable.fundoatualizado
-            )
-
-            scaleType = ImageView.ScaleType.FIT_XY
-            isClickable = false
-            isFocusable = false
-        }
-
-        // BOTÃO RETORNO
-
-        val voltar = adicionarImagem(
-            "botaoretornoazul",
-            19, 25, 40, 40,
-            sx, sy
-        )
-
-        voltar.contentDescription = "Voltar"
-        voltar.isClickable = true
-        voltar.isFocusable = true
-
-        voltar.setOnClickListener {
-
-            voltarParaCincoOpcoes()
-        }
-
-        // TÍTULO
-
-        adicionarImagem(
-            "titulodescubracomocheiro",
-            205, 2, 490, 85,
-            sx, sy
-        )
-
-        // PERSONAGEM
-
-        adicionarImagem(
-            "meninadeverde",
-            55, 190, 150, 210,
-            sx, sy
-        )
-
-        // BALÃO CORRIGIDO
-
-        criarBalao(sx, sy)
-
-        // BRIGADEIRO - RESPOSTA CORRETA
-
-        criarOpcao(
-            nomeImagem = "brigadeiro",
-            x = 395,
-            y = 105,
-            sx = sx,
-            sy = sy,
-            deslocamentoImagemX = 8
-        ) {
-            mostrarResposta(true, sx, sy)
-        }
-
-        // PIZZA
-
-        criarOpcao(
-            nomeImagem = "pizza",
-            x = 600,
-            y = 105,
-            sx = sx,
-            sy = sy
-        ) {
-            mostrarResposta(false, sx, sy)
-        }
-
-        // BRÓCOLIS
-
-        criarOpcao(
-            nomeImagem = "brocolis",
-            x = 395,
-            y = 245,
-            sx = sx,
-            sy = sy
-        ) {
-            mostrarResposta(false, sx, sy)
-        }
-
-        // MACARRÃO
-
-        criarOpcao(
-            nomeImagem = "macarrao",
-            x = 600,
-            y = 245,
-            sx = sx,
-            sy = sy
-        ) {
-            mostrarResposta(false, sx, sy)
-        }
-    }
-
-    // =====================================================
-    // BALÃO DA PERGUNTA CORRIGIDO
-    // =====================================================
-
-    private fun criarBalao(
-        sx: Float,
-        sy: Float
-    ) {
-
-        // CONTAINER DO BALÃO
-
-        val containerBalao = FrameLayout(this).apply {
-
-            isClickable = false
-            isFocusable = false
-        }
-
-        adicionarView(
-            containerBalao,
-            75, 85, 300, 135,
-            sx, sy
-        )
-
-        // IMAGEM DO BALÃO
-
-        val balao = ImageView(this).apply {
-
-            setImageResource(R.drawable.balaopergunta)
-
-            scaleType = ImageView.ScaleType.FIT_XY
-        }
-
-        containerBalao.addView(
-            balao,
-            FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.MATCH_PARENT
-            )
-        )
-
-        // TEXTO CENTRALIZADO
-
-        val pergunta = TextView(this).apply {
-
-            text = "Qual alimento tem\num cheiro doce?"
-
-            gravity = Gravity.CENTER
-
-            setTextColor(
-                Color.parseColor("#303030")
-            )
-
-            setTextSize(
-                TypedValue.COMPLEX_UNIT_PX,
-                18f * minOf(sx, sy)
-            )
-
-            typeface = Typeface.create(
-                "sans-serif",
-                Typeface.BOLD
-            )
-
-            includeFontPadding = false
-
-            maxLines = 2
-
-            setPadding(0, 0, 0, 0)
-        }
-
-        val parametrosTexto = FrameLayout.LayoutParams(
-            (245 * sx).toInt().coerceAtLeast(1),
-            (65 * sy).toInt().coerceAtLeast(1)
-        )
-
-        parametrosTexto.leftMargin = (27 * sx).toInt()
-
-        parametrosTexto.topMargin = (15 * sy).toInt()
-
-        containerBalao.addView(
-            pergunta,
-            parametrosTexto
-        )
-    }
-
-    // =====================================================
-    // CARTÕES DOS ALIMENTOS
-    // =====================================================
-
-    private fun criarOpcao(
-        nomeImagem: String,
-        x: Int,
-        y: Int,
-        sx: Float,
-        sy: Float,
-        deslocamentoImagemX: Int = 0,
-        acao: () -> Unit
-    ) {
-
-        // SOMBRA
-
-        val sombra = View(this).apply {
-
-            background = GradientDrawable().apply {
-
-                setColor(
-                    Color.parseColor("#E8E7E7")
-                )
-
-                cornerRadius = 17f * sx
-            }
-
-            isClickable = false
-        }
-
-        adicionarView(
-            sombra,
-            x + 13,
-            y + 13,
-            155,
-            100,
-            sx,
-            sy
-        )
-
-        // CARTÃO AZUL
-
-        val cartao = FrameLayout(this).apply {
-
-            background = GradientDrawable().apply {
-
-                setColor(
-                    Color.parseColor("#96CBEB")
-                )
-
-                cornerRadius = 17f * sx
-            }
+        tela = FrameLayout(this).apply {
 
             clipChildren = false
             clipToPadding = false
         }
 
-        adicionarView(
-            cartao,
-            x, y, 155, 100,
-            sx, sy
-        )
+        setContentView(tela)
 
-        // IMAGEM DO ALIMENTO
+        onBackPressedDispatcher.addCallback(
+            this,
+            object : OnBackPressedCallback(true) {
 
-        val alimento = ImageView(this)
+                override fun handleOnBackPressed() {
 
-        val idImagem = resources.getIdentifier(
-            nomeImagem,
-            "drawable",
-            packageName
-        )
+                    tocarClique()
 
-        if (idImagem != 0) {
+                    if (popupAtual != null) {
 
-            alimento.setImageResource(idImagem)
+                        fecharPopup()
 
-        } else {
+                    } else {
 
-            Log.e(
-                "DescubraOCheiro",
-                "Imagem não encontrada: $nomeImagem"
-            )
-        }
-
-        alimento.scaleType =
-            ImageView.ScaleType.FIT_CENTER
-
-        alimento.contentDescription = nomeImagem
-
-        alimento.isClickable = false
-        alimento.isFocusable = false
-
-        val parametrosImagem = FrameLayout.LayoutParams(
-            (115 * sx).toInt().coerceAtLeast(1),
-            (84 * sy).toInt().coerceAtLeast(1),
-            Gravity.CENTER
-        )
-
-        cartao.addView(
-            alimento,
-            parametrosImagem
-        )
-
-        alimento.translationX =
-            deslocamentoImagemX * sx
-
-        // ÁREA TRANSPARENTE DE CLIQUE
-
-        val areaClique = View(this).apply {
-
-            setBackgroundColor(Color.TRANSPARENT)
-
-            isClickable = true
-            isFocusable = true
-
-            contentDescription =
-                "Selecionar $nomeImagem"
-        }
-
-        cartao.addView(
-            areaClique,
-            FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.MATCH_PARENT
-            )
-        )
-
-        areaClique.setOnClickListener {
-
-            if (
-                !jogoFinalizado &&
-                !popupAberto &&
-                !processandoClique &&
-                !navegando
-            ) {
-
-                processandoClique = true
-
-                animarPulsacao(cartao)
-
-                tocarAudio(R.raw.brilho_suave)
-
-                handler.postDelayed({
-
-                    processandoClique = false
-
-                    if (!navegando && !isFinishing) {
-
-                        acao()
+                        voltarParaJogos()
                     }
+                }
+            }
+        )
 
-                }, 380L)
+        tela.post {
+
+            if (!isFinishing && !isDestroyed) {
+
+                escala = minOf(
+                    tela.width / 874f,
+                    tela.height / 393f
+                ).coerceAtLeast(0.1f)
+
+                montarTela()
             }
         }
     }
 
-    // =====================================================
-    // ANIMAÇÃO DE PULSAÇÃO
-    // =====================================================
+    // =========================================
+    // TELA PRINCIPAL
+    // =========================================
 
-    private fun animarPulsacao(view: View) {
+    private fun montarTela() {
 
-        animacoes.remove(view)?.cancel()
+        cancelarAnimacoes(animacoes)
+        cancelarAnimacoes(animacoesPopup)
 
-        view.scaleX = 1f
-        view.scaleY = 1f
+        tela.removeAllViews()
 
-        val escalaX = PropertyValuesHolder.ofFloat(
-            View.SCALE_X,
-            1f, 0.88f, 1.10f, 1f
-        )
+        popupAtual = null
+        navegando = false
 
-        val escalaY = PropertyValuesHolder.ofFloat(
-            View.SCALE_Y,
-            1f, 0.88f, 1.10f, 1f
-        )
+        val fundoTela = imagem(
+            "fundodescubra"
+        ).apply {
 
-        val animacao = ObjectAnimator.ofPropertyValuesHolder(
-            view,
-            escalaX,
-            escalaY
-        )
-
-        animacao.duration = 380L
-
-        animacoes[view] = animacao
-
-        animacao.start()
-    }
-
-    // =====================================================
-    // CONFERIR RESPOSTA
-    // =====================================================
-
-    private fun mostrarResposta(
-        correta: Boolean,
-        sx: Float,
-        sy: Float
-    ) {
-
-        if (
-            jogoFinalizado ||
-            popupAberto ||
-            navegando
-        ) {
-            return
-        }
-
-        if (correta) {
-
-            jogoFinalizado = true
-        }
-
-        mostrarPopup(
-            correta,
-            sx,
-            sy
-        )
-    }
-
-    // =====================================================
-    // POP-UP PERSONALIZADO
-    // =====================================================
-
-    private fun mostrarPopup(
-        correta: Boolean,
-        sx: Float,
-        sy: Float
-    ) {
-
-        if (popupAberto) return
-
-        popupAberto = true
-
-        val escala = minOf(sx, sy)
-
-        // FUNDO ESCURECIDO
-
-        val camadaEscura = FrameLayout(this).apply {
-
-            setBackgroundColor(
-                Color.argb(85, 35, 45, 40)
-            )
-
-            isClickable = true
-            isFocusable = true
-
-            alpha = 0f
+            scaleType = ImageView.ScaleType.FIT_XY
         }
 
         tela.addView(
-            camadaEscura,
-            FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.MATCH_PARENT
-            )
+            fundoTela,
+            FrameLayout.LayoutParams(-1, -1)
         )
 
-        camadaEscura.animate()
-            .alpha(1f)
-            .setDuration(350)
-            .start()
+        conteudo = FrameLayout(this).apply {
 
-        // CAIXA DO POP-UP
-
-        val popup = FrameLayout(this).apply {
-
-            background = GradientDrawable(
-                GradientDrawable.Orientation.TOP_BOTTOM,
-                intArrayOf(
-                    Color.rgb(255, 253, 245),
-                    Color.rgb(255, 249, 228)
-                )
-            ).apply {
-
-                cornerRadius = 28f * escala
-
-                setStroke(
-                    (3 * escala).toInt().coerceAtLeast(2),
-                    Color.rgb(245, 222, 160)
-                )
-            }
-
-            elevation = 12f * escala
-
-            isClickable = true
+            clipChildren = false
+            clipToPadding = false
         }
 
-        camadaEscura.addView(
-            popup,
+        tela.addView(
+            conteudo,
             FrameLayout.LayoutParams(
-                (540 * sx).toInt(),
-                (260 * sy).toInt(),
+                px(874),
+                px(393),
                 Gravity.CENTER
             )
         )
 
-        // ANIMAÇÃO DO POP-UP
+        // BOTÃO RETORNO
 
-        popup.scaleX = 0.6f
-        popup.scaleY = 0.6f
-        popup.alpha = 0f
-
-        popup.animate()
-            .scaleX(1f)
-            .scaleY(1f)
-            .alpha(1f)
-            .setDuration(500)
-            .setInterpolator(
-                OvershootInterpolator(1.1f)
-            )
-            .start()
-
-        // POSICIONAR ELEMENTOS
-
-        fun colocar(
-            view: View,
-            x: Int,
-            y: Int,
-            largura: Int,
-            altura: Int
-        ) {
-
-            val params = FrameLayout.LayoutParams(
-                (largura * sx).toInt().coerceAtLeast(1),
-                (altura * sy).toInt().coerceAtLeast(1)
-            )
-
-            params.leftMargin = (x * sx).toInt()
-            params.topMargin = (y * sy).toInt()
-
-            popup.addView(view, params)
-        }
-
-        // CRIAR TEXTOS
-
-        fun criarTexto(
-            conteudo: String,
-            tamanho: Float,
-            cor: Int
-        ): TextView {
-
-            return TextView(this).apply {
-
-                text = conteudo
-
-                setTextColor(cor)
-
-                setTextSize(
-                    TypedValue.COMPLEX_UNIT_PX,
-                    tamanho * escala
-                )
-
-                typeface = Typeface.DEFAULT_BOLD
-
-                gravity = Gravity.CENTER
-
-                includeFontPadding = false
-            }
-        }
-
-        // GIRAFINHA
-
-        val girafinha = ImageView(this).apply {
-
-            setImageResource(R.drawable.logoinferior)
-
-            scaleType = ImageView.ScaleType.FIT_CENTER
-        }
-
-        colocar(
-            girafinha,
-            215, 0, 110, 95
-        )
-
-        girafinha.scaleX = 0f
-        girafinha.scaleY = 0f
-
-        girafinha.animate()
-            .scaleX(1f)
-            .scaleY(1f)
-            .setStartDelay(200)
-            .setDuration(600)
-            .setInterpolator(
-                OvershootInterpolator(1.8f)
-            )
-            .start()
-
-        // ESTRELAS
-
-        val estrelaEsquerda = criarTexto(
-            "✦",
-            26f,
-            Color.rgb(245, 210, 135)
+        val voltar = imagem(
+            imagemRetorno,
+            "botaoretornoamareloclaro"
         )
 
         colocar(
-            estrelaEsquerda,
-            75, 40, 35, 35
+            conteudo,
+            voltar,
+            19, 18, 43, 43
         )
 
-        val estrelaDireita = criarTexto(
-            "✦",
-            26f,
-            Color.rgb(245, 210, 135)
-        )
+        voltar.contentDescription = "Voltar aos jogos"
 
-        colocar(
-            estrelaDireita,
-            430, 40, 35, 35
-        )
+        toque(voltar) {
+
+            tocarClique()
+
+            voltarParaJogos()
+        }
 
         // TÍTULO
 
-        val titulo = criarTexto(
+        val titulo = texto(
+            "Nariz Detetive",
+            39f,
+            tema.texto
+        ).apply {
 
-            if (correta) {
-                "Parabéns, explorador!"
-            } else {
-                "Ops! Não foi dessa vez!"
-            },
+            typeface = Typeface.create(
+                "sans-serif-black",
+                Typeface.BOLD
+            )
 
-            32f,
+            letterSpacing = 0.015f
 
-            Color.rgb(165, 138, 199)
-        )
+            setShadowLayer(
+                2.5f * escala,
+                0f,
+                2f * escala,
+                Color.WHITE
+            )
+        }
 
         colocar(
+            conteudo,
             titulo,
-            35, 85, 470, 48
+            250, 5, 470, 67
         )
 
-        // MENSAGEM
+        // PERSONAGEM ESTÁTICA
 
-        val mensagem = criarTexto(
+        val crianca = imagem(personagem).apply {
 
-            if (correta) {
-
-                "O brigadeiro tem um cheirinho doce!"
-
-            } else {
-
-                "Vamos tentar novamente?"
-            },
-
-            21f,
-
-            Color.rgb(145, 123, 105)
-        )
+            scaleType = ImageView.ScaleType.FIT_END
+        }
 
         colocar(
-            mensagem,
-            35, 135, 470, 38
+            conteudo,
+            crianca,
+            45, 165, 260, 228
         )
 
-        // CRIAR BOTÕES
+        // BALÃO
 
-        fun criarBotao(
-            textoBotao: String,
-            corInicio: Int,
-            corFim: Int,
-            corBorda: Int
-        ): TextView {
+        criarBalao()
 
-            return TextView(this).apply {
+        // CARTÕES
 
-                text = textoBotao
+        opcoes().forEachIndexed { indice, opcao ->
 
-                setTextColor(
-                    Color.rgb(75, 95, 95)
-                )
+            val x = if (indice % 2 == 0) {
+                325
+            } else {
+                578
+            }
 
-                setTextSize(
-                    TypedValue.COMPLEX_UNIT_PX,
-                    23f * escala
-                )
+            val y = if (indice < 2) {
+                82
+            } else {
+                209
+            }
 
-                typeface = Typeface.DEFAULT_BOLD
+            criarCartao(
+                opcao,
+                x,
+                y,
+                indice
+            )
+        }
 
-                gravity = Gravity.CENTER
+        criarIndicadorNivel()
+    }
 
-                background = GradientDrawable(
-                    GradientDrawable.Orientation.TOP_BOTTOM,
-                    intArrayOf(
-                        corInicio,
-                        corFim
+    // =========================================
+    // BALÃO COM PONTINHA DA FALA
+    // =========================================
+
+    private fun criarBalao() {
+
+        val conjunto = FrameLayout(this).apply {
+
+            clipChildren = false
+            clipToPadding = false
+        }
+
+        colocar(
+            conteudo,
+            conjunto,
+            30, 72, 230, 115
+        )
+
+        val desenho = object : View(this) {
+
+            private val paint =
+                Paint(Paint.ANTI_ALIAS_FLAG)
+
+            override fun onDraw(canvas: Canvas) {
+
+                super.onDraw(canvas)
+
+                val w = width.toFloat()
+                val h = height.toFloat()
+
+                val caminho = Path().apply {
+
+                    moveTo(w * 0.12f, h * 0.02f)
+
+                    lineTo(w * 0.88f, h * 0.02f)
+
+                    quadTo(
+                        w * 0.98f, h * 0.02f,
+                        w * 0.98f, h * 0.18f
                     )
-                ).apply {
 
-                    cornerRadius = 20f * escala
+                    lineTo(w * 0.98f, h * 0.66f)
 
-                    setStroke(
-                        (2 * escala).toInt().coerceAtLeast(1),
-                        corBorda
+                    quadTo(
+                        w * 0.98f, h * 0.82f,
+                        w * 0.88f, h * 0.82f
                     )
+
+                    lineTo(w * 0.73f, h * 0.82f)
+
+                    lineTo(w * 0.61f, h * 0.97f)
+
+                    lineTo(w * 0.56f, h * 0.82f)
+
+                    lineTo(w * 0.12f, h * 0.82f)
+
+                    quadTo(
+                        w * 0.02f, h * 0.82f,
+                        w * 0.02f, h * 0.66f
+                    )
+
+                    lineTo(w * 0.02f, h * 0.18f)
+
+                    quadTo(
+                        w * 0.02f, h * 0.02f,
+                        w * 0.12f, h * 0.02f
+                    )
+
+                    close()
                 }
 
-                elevation = 4f * escala
+                paint.style = Paint.Style.FILL
 
-                isClickable = true
-                isFocusable = true
+                paint.shader = LinearGradient(
+                    0f, 0f,
+                    0f, h,
+                    cor("#FFFDF6"),
+                    cor("#FFF5E0"),
+                    Shader.TileMode.CLAMP
+                )
+
+                canvas.drawPath(caminho, paint)
+
+                paint.shader = null
+
+                paint.style = Paint.Style.STROKE
+
+                paint.strokeWidth = 2.5f * escala
+
+                paint.strokeJoin = Paint.Join.ROUND
+
+                paint.color = cor(tema.base)
+
+                canvas.drawPath(caminho, paint)
             }
         }
 
-        // =================================================
-        // RESPOSTA CORRETA
-        // =================================================
+        colocar(
+            conjunto,
+            desenho,
+            0, 0, 230, 115
+        )
 
-        if (correta) {
+        colocar(
+            conjunto,
+            texto(
+                pergunta,
+                19f,
+                tema.texto
+            ),
+            10, 5, 210, 85
+        )
 
-            val botaoVoltar = criarBotao(
-                "← Voltar",
-                Color.rgb(190, 232, 248),
-                Color.rgb(155, 215, 240),
-                Color.rgb(135, 195, 225)
+        flutuar(
+            conjunto,
+            3f,
+            2700L,
+            animacoes
+        )
+    }
+
+    // =========================================
+    // CARTÕES DOS ALIMENTOS
+    // =========================================
+
+    private fun criarCartao(
+        opcao: Opcao,
+        x: Int,
+        y: Int,
+        indice: Int
+    ) {
+
+        val cartao = FrameLayout(this).apply {
+
+            background = fundo3D(
+                opcao.paleta,
+                25f
             )
 
-            colocar(
-                botaoVoltar,
-                55, 190, 195, 52
-            )
+            elevation = px(3).toFloat()
 
-            botaoVoltar.setOnClickListener {
+            clipChildren = false
+            clipToPadding = false
+        }
 
-                voltarParaCincoOpcoes()
-            }
+        colocar(
+            conteudo,
+            cartao,
+            x, y, 230, 115
+        )
 
-            // PRÓXIMO NÍVEL
+        val figura = imagem(opcao.imagem)
 
-            val botaoProximo = criarBotao(
-                "Próximo nível →",
-                Color.rgb(205, 242, 210),
-                Color.rgb(175, 225, 185),
-                Color.rgb(145, 205, 160)
-            )
+        colocar(
+            cartao,
+            figura,
+            12, 9, 92, 91
+        )
 
-            colocar(
-                botaoProximo,
-                275, 190, 210, 52
-            )
+        colocar(
+            cartao,
+            texto(
+                opcao.nome,
+                if (opcao.nome.length > 11) 17f else 21f,
+                opcao.paleta.texto
+            ),
+            104, 9, 118, 90
+        )
 
-            botaoProximo.setOnClickListener {
+        cartao.contentDescription = opcao.nome
 
-                if (!navegando) {
+        flutuar(
+            figura,
+            3f,
+            2300L + indice * 180L,
+            animacoes,
+            indice * 220L
+        )
 
-                    botaoProximo.animate().cancel()
+        toque(cartao) {
 
-                    animarPulsacao(botaoProximo)
+            if (popupAtual == null && !navegando) {
 
-                    abrirProximaFase()
-                }
-            }
+                if (opcao.correta) {
 
-            botaoProximo.animate()
-                .scaleX(1.03f)
-                .scaleY(1.03f)
-                .setStartDelay(750)
-                .setDuration(450)
-                .withEndAction {
+                    mostrarPopupAcerto(opcao)
 
-                    botaoProximo.animate()
-                        .scaleX(1f)
-                        .scaleY(1f)
-                        .setStartDelay(0)
-                        .setDuration(400)
-                        .start()
-                }
-                .start()
+                } else {
 
-        } else {
+                    tocarClique()
 
-            // =============================================
-            // RESPOSTA ERRADA
-            // =============================================
-
-            val botaoTentar = criarBotao(
-                "Tentar novamente",
-                Color.rgb(190, 232, 248),
-                Color.rgb(155, 215, 240),
-                Color.rgb(135, 195, 225)
-            )
-
-            colocar(
-                botaoTentar,
-                135, 190, 270, 52
-            )
-
-            botaoTentar.setOnClickListener {
-
-                if (!processandoClique && !navegando) {
-
-                    processandoClique = true
-
-                    animarPulsacao(botaoTentar)
-
-                    tocarAudio(R.raw.clique_pop)
-
-                    handler.postDelayed({
-
-                        tela.removeView(camadaEscura)
-
-                        popupAberto = false
-                        processandoClique = false
-
-                        animacoes.remove(botaoTentar)?.cancel()
-
-                    }, 380L)
+                    mostrarPopupErro()
                 }
             }
         }
     }
 
-    // =====================================================
-    // RETORNO DIRETO PARA A TELA DOS CINCO JOGOS
-    // =====================================================
+    // =========================================
+    // INDICADOR DE NÍVEL
+    // =========================================
 
-    private fun voltarParaCincoOpcoes() {
+    private fun criarIndicadorNivel() {
+
+        val indicador = FrameLayout(this).apply {
+
+            background = fundo(
+                "#FAFDFF",
+                "#EDF5FA",
+                17f
+            )
+
+            elevation = px(2).toFloat()
+        }
+
+        colocar(
+            conteudo,
+            indicador,
+            468, 348, 220, 29
+        )
+
+        colocar(
+            indicador,
+            texto(
+                "Nível $nivel/3",
+                12f,
+                tema.texto
+            ),
+            5, 0, 90, 29
+        )
+
+        for (i in 1..3) {
+
+            val ativo = i == nivel
+
+            val numero = texto(
+                i.toString(),
+                12f,
+                if (ativo) tema.texto else "#93A9B7"
+            ).apply {
+
+                background = fundo(
+                    if (ativo) tema.topo else "#F0F5F8",
+                    if (ativo) tema.base else "#E4EDF3",
+                    20f
+                )
+            }
+
+            colocar(
+                indicador,
+                numero,
+                105 + (i - 1) * 35,
+                4, 21, 21
+            )
+        }
+    }
+
+    // =========================================
+    // POP-UP DE ACERTO
+    // =========================================
+
+    private fun mostrarPopupAcerto(opcao: Opcao) {
+
+        if (popupAtual != null || navegando) return
+
+        tocarAudio("brilho_suave", 0.20f)
+
+        val camada = criarCamadaPopup()
+
+        val conjunto = criarConjuntoPopup(
+            camada,
+            640,
+            330
+        )
+
+        val moldura = FrameLayout(this).apply {
+
+            background = fundo3D(
+                verde,
+                32f
+            )
+
+            elevation = px(5).toFloat()
+
+            clipChildren = false
+            clipToPadding = false
+        }
+
+        colocar(
+            conjunto,
+            moldura,
+            20, 35, 580, 285
+        )
+
+        // TÍTULO SUPERIOR
+
+        colocar(
+            moldura,
+            texto(
+                "Missão cumprida!",
+                28f,
+                verde.texto
+            ),
+            50, 5, 435, 43
+        )
+
+        // PAINEL INTERNO
+
+        val painel = FrameLayout(this).apply {
+
+            background = fundo(
+                "#FFFDF5",
+                "#FFF8E8",
+                25f
+            )
+
+            clipChildren = false
+            clipToPadding = false
+        }
+
+        colocar(
+            moldura,
+            painel,
+            12, 48, 556, 222
+        )
+
+        // LUPA GRANDE COM BRILHOS
+
+        adicionarLupaDecorativa(conjunto)
+
+        // CÍRCULO DO ALIMENTO
+
+        val circulo = View(this).apply {
+
+            background = fundo(
+                verde.topo,
+                verde.base,
+                100f
+            )
+        }
+
+        colocar(
+            painel,
+            circulo,
+            35, 13, 150, 150
+        )
+
+        val figura = imagem(opcao.imagem)
+
+        colocar(
+            painel,
+            figura,
+            47, 24, 126, 126
+        )
+
+        flutuar(
+            figura,
+            4f,
+            2100L,
+            animacoesPopup
+        )
+
+        // TEXTO DO ACERTO
+
+        colocar(
+            painel,
+            texto(
+                "Você descobriu!",
+                25f,
+                verde.texto
+            ),
+            205, 10, 340, 40
+        )
+
+        // NOME DO ALIMENTO
+
+        val nome = texto(
+            opcao.nome,
+            25f,
+            verde.texto
+        ).apply {
+
+            background = fundo3D(
+                verde,
+                19f
+            )
+
+            setPadding(
+                0, 0, 0, px(4)
+            )
+        }
+
+        colocar(
+            painel,
+            nome,
+            220, 57, 310, 49
+        )
+
+        // EXPLICAÇÃO
+
+        colocar(
+            painel,
+            texto(
+                explicacao,
+                18f,
+                "#537B4D"
+            ),
+            205, 111, 340, 55
+        )
+
+        // VOLTAR PARA O MESMO NÍVEL
+
+        botao(
+            painel,
+            "← Voltar",
+            azul,
+            12, 173, 260, 43
+        ) {
+
+            tocarClique()
+
+            fecharPopup()
+        }
+
+        // PRÓXIMO NÍVEL OU CONCLUSÃO
+
+        botao(
+            painel,
+            if (nivel == 3) {
+                "Concluir desafio"
+            } else {
+                "Próximo nível →"
+            },
+            verde,
+            284, 173, 260, 43
+        ) {
+
+            tocarClique()
+
+            if (nivel == 3) {
+
+                fecharPopup()
+
+                mostrarPopupFinal()
+
+            } else {
+
+                abrirProximoNivel()
+            }
+        }
+
+        animarEntrada(conjunto)
+    }
+
+    // =========================================
+    // POP-UP DE ERRO
+    // =========================================
+
+    private fun mostrarPopupErro() {
+
+        if (popupAtual != null || navegando) return
+
+        val camada = criarCamadaPopup()
+
+        val conjunto = criarConjuntoPopup(
+            camada,
+            640,
+            330
+        )
+
+        // MOLDURA VERMELHO CORAL
+
+        val moldura = FrameLayout(this).apply {
+
+            background = fundo3D(
+                vermelho,
+                32f
+            )
+
+            elevation = px(5).toFloat()
+
+            clipChildren = false
+            clipToPadding = false
+        }
+
+        colocar(
+            conjunto,
+            moldura,
+            20, 35, 580, 285
+        )
+
+        // TÍTULO
+
+        colocar(
+            moldura,
+            texto(
+                "Ops, detetive!",
+                28f,
+                vermelho.texto
+            ),
+            50, 5, 435, 43
+        )
+
+        // PAINEL CREME
+
+        val painel = FrameLayout(this).apply {
+
+            background = fundo(
+                "#FFFDF8",
+                "#FFF5EF",
+                25f
+            )
+
+            clipChildren = false
+            clipToPadding = false
+        }
+
+        colocar(
+            moldura,
+            painel,
+            12, 48, 556, 222
+        )
+
+        // LUPA GRANDE COM BRILHOS
+
+        adicionarLupaDecorativa(conjunto)
+
+        // CÍRCULO DO BUBBA
+
+        val circulo = View(this).apply {
+
+            background = fundo(
+                "#FFE9DF",
+                "#F8D7CB",
+                100f
+            )
+        }
+
+        colocar(
+            painel,
+            circulo,
+            35, 13, 150, 150
+        )
+
+        // BUBBA ORIGINAL COM DÚVIDA
+
+        val bubba = imagem(
+            "girafaduvida",
+            "logoinferior"
+        )
+
+        colocar(
+            painel,
+            bubba,
+            40, 18, 140, 140
+        )
+
+        flutuar(
+            bubba,
+            3f,
+            2400L,
+            animacoesPopup
+        )
+
+        // INTERROGAÇÃO DECORATIVA
+
+        val interrogacao = texto(
+            "?",
+            32f,
+            "#D68E80"
+        ).apply {
+
+            rotation = 12f
+        }
+
+        colocar(
+            painel,
+            interrogacao,
+            168, 7, 40, 42
+        )
+
+        flutuar(
+            interrogacao,
+            4f,
+            2300L,
+            animacoesPopup
+        )
+
+        // MENSAGEM DE ERRO
+
+        colocar(
+            painel,
+            texto(
+                "Ainda não foi dessa vez!",
+                24f,
+                vermelho.texto
+            ),
+            210, 22, 335, 50
+        )
+
+        colocar(
+            painel,
+            texto(
+                "Vamos imaginar os cheirinhos\ne tentar outra vez?",
+                19f,
+                "#987064"
+            ),
+            210, 78, 335, 75
+        )
+
+        // BOTÃO VERMELHO CORAL
+
+        botao(
+            painel,
+            "↻ Tentar novamente",
+            vermelho,
+            103, 173, 350, 43
+        ) {
+
+            tocarClique()
+
+            fecharPopup()
+        }
+
+        animarEntrada(conjunto)
+    }
+
+    // =========================================
+    // LUPA NO CANTO SUPERIOR DIREITO
+    // =========================================
+
+    private fun adicionarLupaDecorativa(
+        conjunto: FrameLayout
+    ) {
+
+        val decoracao = FrameLayout(this).apply {
+
+            clipChildren = false
+            clipToPadding = false
+
+            elevation = px(15).toFloat()
+
+            isClickable = false
+            isFocusable = false
+        }
+
+        colocar(
+            conjunto,
+            decoracao,
+            493, 0, 147, 138
+        )
+
+        // LUPA
+
+        val lupa = criarLupa().apply {
+
+            rotation = -12f
+        }
+
+        colocar(
+            decoracao,
+            lupa,
+            18, 7, 112, 112
+        )
+
+        // BALANÇO SUAVE DA LUPA
+
+        val balanco = ObjectAnimator.ofFloat(
+            lupa,
+            View.ROTATION,
+            -12f,
+            -5f,
+            -12f
+        ).apply {
+
+            duration = 2900L
+
+            repeatCount = ValueAnimator.INFINITE
+
+            start()
+        }
+
+        animacoesPopup.add(balanco)
+
+        // BRILHINHOS AO REDOR
+
+        adicionarBrilho(
+            decoracao,
+            4, 13, 17, 0L
+        )
+
+        adicionarBrilho(
+            decoracao,
+            119, 4, 19, 400L
+        )
+
+        adicionarBrilho(
+            decoracao,
+            0, 64, 12, 800L
+        )
+
+        adicionarBrilho(
+            decoracao,
+            131, 55, 14, 1200L
+        )
+
+        adicionarBrilho(
+            decoracao,
+            91, 113, 11, 600L
+        )
+
+        adicionarPontinho(
+            decoracao,
+            26, 0, 5, 300L
+        )
+
+        adicionarPontinho(
+            decoracao,
+            137, 32, 6, 900L
+        )
+    }
+
+    // =========================================
+    // DESENHO DA LUPA
+    // =========================================
+
+    private fun criarLupa(): View {
+
+        return object : View(this) {
+
+            private val paint =
+                Paint(Paint.ANTI_ALIAS_FLAG)
+
+            override fun onDraw(canvas: Canvas) {
+
+                super.onDraw(canvas)
+
+                canvas.save()
+
+                canvas.scale(
+                    width / 120f,
+                    height / 120f
+                )
+
+                paint.shader = null
+
+                // SOMBRA DO CABO
+
+                paint.style = Paint.Style.STROKE
+
+                paint.strokeCap = Paint.Cap.ROUND
+
+                paint.strokeWidth = 23f
+
+                paint.color = cor("#B98349")
+
+                canvas.drawLine(
+                    72f, 72f,
+                    105f, 105f,
+                    paint
+                )
+
+                // CABO DOURADO
+
+                paint.strokeWidth = 16f
+
+                paint.color = cor("#E2B579")
+
+                canvas.drawLine(
+                    71f, 69f,
+                    104f, 102f,
+                    paint
+                )
+
+                // SOMBRA DA MOLDURA
+
+                paint.style = Paint.Style.FILL
+
+                paint.color = cor("#C39142")
+
+                canvas.drawCircle(
+                    46f, 48f, 42f,
+                    paint
+                )
+
+                // MOLDURA DOURADA
+
+                paint.shader = LinearGradient(
+                    0f, 0f,
+                    0f, 90f,
+                    cor("#FFE6A1"),
+                    cor("#E9B64D"),
+                    Shader.TileMode.CLAMP
+                )
+
+                canvas.drawCircle(
+                    46f, 44f, 41f,
+                    paint
+                )
+
+                // SOMBRA INTERNA DA LENTE
+
+                paint.shader = null
+
+                paint.color = cor("#96CADF")
+
+                canvas.drawCircle(
+                    46f, 44f, 31f,
+                    paint
+                )
+
+                // LENTE AZUL
+
+                paint.shader = LinearGradient(
+                    0f, 12f,
+                    0f, 75f,
+                    cor("#E5F7FF"),
+                    cor("#B7E0F1"),
+                    Shader.TileMode.CLAMP
+                )
+
+                canvas.drawCircle(
+                    46f, 42f, 28f,
+                    paint
+                )
+
+                // REFLEXO DA LENTE
+
+                paint.shader = null
+
+                paint.style = Paint.Style.STROKE
+
+                paint.strokeWidth = 6f
+
+                paint.strokeCap = Paint.Cap.ROUND
+
+                paint.color = cor("#F8FDFF")
+
+                val reflexo = Path().apply {
+
+                    moveTo(27f, 42f)
+
+                    quadTo(
+                        27f, 24f,
+                        45f, 24f
+                    )
+                }
+
+                canvas.drawPath(
+                    reflexo,
+                    paint
+                )
+
+                // PONTINHO DE REFLEXO
+
+                paint.style = Paint.Style.FILL
+
+                canvas.drawCircle(
+                    53f, 24f, 3f,
+                    paint
+                )
+
+                canvas.restore()
+            }
+        }
+    }
+
+    // =========================================
+    // BRILHOS DOURADOS
+    // =========================================
+
+    private fun criarBrilho(): View {
+
+        return object : View(this) {
+
+            private val paint =
+                Paint(Paint.ANTI_ALIAS_FLAG)
+
+            override fun onDraw(canvas: Canvas) {
+
+                super.onDraw(canvas)
+
+                val w = width.toFloat()
+                val h = height.toFloat()
+
+                val caminho = Path().apply {
+
+                    moveTo(w * 0.5f, h * 0.02f)
+
+                    quadTo(
+                        w * 0.56f, h * 0.02f,
+                        w * 0.62f, h * 0.32f
+                    )
+
+                    quadTo(
+                        w * 0.68f, h * 0.40f,
+                        w * 0.98f, h * 0.5f
+                    )
+
+                    quadTo(
+                        w * 0.98f, h * 0.56f,
+                        w * 0.68f, h * 0.62f
+                    )
+
+                    quadTo(
+                        w * 0.60f, h * 0.68f,
+                        w * 0.5f, h * 0.98f
+                    )
+
+                    quadTo(
+                        w * 0.44f, h * 0.98f,
+                        w * 0.38f, h * 0.68f
+                    )
+
+                    quadTo(
+                        w * 0.32f, h * 0.60f,
+                        w * 0.02f, h * 0.5f
+                    )
+
+                    quadTo(
+                        w * 0.02f, h * 0.44f,
+                        w * 0.32f, h * 0.38f
+                    )
+
+                    quadTo(
+                        w * 0.40f, h * 0.32f,
+                        w * 0.5f, h * 0.02f
+                    )
+
+                    close()
+                }
+
+                paint.style = Paint.Style.FILL
+
+                paint.pathEffect =
+                    CornerPathEffect(w * 0.08f)
+
+                paint.shader = LinearGradient(
+                    0f, 0f,
+                    0f, h,
+                    cor("#FFF0AA"),
+                    cor("#FFC94D"),
+                    Shader.TileMode.CLAMP
+                )
+
+                canvas.drawPath(
+                    caminho,
+                    paint
+                )
+            }
+        }
+    }
+
+    private fun adicionarBrilho(
+        pai: FrameLayout,
+        x: Int,
+        y: Int,
+        tamanho: Int,
+        atraso: Long
+    ) {
+
+        val brilho = criarBrilho()
+
+        colocar(
+            pai,
+            brilho,
+            x, y, tamanho, tamanho
+        )
+
+        animarBrilho(
+            brilho,
+            atraso
+        )
+    }
+
+    private fun adicionarPontinho(
+        pai: FrameLayout,
+        x: Int,
+        y: Int,
+        tamanho: Int,
+        atraso: Long
+    ) {
+
+        val ponto = View(this).apply {
+
+            background = fundo(
+                "#FFF4C1",
+                "#FFD36A",
+                100f
+            )
+        }
+
+        colocar(
+            pai,
+            ponto,
+            x, y, tamanho, tamanho
+        )
+
+        animarBrilho(
+            ponto,
+            atraso
+        )
+    }
+
+    private fun animarBrilho(
+        view: View,
+        atraso: Long
+    ) {
+
+        val animacaoAlpha = ObjectAnimator.ofFloat(
+            view,
+            View.ALPHA,
+            0.35f,
+            1f,
+            0.35f
+        ).apply {
+
+            duration = 2200L
+
+            startDelay = atraso
+
+            repeatCount = ValueAnimator.INFINITE
+
+            start()
+        }
+
+        animacoesPopup.add(animacaoAlpha)
+
+        arrayOf(
+            View.SCALE_X,
+            View.SCALE_Y
+        ).forEach { propriedade ->
+
+            val animacao = ObjectAnimator.ofFloat(
+                view,
+                propriedade,
+                0.75f,
+                1.12f,
+                0.75f
+            ).apply {
+
+                duration = 2200L
+
+                startDelay = atraso
+
+                repeatCount = ValueAnimator.INFINITE
+
+                start()
+            }
+
+            animacoesPopup.add(animacao)
+        }
+    }
+
+    // =========================================
+    // POP-UP FINAL DE PARABÉNS
+    // =========================================
+
+    private fun mostrarPopupFinal() {
+
+        tocarAudio(
+            "brilho_suave",
+            0.20f
+        )
+
+        val camada = criarCamadaPopup()
+
+        val conjunto = criarConjuntoPopup(
+            camada,
+            550,
+            345
+        )
+
+        val moldura = FrameLayout(this).apply {
+
+            background = fundo3D(
+                amarelo,
+                34f
+            )
+
+            elevation = px(4).toFloat()
+
+            clipChildren = false
+            clipToPadding = false
+        }
+
+        colocar(
+            conjunto,
+            moldura,
+            5, 36, 540, 300
+        )
+
+        val painel = FrameLayout(this).apply {
+
+            background = fundo(
+                "#FFFDF3",
+                "#FFF4D3",
+                26f
+            )
+
+            clipChildren = false
+            clipToPadding = false
+        }
+
+        colocar(
+            moldura,
+            painel,
+            12, 12, 516, 270
+        )
+
+        // FAIXA AMARELA
+
+        colocar(
+            painel,
+            faixaParabens(),
+            50, 12, 416, 65
+        )
+
+        val titulo = texto(
+            "Parabéns!",
+            34f,
+            "#98631C"
+        ).apply {
+
+            typeface = Typeface.create(
+                "sans-serif-black",
+                Typeface.BOLD
+            )
+        }
+
+        colocar(
+            painel,
+            titulo,
+            100, 13, 316, 49
+        )
+
+        // TROFÉU
+
+        val premio = trofeu()
+
+        colocar(
+            conjunto,
+            premio,
+            235, 0, 80, 68
+        )
+
+        premio.elevation = px(12).toFloat()
+
+        pulsar(
+            premio,
+            1.06f,
+            2100L,
+            animacoesPopup
+        )
+
+        // MENSAGEM FINAL
+
+        colocar(
+            painel,
+            texto(
+                "Você completou todo o desafio!",
+                19f,
+                "#94702F"
+            ),
+            15, 77, 486, 30
+        )
+
+        // BUBBA
+
+        val bubba = imagem(
+            "rostogirafa",
+            "logoinferior"
+        )
+
+        colocar(
+            painel,
+            bubba,
+            173, 108, 170, 110
+        )
+
+        pulsar(
+            bubba,
+            1.04f,
+            2000L,
+            animacoesPopup
+        )
+
+        // ESTRELAS DECORATIVAS
+
+        val estrelaEsquerda = estrela()
+
+        colocar(
+            painel,
+            estrelaEsquerda,
+            112, 140, 39, 39
+        )
+
+        val estrelaDireita = estrela()
+
+        colocar(
+            painel,
+            estrelaDireita,
+            365, 140, 39, 39
+        )
+
+        flutuar(
+            estrelaEsquerda,
+            4f,
+            2200L,
+            animacoesPopup
+        )
+
+        flutuar(
+            estrelaDireita,
+            4f,
+            2500L,
+            animacoesPopup
+        )
+
+        // JOGAR NOVAMENTE
+
+        botao(
+            painel,
+            "↻ Jogar novamente",
+            azul,
+            12, 224, 240, 43
+        ) {
+
+            tocarClique()
+
+            reiniciarJogo()
+        }
+
+        // VOLTAR AOS JOGOS
+
+        botao(
+            painel,
+            "Voltar aos jogos",
+            rosa,
+            264, 224, 240, 43
+        ) {
+
+            tocarClique()
+
+            voltarParaJogos()
+        }
+
+        animarEntrada(conjunto)
+    }
+
+    // =========================================
+    // FAIXA DOURADA
+    // =========================================
+
+    private fun faixaParabens(): View {
+
+        return object : View(this) {
+
+            private val paint =
+                Paint(Paint.ANTI_ALIAS_FLAG)
+
+            override fun onDraw(canvas: Canvas) {
+
+                super.onDraw(canvas)
+
+                val w = width.toFloat()
+                val h = height.toFloat()
+
+                paint.shader = null
+
+                paint.style = Paint.Style.FILL
+
+                paint.color = cor("#E9B849")
+
+                val esquerda = Path().apply {
+
+                    moveTo(w * 0.18f, h * 0.16f)
+
+                    lineTo(w * 0.01f, h * 0.36f)
+
+                    lineTo(w * 0.07f, h * 0.59f)
+
+                    lineTo(w * 0.01f, h * 0.91f)
+
+                    lineTo(w * 0.23f, h * 0.79f)
+
+                    close()
+                }
+
+                val direita = Path().apply {
+
+                    moveTo(w * 0.82f, h * 0.16f)
+
+                    lineTo(w * 0.99f, h * 0.36f)
+
+                    lineTo(w * 0.93f, h * 0.59f)
+
+                    lineTo(w * 0.99f, h * 0.91f)
+
+                    lineTo(w * 0.77f, h * 0.79f)
+
+                    close()
+                }
+
+                paint.pathEffect =
+                    CornerPathEffect(5f * escala)
+
+                canvas.drawPath(esquerda, paint)
+
+                canvas.drawPath(direita, paint)
+
+                paint.pathEffect = null
+
+                paint.color = cor("#DDB04A")
+
+                canvas.drawRoundRect(
+                    w * 0.10f,
+                    h * 0.12f,
+                    w * 0.90f,
+                    h * 0.88f,
+                    15f * escala,
+                    15f * escala,
+                    paint
+                )
+
+                paint.shader = LinearGradient(
+                    0f, 0f,
+                    0f, h,
+                    cor("#FFECA1"),
+                    cor("#FFD05C"),
+                    Shader.TileMode.CLAMP
+                )
+
+                canvas.drawRoundRect(
+                    w * 0.10f,
+                    h * 0.03f,
+                    w * 0.90f,
+                    h * 0.78f,
+                    15f * escala,
+                    15f * escala,
+                    paint
+                )
+
+                paint.shader = null
+            }
+        }
+    }
+
+    // =========================================
+    // TROFÉU ARREDONDADO
+    // =========================================
+
+    private fun trofeu(): View {
+
+        return object : View(this) {
+
+            private val paint =
+                Paint(Paint.ANTI_ALIAS_FLAG)
+
+            override fun onDraw(canvas: Canvas) {
+
+                super.onDraw(canvas)
+
+                canvas.save()
+
+                canvas.scale(
+                    width / 100f,
+                    height / 100f
+                )
+
+                paint.shader = null
+
+                paint.color = cor("#EFB83F")
+
+                paint.style = Paint.Style.STROKE
+
+                paint.strokeWidth = 8f
+
+                paint.strokeCap = Paint.Cap.ROUND
+
+                val esquerda = Path().apply {
+
+                    moveTo(28f, 20f)
+
+                    cubicTo(
+                        0f, 8f,
+                        1f, 55f,
+                        33f, 53f
+                    )
+                }
+
+                val direita = Path().apply {
+
+                    moveTo(72f, 20f)
+
+                    cubicTo(
+                        100f, 8f,
+                        99f, 55f,
+                        67f, 53f
+                    )
+                }
+
+                canvas.drawPath(esquerda, paint)
+
+                canvas.drawPath(direita, paint)
+
+                paint.style = Paint.Style.FILL
+
+                paint.shader = LinearGradient(
+                    0f, 5f,
+                    0f, 75f,
+                    cor("#FFED9D"),
+                    cor("#FFC343"),
+                    Shader.TileMode.CLAMP
+                )
+
+                val taca = Path().apply {
+
+                    moveTo(23f, 8f)
+
+                    quadTo(
+                        18f, 8f,
+                        18f, 15f
+                    )
+
+                    lineTo(22f, 38f)
+
+                    cubicTo(
+                        25f, 78f,
+                        75f, 78f,
+                        78f, 38f
+                    )
+
+                    lineTo(82f, 15f)
+
+                    quadTo(
+                        82f, 8f,
+                        75f, 8f
+                    )
+
+                    close()
+                }
+
+                canvas.drawPath(taca, paint)
+
+                paint.shader = null
+
+                paint.color = cor("#EFB83F")
+
+                canvas.drawRoundRect(
+                    43f, 65f,
+                    57f, 86f,
+                    5f, 5f,
+                    paint
+                )
+
+                paint.color = cor("#F5C653")
+
+                canvas.drawRoundRect(
+                    27f, 82f,
+                    73f, 94f,
+                    6f, 6f,
+                    paint
+                )
+
+                val caminho = caminhoEstrela(
+                    50f,
+                    34f,
+                    16f
+                )
+
+                paint.color = cor("#FFF5C5")
+
+                paint.pathEffect =
+                    CornerPathEffect(3f)
+
+                canvas.drawPath(caminho, paint)
+
+                paint.pathEffect = null
+
+                canvas.restore()
+            }
+        }
+    }
+
+    // =========================================
+    // ESTRELA ARREDONDADA
+    // =========================================
+
+    private fun caminhoEstrela(
+        cx: Float,
+        cy: Float,
+        raio: Float
+    ): Path {
+
+        val caminho = Path()
+
+        for (i in 0 until 10) {
+
+            val angulo =
+                Math.PI * i / 5 - Math.PI / 2
+
+            val r = if (i % 2 == 0) {
+
+                raio
+
+            } else {
+
+                raio * 0.58f
+            }
+
+            val x = cx +
+                    cos(angulo).toFloat() * r
+
+            val y = cy +
+                    sin(angulo).toFloat() * r
+
+            if (i == 0) {
+
+                caminho.moveTo(x, y)
+
+            } else {
+
+                caminho.lineTo(x, y)
+            }
+        }
+
+        caminho.close()
+
+        return caminho
+    }
+
+    private fun estrela(): View {
+
+        return object : View(this) {
+
+            private val paint =
+                Paint(Paint.ANTI_ALIAS_FLAG)
+
+            override fun onDraw(canvas: Canvas) {
+
+                super.onDraw(canvas)
+
+                val raio =
+                    minOf(width, height) * 0.46f
+
+                val caminho = caminhoEstrela(
+                    width / 2f,
+                    height / 2f,
+                    raio
+                )
+
+                paint.style = Paint.Style.FILL
+
+                paint.pathEffect =
+                    CornerPathEffect(raio * 0.20f)
+
+                paint.shader = LinearGradient(
+                    0f, 0f,
+                    0f, height.toFloat(),
+                    cor("#FFE994"),
+                    cor("#FFC94D"),
+                    Shader.TileMode.CLAMP
+                )
+
+                canvas.drawPath(caminho, paint)
+            }
+        }
+    }
+
+    // =========================================
+    // CAMADA DO POP-UP
+    // =========================================
+
+    private fun criarCamadaPopup(): FrameLayout {
+
+        animacoes.forEach {
+
+            if (it.isStarted) it.pause()
+        }
+
+        val camada = FrameLayout(this).apply {
+
+            setBackgroundColor(
+                Color.argb(150, 25, 45, 65)
+            )
+
+            isClickable = true
+
+            isFocusable = true
+
+            clipChildren = false
+
+            clipToPadding = false
+
+            elevation = px(50).toFloat()
+        }
+
+        popupAtual = camada
+
+        tela.addView(
+            camada,
+            FrameLayout.LayoutParams(-1, -1)
+        )
+
+        return camada
+    }
+
+    private fun criarConjuntoPopup(
+        camada: FrameLayout,
+        largura: Int,
+        altura: Int
+    ): FrameLayout {
+
+        val conjunto = FrameLayout(this).apply {
+
+            clipChildren = false
+
+            clipToPadding = false
+        }
+
+        camada.addView(
+            conjunto,
+            FrameLayout.LayoutParams(
+                px(largura),
+                px(altura),
+                Gravity.CENTER
+            )
+        )
+
+        return conjunto
+    }
+
+    private fun fecharPopup() {
+
+        cancelarAnimacoes(animacoesPopup)
+
+        popupAtual?.let {
+
+            tela.removeView(it)
+        }
+
+        popupAtual = null
+
+        animacoes.forEach {
+
+            if (it.isPaused) it.resume()
+        }
+    }
+
+    private fun animarEntrada(view: View) {
+
+        view.scaleX = 0.80f
+
+        view.scaleY = 0.80f
+
+        view.alpha = 0f
+
+        view.animate()
+            .scaleX(1f)
+            .scaleY(1f)
+            .alpha(1f)
+            .setDuration(320L)
+            .setInterpolator(
+                OvershootInterpolator(1.1f)
+            )
+            .start()
+    }
+
+    // =========================================
+    // BOTÕES 3D
+    // =========================================
+
+    private fun botao(
+        pai: FrameLayout,
+        nome: String,
+        paleta: Paleta,
+        x: Int,
+        y: Int,
+        largura: Int,
+        altura: Int,
+        acao: () -> Unit
+    ) {
+
+        val botao = texto(
+            nome,
+            19f,
+            paleta.texto
+        ).apply {
+
+            background = fundo3D(
+                paleta,
+                22f
+            )
+
+            setPadding(
+                px(5), 0,
+                px(5), px(5)
+            )
+
+            elevation = px(2).toFloat()
+        }
+
+        colocar(
+            pai,
+            botao,
+            x, y, largura, altura
+        )
+
+        toque(botao, acao)
+    }
+
+    private fun fundo3D(
+        paleta: Paleta,
+        raio: Float
+    ): LayerDrawable {
+
+        val sombra = GradientDrawable().apply {
+
+            setColor(cor(paleta.sombra))
+
+            cornerRadius = raio * escala
+        }
+
+        val frente = GradientDrawable(
+            GradientDrawable.Orientation.TOP_BOTTOM,
+            intArrayOf(
+                cor(paleta.topo),
+                cor(paleta.base)
+            )
+        ).apply {
+
+            cornerRadius = raio * escala
+        }
+
+        return LayerDrawable(
+            arrayOf(sombra, frente)
+        ).apply {
+
+            setLayerInset(
+                1, 0, 0, 0, px(6)
+            )
+        }
+    }
+
+    private fun fundo(
+        topo: String,
+        base: String,
+        raio: Float
+    ): GradientDrawable {
+
+        return GradientDrawable(
+            GradientDrawable.Orientation.TOP_BOTTOM,
+            intArrayOf(
+                cor(topo),
+                cor(base)
+            )
+        ).apply {
+
+            cornerRadius = raio * escala
+        }
+    }
+
+    // =========================================
+    // ANIMAÇÕES
+    // =========================================
+
+    private fun flutuar(
+        view: View,
+        distancia: Float,
+        tempo: Long,
+        lista: MutableList<ObjectAnimator>,
+        atraso: Long = 0L
+    ) {
+
+        val animacao = ObjectAnimator.ofFloat(
+            view,
+            View.TRANSLATION_Y,
+            0f,
+            -distancia * escala,
+            0f
+        ).apply {
+
+            duration = tempo
+
+            startDelay = atraso
+
+            repeatCount =
+                ValueAnimator.INFINITE
+
+            start()
+        }
+
+        lista.add(animacao)
+    }
+
+    private fun pulsar(
+        view: View,
+        tamanho: Float,
+        tempo: Long,
+        lista: MutableList<ObjectAnimator>
+    ) {
+
+        arrayOf(
+            View.SCALE_X,
+            View.SCALE_Y
+        ).forEach { propriedade ->
+
+            val animacao = ObjectAnimator.ofFloat(
+                view,
+                propriedade,
+                1f,
+                tamanho,
+                1f
+            ).apply {
+
+                duration = tempo
+
+                repeatCount =
+                    ValueAnimator.INFINITE
+
+                start()
+            }
+
+            lista.add(animacao)
+        }
+    }
+
+    private fun toque(
+        view: View,
+        acao: () -> Unit
+    ) {
+
+        view.isClickable = true
+
+        view.isFocusable = true
+
+        view.setOnClickListener {
+
+            if (!view.isEnabled || navegando) {
+
+                return@setOnClickListener
+            }
+
+            view.isEnabled = false
+
+            view.animate()
+                .scaleX(0.94f)
+                .scaleY(0.94f)
+                .setDuration(85L)
+                .withEndAction {
+
+                    view.animate()
+                        .scaleX(1f)
+                        .scaleY(1f)
+                        .setDuration(140L)
+                        .setInterpolator(
+                            OvershootInterpolator()
+                        )
+                        .withEndAction {
+
+                            view.isEnabled = true
+
+                            if (
+                                !isFinishing &&
+                                !isDestroyed &&
+                                view.isAttachedToWindow &&
+                                !navegando
+                            ) {
+
+                                acao()
+                            }
+                        }
+                        .start()
+                }
+                .start()
+        }
+    }
+
+    private fun cancelarAnimacoes(
+        lista: MutableList<ObjectAnimator>
+    ) {
+
+        lista.forEach {
+
+            it.cancel()
+        }
+
+        lista.clear()
+    }
+
+    // =========================================
+    // FUNÇÕES VISUAIS
+    // =========================================
+
+    private fun imagem(
+        nome: String,
+        alternativa: String? = null
+    ): ImageView {
+
+        return ImageView(this).apply {
+
+            scaleType = ImageView.ScaleType.FIT_CENTER
+
+            var id = resources.getIdentifier(
+                nome,
+                "drawable",
+                packageName
+            )
+
+            if (id == 0 && alternativa != null) {
+
+                id = resources.getIdentifier(
+                    alternativa,
+                    "drawable",
+                    packageName
+                )
+            }
+
+            if (id != 0) {
+
+                setImageResource(id)
+
+            } else {
+
+                android.util.Log.e(
+                    "NarizDetetive",
+                    "Imagem não encontrada: $nome"
+                )
+            }
+        }
+    }
+
+    private fun texto(
+        conteudo: String,
+        tamanho: Float,
+        corTexto: String
+    ): TextView {
+
+        return TextView(this).apply {
+
+            text = conteudo
+
+            gravity = Gravity.CENTER
+
+            setTextColor(cor(corTexto))
+
+            setTextSize(
+                TypedValue.COMPLEX_UNIT_PX,
+                tamanho * escala
+            )
+
+            typeface = Typeface.create(
+                "sans-serif-rounded",
+                Typeface.BOLD
+            )
+
+            includeFontPadding = false
+        }
+    }
+
+    private fun colocar(
+        pai: FrameLayout,
+        view: View,
+        x: Int,
+        y: Int,
+        largura: Int,
+        altura: Int
+    ) {
+
+        val parametros = FrameLayout.LayoutParams(
+            px(largura),
+            px(altura)
+        ).apply {
+
+            leftMargin = (x * escala).toInt()
+
+            topMargin = (y * escala).toInt()
+        }
+
+        pai.addView(
+            view,
+            parametros
+        )
+    }
+
+    private fun px(valor: Int): Int {
+
+        return (valor * escala)
+            .toInt()
+            .coerceAtLeast(1)
+    }
+
+    private fun cor(valor: String): Int {
+
+        return Color.parseColor(valor)
+    }
+
+    // =========================================
+    // NAVEGAÇÃO
+    // =========================================
+
+    private fun abrirProximoNivel() {
+
+        if (navegando) return
+
+        val destino = when (nivel) {
+
+            1 -> DescubraOCheiro2Activity::class.java
+
+            2 -> DescubraOCheiro3Activity::class.java
+
+            else -> return
+        }
+
+        navegando = true
+
+        startActivity(
+            Intent(this, destino)
+        )
+
+        finish()
+    }
+
+    private fun reiniciarJogo() {
 
         if (navegando) return
 
         navegando = true
 
-        handler.removeCallbacksAndMessages(null)
+        startActivity(
+            Intent(
+                this,
+                DescubraOCheiroActivity::class.java
+            )
+        )
 
-        pararAudio()
+        finish()
+    }
 
-        tocarSomNavegacao()
+    private fun voltarParaJogos() {
+
+        if (navegando) return
+
+        navegando = true
+
+        MusicaSensorial.parar()
 
         val intent = Intent(
             this,
             CincoOpcoesDosJogosActivity::class.java
-        )
+        ).apply {
 
-        intent.flags =
-            Intent.FLAG_ACTIVITY_CLEAR_TOP or
-                    Intent.FLAG_ACTIVITY_SINGLE_TOP
+            flags =
+                Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                        Intent.FLAG_ACTIVITY_SINGLE_TOP
+        }
 
         startActivity(intent)
 
         finish()
     }
 
-    // =====================================================
-    // BOTÃO VOLTAR FÍSICO DO CELULAR
-    // =====================================================
-
-    @Suppress("DEPRECATION")
-    override fun onBackPressed() {
-
-        voltarParaCincoOpcoes()
-    }
-
-    // =====================================================
-    // ABRIR PRÓXIMO NÍVEL
-    // =====================================================
-
-    private fun abrirProximaFase() {
-
-        if (navegando) return
-
-        navegando = true
-
-        pararAudio()
-
-        tocarSomNavegacao()
-
-        try {
-
-            val classeProximaFase = Class.forName(
-                "$packageName.DescubraOCheiro2Activity"
-            )
-
-            val intent = Intent(
-                this,
-                classeProximaFase
-            )
-
-            startActivity(intent)
-
-            finish()
-
-        } catch (erro: Exception) {
-
-            navegando = false
-
-            Log.e(
-                "DescubraOCheiro",
-                "Erro ao abrir próxima fase",
-                erro
-            )
-
-            mostrarAvisoProximoNivel()
-        }
-    }
-
-    // =====================================================
-    // SOM DE NAVEGAÇÃO
-    // =====================================================
-
-    private fun tocarSomNavegacao() {
-
-        var player: MediaPlayer? = null
-
-        try {
-
-            player = MediaPlayer.create(
-                applicationContext,
-                R.raw.clique_pop
-            )
-
-            player?.setOnCompletionListener {
-
-                it.release()
-            }
-
-            player?.setOnErrorListener { mp, _, _ ->
-
-                mp.release()
-
-                true
-            }
-
-            player?.start()
-
-        } catch (erro: Exception) {
-
-            player?.release()
-
-            Log.e(
-                "DescubraOCheiro",
-                "Erro no som de navegação",
-                erro
-            )
-        }
-    }
-
-    // =====================================================
-    // AVISO PERSONALIZADO
-    // =====================================================
-
-    private fun mostrarAvisoProximoNivel() {
-
-        val dialogo = android.app.Dialog(this)
-
-        val caixa = android.widget.LinearLayout(this).apply {
-
-            orientation =
-                android.widget.LinearLayout.VERTICAL
-
-            gravity = Gravity.CENTER
-
-            setPadding(35, 30, 35, 30)
-
-            background = GradientDrawable().apply {
-
-                setColor(Color.parseColor("#FFF9E4"))
-
-                cornerRadius = 28f
-
-                setStroke(
-                    3,
-                    Color.parseColor("#F5DEA0")
-                )
-            }
-        }
-
-        val mensagem = TextView(this).apply {
-
-            text = "O próximo nível ainda não está disponível!"
-
-            textSize = 20f
-
-            gravity = Gravity.CENTER
-
-            typeface = Typeface.DEFAULT_BOLD
-
-            setTextColor(
-                Color.parseColor("#A58AC7")
-            )
-
-            setPadding(10, 10, 10, 25)
-        }
-
-        caixa.addView(mensagem)
-
-        val botao = TextView(this).apply {
-
-            text = "Voltar"
-
-            textSize = 18f
-
-            gravity = Gravity.CENTER
-
-            typeface = Typeface.DEFAULT_BOLD
-
-            setTextColor(
-                Color.parseColor("#4B5F5F")
-            )
-
-            setPadding(40, 15, 40, 15)
-
-            background = GradientDrawable().apply {
-
-                setColor(Color.parseColor("#BEE8F8"))
-
-                cornerRadius = 20f
-            }
-
-            setOnClickListener {
-
-                dialogo.dismiss()
-
-                voltarParaCincoOpcoes()
-            }
-        }
-
-        caixa.addView(botao)
-
-        dialogo.setContentView(caixa)
-
-        dialogo.window?.setBackgroundDrawableResource(
-            android.R.color.transparent
+    // =========================================
+    // ÁUDIOS
+    // =========================================
+
+    private fun tocarClique() {
+
+        tocarAudio(
+            "clique_pop",
+            0.18f
         )
-
-        dialogo.show()
     }
-
-    // =====================================================
-    // REPRODUZIR ÁUDIO DOS ALIMENTOS
-    // =====================================================
 
     private fun tocarAudio(
-        recursoAudio: Int
+        nome: String,
+        volume: Float
     ) {
+
+        val id = resources.getIdentifier(
+            nome,
+            "raw",
+            packageName
+        )
+
+        if (id == 0) return
 
         pararAudio()
 
         try {
 
-            val player = MediaPlayer.create(
+            audioAtual = MediaPlayer.create(
                 this,
-                recursoAudio
-            ) ?: return
+                id
+            )?.apply {
 
-            audioAtual = player
+                setVolume(
+                    volume,
+                    volume
+                )
 
-            player.setOnCompletionListener {
+                setOnCompletionListener { player ->
 
-                if (audioAtual === player) {
+                    if (audioAtual === player) {
 
-                    audioAtual = null
+                        audioAtual = null
 
-                    player.release()
-                }
-            }
-
-            player.setOnErrorListener { _, _, _ ->
-
-                if (audioAtual === player) {
-
-                    pararAudio()
+                        player.release()
+                    }
                 }
 
-                true
+                start()
             }
 
-            player.start()
-
-        } catch (erro: Exception) {
+        } catch (_: Exception) {
 
             pararAudio()
-
-            Log.e(
-                "DescubraOCheiro",
-                "Erro ao reproduzir áudio",
-                erro
-            )
         }
     }
-
-    // =====================================================
-    // PARAR ÁUDIO
-    // =====================================================
 
     private fun pararAudio() {
 
@@ -1156,127 +2498,88 @@ class DescubraOCheiroActivity : Activity() {
             try {
 
                 it.setOnCompletionListener(null)
-                it.setOnErrorListener(null)
 
-                if (it.isPlaying) {
-
-                    it.stop()
-                }
+                it.release()
 
             } catch (_: Exception) {
             }
-
-            it.release()
         }
     }
 
-    // =====================================================
-    // ADICIONAR IMAGEM
-    // =====================================================
+    // =========================================
+    // TELA CHEIA
+    // =========================================
 
-    private fun adicionarImagem(
-        nome: String,
-        x: Int,
-        y: Int,
-        largura: Int,
-        altura: Int,
-        sx: Float,
-        sy: Float
-    ): ImageView {
+    @Suppress("DEPRECATION")
+    private fun aplicarModoImersivo() {
 
-        val imagem = ImageView(this)
-
-        val idImagem = resources.getIdentifier(
-            nome,
-            "drawable",
-            packageName
-        )
-
-        if (idImagem != 0) {
-
-            imagem.setImageResource(idImagem)
-
-        } else {
-
-            Log.e(
-                "DescubraOCheiro",
-                "Imagem não encontrada: $nome"
-            )
-        }
-
-        imagem.scaleType =
-            ImageView.ScaleType.FIT_CENTER
-
-        imagem.isClickable = false
-        imagem.isFocusable = false
-
-        adicionarView(
-            imagem,
-            x, y, largura, altura,
-            sx, sy
-        )
-
-        return imagem
+        window.decorView.systemUiVisibility =
+            View.SYSTEM_UI_FLAG_FULLSCREEN or
+                    View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
+                    View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY or
+                    View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
+                    View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or
+                    View.SYSTEM_UI_FLAG_LAYOUT_STABLE
     }
 
-    // =====================================================
-    // ADICIONAR VIEW
-    // =====================================================
-
-    private fun adicionarView(
-        view: View,
-        x: Int,
-        y: Int,
-        largura: Int,
-        altura: Int,
-        sx: Float,
-        sy: Float
+    override fun onWindowFocusChanged(
+        hasFocus: Boolean
     ) {
 
-        val parametros = FrameLayout.LayoutParams(
-            (largura * sx).toInt().coerceAtLeast(1),
-            (altura * sy).toInt().coerceAtLeast(1)
-        )
+        super.onWindowFocusChanged(hasFocus)
 
-        parametros.leftMargin = (x * sx).toInt()
+        if (hasFocus) {
 
-        parametros.topMargin = (y * sy).toInt()
-
-        tela.addView(
-            view,
-            parametros
-        )
+            aplicarModoImersivo()
+        }
     }
 
-    // =====================================================
-    // CICLO DE VIDA
-    // =====================================================
+    override fun onPause() {
 
-    override fun onStop() {
+        super.onPause()
 
-        handler.removeCallbacksAndMessages(null)
+        MusicaSensorial.pausar(this)
 
         pararAudio()
 
-        animacoes.forEach { (view, animacao) ->
+        animacoes.forEach {
 
-            animacao.cancel()
-
-            view.scaleX = 1f
-            view.scaleY = 1f
+            if (it.isStarted) it.pause()
         }
 
-        animacoes.clear()
+        animacoesPopup.forEach {
 
-        processandoClique = false
-        navegando = false
+            if (it.isStarted) it.pause()
+        }
+    }
 
-        super.onStop()
+    override fun onResume() {
+
+        super.onResume()
+
+        MusicaSensorial.iniciar(this)
+
+        if (popupAtual == null) {
+
+            animacoes.forEach {
+
+                if (it.isPaused) it.resume()
+            }
+
+        } else {
+
+            animacoesPopup.forEach {
+
+                if (it.isPaused) it.resume()
+            }
+        }
     }
 
     override fun onDestroy() {
 
-        handler.removeCallbacksAndMessages(null)
+        cancelarAnimacoes(animacoes)
+
+        cancelarAnimacoes(animacoesPopup)
 
         pararAudio()
 

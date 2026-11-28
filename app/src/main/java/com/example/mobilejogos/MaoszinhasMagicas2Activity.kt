@@ -45,7 +45,7 @@ import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.random.Random
 
-class MaoszinhasMagicas2Activity : Activity() {
+class    MaoszinhasMagicas2Activity : Activity() {
 
     private lateinit var root: FrameLayout
 

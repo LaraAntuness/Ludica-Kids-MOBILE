@@ -19,13 +19,13 @@ class TelaResponsavelActivity : Activity() {
 
     // CORES
 
-    private val azulMenu = Color.parseColor("#6498D5")
-    private val azulTitulo = Color.parseColor("#4679B8")
+    private val azulMenu = Color.parseColor("#438FD1")
+    private val azulTitulo = Color.parseColor("#18518E")
     private val azulClaro = Color.parseColor("#E5F1FC")
 
-    private val fundo = Color.parseColor("#F6F8FC")
+    private val fundo = Color.parseColor("#EAF5FE")
     private val branco = Color.WHITE
-    private val textoEscuro = Color.parseColor("#354458")
+    private val textoEscuro = Color.parseColor("#183D68")
     private val textoCinza = Color.parseColor("#697586")
 
     private val rosa = Color.parseColor("#FBE1E7")
@@ -39,9 +39,21 @@ class TelaResponsavelActivity : Activity() {
         mutableMapOf<String, LinearLayout>()
 
     private var paginaAtual = "Perfil"
+    private var abaPerfil = 0
+    private var criancaAtiva = 0
+    private var perfilEmEdicao = false
+    private var avisoAtual: View? = null
+    private val selosRecortados = mutableMapOf<Int, android.graphics.Bitmap>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (android.os.Build.VERSION.SDK_INT >= 33) {
+            onBackInvokedDispatcher.registerOnBackInvokedCallback(
+                android.window.OnBackInvokedDispatcher.PRIORITY_DEFAULT
+            ) {
+                voltarInicio()
+            }
+        }
 
         requestedOrientation =
             ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
@@ -105,6 +117,7 @@ class TelaResponsavelActivity : Activity() {
             text = conteudo
             textSize = tamanho
             setTextColor(cor)
+            includeFontPadding = true
 
             typeface = Typeface.create(
                 "sans-serif",
@@ -195,11 +208,14 @@ class TelaResponsavelActivity : Activity() {
 
             val figura = ImageView(this).apply {
 
-                setImageResource(idImagem)
+                if (circular || nome.startsWith("selo")) {
+                    val bitmap = recortarSelo(idImagem)
+                    if (bitmap != null) setImageBitmap(bitmap) else setImageResource(idImagem)
+                } else setImageResource(idImagem)
 
-                scaleType = ImageView.ScaleType.FIT_CENTER
+                scaleType = if (circular) ImageView.ScaleType.CENTER_CROP else ImageView.ScaleType.FIT_CENTER
 
-                val margem = if (circular) 7 else 3
+                val margem = if (circular) 0 else 3
 
                 setPadding(
                     dp(margem),
@@ -237,162 +253,91 @@ class TelaResponsavelActivity : Activity() {
     // ESTRUTURA PRINCIPAL
     // ==========================================
 
+    private fun recortarSelo(id: Int): android.graphics.Bitmap? {
+        selosRecortados[id]?.let { return it }
+        val b = android.graphics.BitmapFactory.decodeResource(resources, id,
+            android.graphics.BitmapFactory.Options().apply { inScaled = false; inSampleSize = 2 }) ?: return null
+        var esquerda = b.width; var direita = -1; var topo = b.height; var base = -1
+        val pixels = IntArray(b.width)
+        for (y in 0 until b.height) {
+            b.getPixels(pixels, 0, b.width, 0, y, b.width, 1)
+            for (x in pixels.indices) if ((pixels[x] ushr 24) > 24) {
+                esquerda = minOf(esquerda, x); direita = maxOf(direita, x)
+                topo = minOf(topo, y); base = maxOf(base, y)
+            }
+        }
+        val recorte = if (direita >= esquerda && base >= topo)
+            android.graphics.Bitmap.createBitmap(b, esquerda, topo, direita-esquerda+1, base-topo+1)
+        else b
+        if (recorte !== b) b.recycle()
+        selosRecortados[id] = recorte
+        return recorte
+    }
+
+    private fun voltarInicio() {
+        finish()
+    }
+
     private fun montarEstrutura() {
-
-        val raiz = linha().apply {
-            setBackgroundColor(fundo)
-        }
-
-        raiz.addView(
-            criarMenu(),
-            LinearLayout.LayoutParams(
-                dp(176),
-                -1
-            )
-        )
-
+        val raiz = linha().apply { setBackgroundColor(fundo) }
+        raiz.addView(criarMenu(), LinearLayout.LayoutParams(dp(155), -1))
         areaConteudo = FrameLayout(this).apply {
-            setBackgroundColor(fundo)
+            addView(CenarioPerfil(), FrameLayout.LayoutParams(-1, -1))
         }
-
-        raiz.addView(
-            areaConteudo,
-            LinearLayout.LayoutParams(
-                0,
-                -1,
-                1f
-            )
-        )
-
+        raiz.addView(areaConteudo, LinearLayout.LayoutParams(0, -1, 1f))
         setContentView(raiz)
     }
 
-    // ==========================================
-    // MENU LATERAL
-    // ==========================================
-
     private fun criarMenu(): LinearLayout {
-
         val lateral = coluna().apply {
-
-            background = degradê(
-                Color.parseColor("#78AFE7"),
-                Color.parseColor("#558AC9"),
-                0
-            )
-
-            setPadding(
-                dp(12),
-                dp(12),
-                dp(12),
-                dp(12)
-            )
+            background = degradê(Color.parseColor("#A4D9FC"), Color.parseColor("#6CB9EE"), 0)
+            setPadding(dp(9), dp(6), dp(9), dp(8))
         }
-
-        val voltar = texto(
-            "‹    Voltar",
-            14f,
-            branco,
-            true
-        ).apply {
-
-            gravity = Gravity.CENTER_VERTICAL
-
-            setPadding(dp(14), 0, 0, 0)
-
-            background = arredondado(
-                Color.parseColor("#33FFFFFF"),
-                12
-            )
-
-            setOnClickListener {
-                finish()
-            }
+        val logo = ImageView(this).apply {
+            val id = resources.getIdentifier("logoinferior", "drawable", packageName)
+            if (id != 0) setImageResource(id)
+            scaleType = ImageView.ScaleType.FIT_CENTER
+            contentDescription = "LúdicaKids"
         }
-
-        lateral.addView(
-            voltar,
-            LinearLayout.LayoutParams(-1, dp(33))
-        )
-
-        lateral.addView(espaco(12))
-
-        val scrollMenu = ScrollView(this).apply {
-            isVerticalScrollBarEnabled = false
-        }
-
+        lateral.addView(logo, LinearLayout.LayoutParams(-1, dp(49)))
+        val scrollMenu = ScrollView(this).apply { isVerticalScrollBarEnabled = false }
         menuContainer = coluna()
-
-        menuContainer.addView(
-            texto(
-                "ÁREA DO RESPONSÁVEL",
-                9f,
-                Color.parseColor("#E4F0FF"),
-                true
-            )
-        )
-
-        menuContainer.addView(espaco(10))
-
-        itemMenu("Perfil", "♙") {
-            abrirPerfil()
-        }
-
-        itemMenu("Jogos", "▣") {
-            abrirJogos()
-        }
-
-        itemMenu("Sobre nós", "ⓘ") {
-            abrirSobre()
-        }
-
-        itemMenu("Configurações", "⚙") {
-            abrirConfiguracoes()
-        }
-
-        itemMenu("FAQ", "?") {
-            abrirFAQ()
-        }
-
+        itemMenu("Perfil", "") { abrirPerfil() }
+        itemMenu("Atividades", "") { abrirAtividades() }
+        itemMenu("Jogos", "") { abrirJogos() }
+        itemMenu("Sobre nós", "") { abrirSobre() }
+        itemMenu("Configurações", "") { abrirConfiguracoes() }
+        itemMenu("FAQ", "") { abrirFAQ() }
         scrollMenu.addView(menuContainer)
-
-        lateral.addView(
-            scrollMenu,
-            LinearLayout.LayoutParams(
-                -1,
-                0,
-                1f
-            )
-        )
-
-        val logoId = resources.getIdentifier(
-            "logoinferior",
-            "drawable",
-            packageName
-        )
-
-        if (logoId != 0) {
-
-            val logo = ImageView(this).apply {
-                setImageResource(logoId)
-                scaleType = ImageView.ScaleType.FIT_CENTER
-            }
-
-            lateral.addView(
-                logo,
-                LinearLayout.LayoutParams(-1, dp(42))
-            )
-
-        } else {
-
-            lateral.addView(
-                texto("LúdicaKids", 19f, branco, true).apply {
-                    gravity = Gravity.CENTER
-                }
-            )
+        lateral.addView(scrollMenu, LinearLayout.LayoutParams(-1, 0, 1f))
+        val voltar = texto("‹  Voltar", 13f, azulTitulo, true).apply {
+            gravity = Gravity.CENTER
+            background = arredondado(Color.parseColor("#CBE8FC"), 30)
+            setOnClickListener { voltarInicio() }
         }
-
+        lateral.addView(voltar, LinearLayout.LayoutParams(-1, dp(34)))
         return lateral
+    }
+
+    // Cenário leve, desenhado sem carregar imagens grandes.
+    private inner class CenarioPerfil : View(this@TelaResponsavelActivity) {
+        private val p = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
+        override fun onDraw(canvas: android.graphics.Canvas) {
+            super.onDraw(canvas)
+            val w = width.toFloat(); val h = height.toFloat()
+            p.color = Color.parseColor("#D9EEFC")
+            canvas.drawRect(0f,0f,w,h,p)
+            p.color = Color.parseColor("#F3F9FF")
+            canvas.drawOval(-w*.15f,-h*.1f,w*.62f,h*.48f,p)
+            canvas.drawOval(w*.25f,-h*.25f,w*.85f,h*.39f,p)
+            canvas.drawOval(w*.65f,-h*.05f,w*1.2f,h*.46f,p)
+            p.color = Color.parseColor("#D4EBAF")
+            canvas.drawOval(-w*.13f,h*.88f,w*.23f,h*1.16f,p)
+            canvas.drawOval(w*.83f,h*.86f,w*1.15f,h*1.18f,p)
+            p.color = Color.parseColor("#A7D58B")
+            canvas.drawCircle(w*.02f,h*.96f,h*.065f,p)
+            canvas.drawCircle(w*.97f,h*.96f,h*.075f,p)
+        }
     }
 
     private fun itemMenu(
@@ -412,36 +357,16 @@ class TelaResponsavelActivity : Activity() {
         }
 
         val icone = IconeMenu(nome)
-        botao.addView(icone, LinearLayout.LayoutParams(dp(25), dp(25)))
-        val rotulo = texto(nome, 13f, branco, true)
+        botao.addView(icone, LinearLayout.LayoutParams(dp(22), dp(22)))
+        val rotulo = texto(nome, 12.5f, azulTitulo, true)
         botao.addView(rotulo, LinearLayout.LayoutParams(-2, -2).apply { marginStart = dp(8) })
 
-        botao.setOnClickListener {
-
-            if (paginaAtual != nome) {
-
-                botao.animate()
-                    .scaleX(0.96f)
-                    .scaleY(0.96f)
-                    .setDuration(65)
-                    .withEndAction {
-
-                        botao.animate()
-                            .scaleX(1f)
-                            .scaleY(1f)
-                            .setDuration(90)
-                            .start()
-
-                        acao()
-                    }
-                    .start()
-            }
-        }
+        botao.setOnClickListener { if (paginaAtual != nome || (nome == "Perfil" && perfilEmEdicao)) acao() }
 
         menuContainer.addView(
             botao,
-            LinearLayout.LayoutParams(-1, dp(37)).apply {
-                bottomMargin = dp(4)
+            LinearLayout.LayoutParams(-1, dp(32)).apply {
+                bottomMargin = dp(2)
             }
         )
 
@@ -456,8 +381,8 @@ class TelaResponsavelActivity : Activity() {
 
             val selecionado = titulo == nome
             botao.background = arredondado(if (selecionado) branco else Color.TRANSPARENT, 12)
-            (botao.getChildAt(0) as IconeMenu).apply { cor = if (selecionado) azulTitulo else branco; invalidate() }
-            (botao.getChildAt(1) as TextView).setTextColor(if (selecionado) azulTitulo else branco)
+            (botao.getChildAt(0) as IconeMenu).apply { cor = azulTitulo; invalidate() }
+            (botao.getChildAt(1) as TextView).setTextColor(azulTitulo)
 
         }
     }
@@ -468,7 +393,7 @@ class TelaResponsavelActivity : Activity() {
 
     private fun criarPagina(nome: String): LinearLayout {
 
-        areaConteudo.removeAllViews()
+        while (areaConteudo.childCount > 1) areaConteudo.removeViewAt(1)
 
         selecionarMenu(nome)
 
@@ -484,10 +409,10 @@ class TelaResponsavelActivity : Activity() {
         val pagina = coluna().apply {
 
             setPadding(
-                dp(24),
-                dp(20),
-                dp(24),
-                dp(30)
+                dp(16),
+                dp(16),
+                dp(16),
+                dp(20)
             )
         }
 
@@ -504,7 +429,7 @@ class TelaResponsavelActivity : Activity() {
         // Transição suave entre as abas
 
         scroll.alpha = 0f
-        scroll.translationX = dp(12).toFloat()
+        scroll.translationX = dp(6).toFloat()
 
         scroll.animate()
             .alpha(1f)
@@ -560,9 +485,9 @@ class TelaResponsavelActivity : Activity() {
 
         return coluna().apply {
 
-            background = arredondado(cor, 20)
+            background = arredondado(cor, 20, Color.parseColor("#D9E5F1"))
 
-            elevation = dp(3).toFloat()
+            elevation = dp(5).toFloat()
 
             setPadding(
                 dp(17),
@@ -588,7 +513,9 @@ class TelaResponsavelActivity : Activity() {
         descricao: String,
         nomeImagem: String,
         cor: Int = branco,
-        imagemEsquerda: Boolean = true
+        imagemEsquerda: Boolean = true,
+        alturaImagem: Int = 135,
+        proporcaoImagem: Float = 0.43f
     ): LinearLayout {
 
         val painel = linha().apply {
@@ -606,7 +533,7 @@ class TelaResponsavelActivity : Activity() {
 
         val ilustracao = imagem(
             nomeImagem,
-            135,
+            alturaImagem,
             Color.TRANSPARENT
         )
 
@@ -632,14 +559,14 @@ class TelaResponsavelActivity : Activity() {
 
         val paramsImagem = LinearLayout.LayoutParams(
             0,
-            dp(135),
-            0.43f
+            dp(alturaImagem),
+            proporcaoImagem
         )
 
         val paramsTexto = LinearLayout.LayoutParams(
             0,
             -2,
-            0.57f
+            1f - proporcaoImagem
         )
 
         if (imagemEsquerda) {
@@ -667,48 +594,314 @@ class TelaResponsavelActivity : Activity() {
         setOnClickListener { executar() }
     }
 
+    private fun painelPerfil(): LinearLayout = coluna().apply {
+        background = arredondado(branco, 22, Color.parseColor("#D4E4F4"))
+        elevation = dp(3).toFloat()
+        setPadding(dp(12), dp(10), dp(12), dp(12))
+    }
+
+    // Mantém o cadastro compacto em celulares e tablets.
+    private fun larguraPerfil(maximo: Int): Int {
+        val largura = if (areaConteudo.width > 0)
+            areaConteudo.width - dp(32)
+        else
+            dp(resources.configuration.screenWidthDp) - dp(155 + 32)
+        return minOf(dp(maximo), largura.coerceAtLeast(dp(100)))
+    }
+
+    private fun adicionarPainelCadastro(pagina: LinearLayout): LinearLayout {
+        val painel = painelPerfil().apply {
+            setPadding(dp(12), dp(9), dp(12), dp(10))
+            elevation = dp(5).toFloat()
+        }
+        pagina.addView(painel, LinearLayout.LayoutParams(larguraPerfil(470), -2).apply {
+            gravity = Gravity.CENTER_HORIZONTAL
+            bottomMargin = dp(8)
+        })
+        return painel
+    }
+
+    private fun topoPerfil(pagina: LinearLayout) {
+        // Foto maior e título à esquerda, na mesma linha.
+        val topo = linha().apply {
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(4), dp(2), dp(4), dp(2))
+        }
+        topo.addView(
+            imagem("selobubbasorrindo", 78, Color.parseColor("#ABD9FA"), true),
+            LinearLayout.LayoutParams(dp(78), dp(78))
+        )
+        val titulos = coluna().apply {
+            setPadding(dp(12), 0, 0, 0)
+            addView(texto("Perfil", 24f, azulTitulo, true))
+            addView(texto("Minha família", 12f, textoCinza))
+        }
+        topo.addView(titulos, LinearLayout.LayoutParams(0, -2, 1f))
+        pagina.addView(topo, LinearLayout.LayoutParams(-1, -2))
+        pagina.addView(espaco(5))
+
+        // Controle único, compacto e centralizado, como Entrar/Criar conta.
+        val abas = linha().apply {
+            background = arredondado(Color.parseColor("#DCEEFF"), 24,
+                Color.parseColor("#B9D8F2"))
+            setPadding(dp(3), dp(3), dp(3), dp(3))
+        }
+        listOf("Responsável", "Crianças").forEachIndexed { i, nome ->
+            val ativa = i == abaPerfil
+            val corAba = if (ativa) branco else azulTitulo
+            val tab = linha().apply {
+                gravity = Gravity.CENTER
+                background = arredondado(if (ativa) azulMenu else Color.TRANSPARENT, 20)
+                contentDescription = nome
+                isSelected = ativa
+                addView(IconeMenu(if (i == 0) "Perfil" else "Crianças").apply {
+                    this.cor = corAba
+                }, LinearLayout.LayoutParams(dp(17), dp(17)))
+                addView(texto(nome, 12f, corAba, true).apply {
+                    includeFontPadding = false
+                    gravity = Gravity.CENTER
+                }, LinearLayout.LayoutParams(-2, -2).apply { marginStart = dp(5) })
+                setOnClickListener {
+                    if (abaPerfil != i || perfilEmEdicao) {
+                        abaPerfil = i
+                        abrirPerfil()
+                    }
+                }
+            }
+            abas.addView(tab, LinearLayout.LayoutParams(0, dp(34), 1f))
+        }
+        pagina.addView(abas, LinearLayout.LayoutParams(larguraPerfil(280), -2).apply {
+            gravity = Gravity.CENTER_HORIZONTAL
+        })
+        pagina.addView(espaco(9))
+    }
+
     private fun abrirPerfil() {
+        perfilEmEdicao = false
         val pagina = criarPagina("Perfil")
-        cabecalho(pagina, "Minha família", "Gerencie sua conta e acompanhe as descobertas das crianças.")
+        topoPerfil(pagina)
         val sessao = LudicaSessao.obter(this)
+        val painel = adicionarPainelCadastro(pagina)
         if (sessao == null) {
-            adicionarBloco(pagina, card("Entre na sua conta", "Faça login para visualizar seus dados."))
+            painel.addView(texto("Entre na sua conta para visualizar os dados.", 14f))
             return
         }
         val espera = ProgressBar(this)
-        pagina.addView(espera, LinearLayout.LayoutParams(dp(36), dp(36)))
+        painel.addView(espera, LinearLayout.LayoutParams(dp(30), dp(30)).apply { gravity = Gravity.CENTER_HORIZONTAL })
         ApiService.consultarResponsavel(sessao.first) { resultado ->
             if (isFinishing || isDestroyed || !pagina.isAttachedToWindow || LudicaSessao.obter(this)?.second != sessao.second) return@consultarResponsavel
-            pagina.removeView(espera)
+            painel.removeView(espera)
             resultado.onSuccess { r ->
-                if (r.id != sessao.second) return@onSuccess
-                adicionarBloco(pagina, card("Olá, ${r.nomeCompleto.substringBefore(' ')}!", "Que bom ter você aqui. Este é o seu espaço para cuidar da experiência da família.", azulClaro))
-                tituloSecao(pagina, "Meus dados")
-                val dados = card("Informações de cadastro", "Nome: ${r.nomeCompleto}\nE-mail: ${r.email}\nCelular: ${r.celular}\nCPF: ${r.cpf}\nRG: ${r.rg}")
-                dados.addView(espaco(12)); dados.addView(acao("Editar meus dados") { editarResponsavel(r, sessao) })
-                adicionarBloco(pagina, dados)
-                tituloSecao(pagina, "Minhas crianças")
-                if (r.criancas.isEmpty()) adicionarBloco(pagina, card("Nenhum perfil", "Ainda não há crianças cadastradas."))
-                r.criancas.forEach { c ->
-                    val p = card(c.nomeUsuario.ifBlank { c.nomeCompleto }, "Nome: ${c.nomeCompleto}\nCPF: ${c.cpf}\nNascimento: ${dataBrasil(c.dataNascimento)}")
-                    p.addView(espaco(10)); p.addView(acao("Editar perfil infantil") { editarCrianca(c, sessao) })
-                    p.addView(espaco(8)); p.addView(acao("Ver atividades") { abrirAtividades(c, sessao.second) })
-                    adicionarBloco(pagina, p)
+                if (r.id != sessao.second) {
+                    painel.addView(texto("Não foi possível confirmar a conta. Entre novamente.")); return@onSuccess
                 }
-                tituloSecao(pagina, "Atividade das crianças")
-                pagina.addView(texto("Acompanhe o progresso registrado neste dispositivo.", 12f, textoCinza))
-                pagina.addView(espaco(10))
-                r.criancas.forEach { c ->
-                    val (j,n,t) = HistoricoAtividades.resumo(this, sessao.second, c.id)
-                    val p = card(c.nomeUsuario.ifBlank { c.nomeCompleto }, "$j atividades diferentes • $n etapas concluídas • $t min em jogo", verde)
-                    p.setOnClickListener { abrirAtividades(c, sessao.second) }
-                    adicionarBloco(pagina, p)
+                when (abaPerfil) {
+                    0 -> mostrarResponsavel(painel, r, sessao)
+                    1 -> mostrarCriancas(painel, r.criancas, sessao)
+                    else -> mostrarCriancas(painel, r.criancas, sessao)
                 }
             }.onFailure {
-                adicionarBloco(pagina, card("Não foi possível carregar", "Confira a conexão ou entre novamente na conta."))
-                pagina.addView(acao("Tentar novamente") { abrirPerfil() })
+                painel.addView(texto("Não foi possível carregar os dados.", 14f, textoEscuro, true))
+                painel.addView(acao("Tentar novamente") { abrirPerfil() })
             }
         }
+    }
+
+    private fun dadoPerfil(p: LinearLayout, rotulo: String, valor: String) {
+        val caixa = coluna().apply {
+            background = arredondado(Color.parseColor("#EAF3FC"), 10,
+                Color.parseColor("#D4E4F4"))
+            setPadding(dp(10), dp(5), dp(10), dp(5))
+            addView(texto(rotulo, 10.5f, textoCinza, true).apply {
+                includeFontPadding = false
+                setLineSpacing(0f, 1f)
+            })
+            addView(espaco(3))
+            addView(texto(valor.ifBlank { "Não informado" }, 12.5f, textoEscuro, true).apply {
+                includeFontPadding = false
+                setLineSpacing(0f, 1f)
+                setTextIsSelectable(true)
+            })
+        }
+        p.addView(caixa, LinearLayout.LayoutParams(-1, -2).apply {
+            bottomMargin = dp(6)
+        })
+    }
+
+    // Duas colunas para reduzir o comprimento e a altura das barras.
+    private fun parDados(p: LinearLayout, primeiro: Pair<String, String>, segundo: Pair<String, String>) {
+        val fila = linha().apply { gravity = Gravity.TOP }
+        val esquerda = coluna()
+        val direita = coluna()
+        dadoPerfil(esquerda, primeiro.first, primeiro.second)
+        dadoPerfil(direita, segundo.first, segundo.second)
+        fila.addView(esquerda, LinearLayout.LayoutParams(0, -2, 1f).apply {
+            marginEnd = dp(6)
+        })
+        fila.addView(direita, LinearLayout.LayoutParams(0, -2, 1f))
+        p.addView(fila, LinearLayout.LayoutParams(-1, -2))
+    }
+
+    private fun botaoCadastro(p: LinearLayout, botao: TextView, largura: Int = 180) {
+        botao.background = arredondado(azulMenu, 22)
+        botao.setPadding(dp(12), dp(6), dp(12), dp(6))
+        botao.minimumHeight = dp(40)
+        p.addView(botao, LinearLayout.LayoutParams(minOf(dp(largura), (larguraPerfil(470) - dp(24)).coerceAtLeast(dp(80))), -2).apply {
+            gravity = Gravity.CENTER_HORIZONTAL
+        })
+    }
+
+    private fun mostrarResponsavel(p: LinearLayout, r: ApiService.Responsavel, sessao: Pair<String,String>) {
+        p.addView(texto("Dados do responsável", 16f, azulTitulo, true).apply {
+            includeFontPadding = false
+        })
+        p.addView(espaco(8))
+        dadoPerfil(p, "Nome completo", r.nomeCompleto)
+        parDados(p, "E-mail" to r.email, "Celular" to r.celular)
+        parDados(p, "CPF" to r.cpf, "RG" to r.rg)
+        p.addView(espaco(3))
+        botaoCadastro(p, acao("Editar dados") { editarResponsavel(r, sessao) })
+    }
+
+    private fun mostrarCriancas(p: LinearLayout, criancas: List<ApiService.Crianca>, sessao: Pair<String,String>) {
+        p.addView(texto("Minhas crianças", 18f, azulTitulo, true)); p.addView(espaco(8))
+        if (criancas.isEmpty()) p.addView(texto("Nenhuma criança cadastrada."))
+        criancas.forEach { c ->
+            val bloco = linha().apply {
+                background = arredondado(Color.parseColor("#EDF5FD"), 17)
+                setPadding(dp(8),dp(8),dp(8),dp(8))
+            }
+            bloco.addView(imagem("selobubbasorrindo",56,Color.parseColor("#BFE2FA"),true), LinearLayout.LayoutParams(dp(56),dp(56)))
+            val info = coluna().apply {
+                setPadding(dp(10),0,dp(6),0)
+                addView(texto(c.nomeUsuario.ifBlank { c.nomeCompleto }, 15f, azulTitulo,true))
+                addView(texto(c.nomeCompleto,12f))
+                addView(texto("Nascimento: ${dataBrasil(c.dataNascimento)}",11f,textoCinza))
+            }
+            bloco.addView(info, LinearLayout.LayoutParams(0,-2,1f))
+            bloco.addView(acao("Editar") { editarCrianca(c,sessao) }, LinearLayout.LayoutParams(-2,-2))
+            adicionarBloco(p,bloco,8)
+        }
+        botaoCadastro(p, acao("+  Adicionar criança") {
+            editarCrianca(ApiService.Crianca(nomeCompleto = "", cpf = "", nomeUsuario = "", dataNascimento = ""), sessao)
+        }, 210)
+    }
+
+    private fun abrirAtividades() {
+        val pagina = criarPagina("Atividades")
+        cabecalho(pagina, "Atividades das crianças", "Acompanhe as descobertas e conquistas de cada criança.")
+        val sessao = LudicaSessao.obter(this)
+        val painel = painelPerfil()
+        adicionarBloco(pagina, painel)
+        if (sessao == null) { painel.addView(texto("Entre na sua conta para consultar as atividades.")); return }
+        val espera = ProgressBar(this)
+        painel.addView(espera, LinearLayout.LayoutParams(dp(30),dp(30)))
+        ApiService.consultarResponsavel(sessao.first) { resultado ->
+            if (isFinishing || isDestroyed || !pagina.isAttachedToWindow || LudicaSessao.obter(this)?.second != sessao.second) return@consultarResponsavel
+            painel.removeView(espera)
+            resultado.onSuccess { r ->
+                if (r.id == sessao.second) mostrarHistorico(painel,r.criancas,sessao.second)
+                else painel.addView(texto("Não foi possível confirmar a conta."))
+            }.onFailure {
+                painel.addView(texto("Não foi possível carregar os perfis."))
+                painel.addView(acao("Tentar novamente") { abrirAtividades() })
+            }
+        }
+    }
+
+    private fun mostrarHistorico(p: LinearLayout, criancas: List<ApiService.Crianca>, id: String) {
+        if (criancas.isEmpty()) { p.addView(texto("Cadastre uma criança para acompanhar as atividades.")); return }
+        criancaAtiva = criancaAtiva.coerceIn(0,criancas.lastIndex)
+        val seletor = Spinner(this).apply {
+            val nomes = criancas.map { it.nomeUsuario.ifBlank { it.nomeCompleto }.ifBlank { "Criança" } }
+            adapter = object : ArrayAdapter<String>(this@TelaResponsavelActivity, android.R.layout.simple_spinner_item, nomes) {
+                override fun getView(position: Int, convertView: View?, parent: android.view.ViewGroup): View =
+                    texto(nomes[position] + "  ▾", 14f, azulTitulo, true).apply { gravity = Gravity.CENTER }
+                override fun getDropDownView(position: Int, convertView: View?, parent: android.view.ViewGroup): View =
+                    texto(nomes[position], 14f, azulTitulo, true).apply {
+                        setBackgroundColor(branco); setPadding(dp(14),dp(10),dp(14),dp(10))
+                    }
+            }
+            background = arredondado(Color.parseColor("#E3F1FF"),30,azulMenu)
+            setPadding(dp(14),0,dp(10),0)
+            setSelection(criancaAtiva)
+            contentDescription = "Selecionar criança"
+        }
+        val navegacao = linha()
+        fun seta(t: String, delta: Int): TextView = texto(t,25f,azulMenu,true).apply {
+            gravity = Gravity.CENTER
+            contentDescription = if(delta < 0) "Criança anterior" else "Próxima criança"
+            setOnClickListener { seletor.setSelection((seletor.selectedItemPosition+delta+criancas.size)%criancas.size) }
+        }
+        navegacao.addView(seta("‹",-1),LinearLayout.LayoutParams(dp(42),dp(36)))
+        navegacao.addView(seletor,LinearLayout.LayoutParams(0,dp(36),1f))
+        navegacao.addView(seta("›",1),LinearLayout.LayoutParams(dp(42),dp(36)))
+        p.addView(navegacao); p.addView(espaco(10))
+        val detalhes = coluna(); p.addView(detalhes)
+        fun atualizar(i: Int) {
+            criancaAtiva = i
+            detalhes.removeAllViews()
+            preencherHistorico(detalhes,criancas[i],id)
+        }
+        atualizar(criancaAtiva)
+        seletor.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, itemId: Long) { atualizar(position) }
+            override fun onNothingSelected(parent: AdapterView<*>?) {}
+        }
+    }
+
+    private fun preencherHistorico(p: LinearLayout, c: ApiService.Crianca, id: String) {
+        val (j,n,t) = HistoricoAtividades.resumo(this,id,c.id)
+        val indicadores = linha().apply { gravity = Gravity.TOP }
+        val valores = listOf(Triple(j.toString(),"Jogos com registro",rosa), Triple(n.toString(),"Níveis concluídos",amarelo), Triple("$t min","Tempo de jogo",verde))
+        valores.forEachIndexed { i, (v,l,cor) ->
+            val destaque = Color.parseColor(listOf("#CB456C", "#C38A13", "#33864E")[i])
+            val bloco = linha().apply {
+                gravity = Gravity.CENTER_VERTICAL
+                background = arredondado(cor,18,destaque)
+                elevation = dp(4).toFloat()
+                setPadding(dp(10),dp(10),dp(8),dp(10))
+                addView(IconeMenu(listOf("Jogos","Estrela","Relógio")[i]).apply { this.cor = destaque },LinearLayout.LayoutParams(dp(30),dp(30)))
+                val info = coluna().apply {
+                    gravity = Gravity.CENTER_HORIZONTAL
+                    addView(texto(l,11f,textoEscuro,true).apply { gravity = Gravity.CENTER; layoutParams = LinearLayout.LayoutParams(-1,-2) })
+                    addView(texto(v,23f,destaque,true).apply { gravity = Gravity.CENTER; layoutParams = LinearLayout.LayoutParams(-1,-2) })
+                }
+                addView(info,LinearLayout.LayoutParams(0,-2,1f).apply { marginStart = dp(6) })
+            }
+            indicadores.addView(bloco,LinearLayout.LayoutParams(0,dp(86),1f).apply { marginStart = dp(3); marginEnd = dp(3) })
+        }
+        p.addView(indicadores); p.addView(espaco(10))
+        val historico = coluna().apply {
+            background = arredondado(Color.parseColor("#E3F0FC"),18,Color.parseColor("#C5DEF5"))
+            setPadding(dp(9),dp(9),dp(9),dp(9))
+        }
+        historico.addView(texto("Histórico de atividades recentes",15f,azulTitulo,true)); historico.addView(espaco(7))
+        val registros = HistoricoAtividades.listar(this,id,c.id)
+        if(registros.isEmpty()) historico.addView(texto("Ainda não há atividades registradas neste dispositivo.",12f,textoCinza))
+        val formato = java.text.SimpleDateFormat("dd/MM/yyyy • HH:mm",java.util.Locale("pt","BR"))
+        registros.take(30).forEach { r ->
+            val linhaRegistro = linha().apply {
+                background = arredondado(branco,12)
+                setPadding(dp(8),dp(7),dp(8),dp(7))
+            }
+            val asset = when {
+                r.jogo.contains("Emoções",true) -> "nuvemfeliz"
+                r.jogo.contains("Dragão",true) -> "rostodragao"
+                else -> "selovideogame"
+            }
+            linhaRegistro.addView(imagem(asset,34,Color.TRANSPARENT),LinearLayout.LayoutParams(dp(36),dp(34)))
+            val info = coluna().apply {
+                setPadding(dp(8),0,0,0)
+                addView(texto(r.jogo,12f,textoEscuro,true))
+                addView(texto(r.nivel,11f,textoCinza))
+                addView(texto(formato.format(java.util.Date(r.data)),10f,textoCinza))
+            }
+            linhaRegistro.addView(info,LinearLayout.LayoutParams(0,-2,1f))
+            adicionarBloco(historico,linhaRegistro,5)
+        }
+        p.addView(historico)
+        p.addView(espaco(6)); p.addView(texto("Dados registrados neste dispositivo.",10f,textoCinza))
     }
 
     private fun dataBrasil(valor: String): String {
@@ -716,22 +909,40 @@ class TelaResponsavelActivity : Activity() {
         return if (partes.size == 3) "${partes[2]}/${partes[1]}/${partes[0]}" else valor
     }
 
+    private fun colunasCadastro(p: LinearLayout): Pair<LinearLayout, LinearLayout> {
+        val fila = linha().apply { gravity = Gravity.TOP }
+        val esquerda = coluna()
+        val direita = coluna()
+        fila.addView(esquerda, LinearLayout.LayoutParams(0, -2, 1f).apply { marginEnd = dp(8) })
+        fila.addView(direita, LinearLayout.LayoutParams(0, -2, 1f))
+        p.addView(fila, LinearLayout.LayoutParams(-1, -2))
+        return Pair(esquerda, direita)
+    }
+
     private fun campo(p: LinearLayout, titulo: String, valor: String, tipo: Int = 1): EditText {
-        p.addView(texto(titulo, 13f, azulTitulo, true))
+        p.addView(texto(titulo, 11.5f, azulTitulo, true))
         val e = EditText(this).apply {
-            setText(valor); textSize = 14f; inputType = tipo; setSingleLine(true)
-            setPadding(dp(12), dp(9), dp(12), dp(9))
-            background = arredondado(branco, 12, Color.parseColor("#CBDCEC"))
+            setText(valor); textSize = 13f; inputType = tipo; setSingleLine(true)
+            setTextColor(textoEscuro); setHintTextColor(textoCinza); hint = titulo
+            setPadding(dp(10), dp(6), dp(10), dp(6))
+            minHeight = dp(40)
+            background = arredondado(Color.parseColor("#F7FAFE"), 10, Color.parseColor("#CBDCEC"))
         }
-        p.addView(e, LinearLayout.LayoutParams(-1, -2)); p.addView(espaco(12)); return e
+        p.addView(e, LinearLayout.LayoutParams(-1, -2)); p.addView(espaco(7)); return e
     }
 
     private fun editarResponsavel(r: ApiService.Responsavel, sessao: Pair<String,String>) {
-        val p = criarPagina("Perfil")
-        cabecalho(p, "Editar meus dados", "Atualize suas informações de contato.")
+        abaPerfil = 0
+        perfilEmEdicao = true
+        val pagina = criarPagina("Perfil")
+        topoPerfil(pagina)
+        val p = adicionarPainelCadastro(pagina)
+        p.addView(texto("Editar meus dados", 17f, azulTitulo, true))
+        p.addView(espaco(7))
         val nome = campo(p, "Nome completo", r.nomeCompleto)
-        val email = campo(p, "E-mail", r.email, 33)
-        val celular = campo(p, "Celular", r.celular, 3)
+        val (esquerda, direita) = colunasCadastro(p)
+        val email = campo(esquerda, "E-mail", r.email, 33)
+        val celular = campo(direita, "Celular", r.celular, 3)
         p.addView(texto("CPF e RG não podem ser alterados por esta tela.", 12f, textoCinza))
         p.addView(espaco(12))
         lateinit var salvar: TextView
@@ -744,16 +955,23 @@ class TelaResponsavelActivity : Activity() {
                 ApiService.atualizarResponsavel(r.id, sessao.first, n, e, c) { res -> finalizarEdicao(p, salvar, res) }
             }
         }
-        p.addView(salvar); p.addView(espaco(8)); p.addView(acao("Cancelar") { abrirPerfil() })
+        botaoCadastro(p, salvar, 200); p.addView(espaco(5)); p.addView(texto("Cancelar",13f,azulTitulo,true).apply { gravity = Gravity.CENTER; setPadding(0,dp(10),0,dp(10)); setOnClickListener { abrirPerfil() } })
     }
 
     private fun editarCrianca(c: ApiService.Crianca, sessao: Pair<String,String>) {
-        val p = criarPagina("Perfil")
-        cabecalho(p, "Editar perfil infantil", "Atualize os dados da criança.")
-        val nome = campo(p, "Nome completo", c.nomeCompleto)
-        val usuario = campo(p, "Nome de usuário", c.nomeUsuario)
-        val cpf = campo(p, "CPF", c.cpf, 3)
-        val data = campo(p, "Nascimento (DD/MM/AAAA)", dataBrasil(c.dataNascimento))
+        abaPerfil = 1
+        perfilEmEdicao = true
+        val pagina = criarPagina("Perfil")
+        topoPerfil(pagina)
+        val p = adicionarPainelCadastro(pagina)
+        p.addView(texto(if(c.id.isBlank()) "Adicionar criança" else "Dados da criança", 17f, azulTitulo, true))
+        p.addView(espaco(7))
+        val (nomeColuna, usuarioColuna) = colunasCadastro(p)
+        val nome = campo(nomeColuna, "Nome completo", c.nomeCompleto)
+        val usuario = campo(usuarioColuna, "Nome de usuário", c.nomeUsuario)
+        val (cpfColuna, dataColuna) = colunasCadastro(p)
+        val cpf = campo(cpfColuna, "CPF", c.cpf, 3)
+        val data = campo(dataColuna, "Nascimento (DD/MM/AAAA)", dataBrasil(c.dataNascimento))
         data.isFocusable = false
         data.setOnClickListener {
             val cal = java.util.Calendar.getInstance()
@@ -770,37 +988,106 @@ class TelaResponsavelActivity : Activity() {
             } else {
                 val iso = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(dia)
                 salvar.isEnabled = false
-                ApiService.atualizarCrianca(sessao.second, sessao.first, c.copy(nomeCompleto = nome.text.toString().trim(), nomeUsuario = usuario.text.toString().trim(), cpf = cpf.text.toString().trim(), dataNascimento = iso)) { res -> finalizarEdicao(p, salvar, res) }
+                val dados = c.copy(nomeCompleto = nome.text.toString().trim(), nomeUsuario = usuario.text.toString().trim(), cpf = cpf.text.toString().trim(), dataNascimento = iso)
+                if (c.id.isBlank()) {
+                    ApiService.adicionarCrianca(sessao.second, sessao.first, dados) { res -> finalizarEdicao(p, salvar, res) }
+                } else {
+                    ApiService.atualizarCrianca(sessao.second, sessao.first, dados) { res -> finalizarEdicao(p, salvar, res) }
+                }
             }
         }
-        p.addView(salvar); p.addView(espaco(8)); p.addView(acao("Cancelar") { abrirPerfil() })
+        botaoCadastro(p, salvar, 200); p.addView(espaco(5))
+        p.addView(texto("Cancelar", 13f, azulTitulo, true).apply {
+            gravity = Gravity.CENTER; setPadding(0,dp(10),0,dp(10)); setOnClickListener { abrirPerfil() }
+        })
+        if(c.id.isNotBlank()) {
+            val excluir = texto("Excluir perfil infantil", 12f, Color.parseColor("#B94251"), true).apply {
+                gravity = Gravity.CENTER; setPadding(0,dp(9),0,dp(9))
+            }
+            excluir.setOnClickListener {
+                if (!salvar.isEnabled) return@setOnClickListener
+                confirmarExclusao(c.nomeCompleto) {
+                    excluir.isEnabled = false; salvar.isEnabled = false
+                    ApiService.excluirCrianca(sessao.second, sessao.first, c.id) { res ->
+                        if (isFinishing || isDestroyed || !p.isAttachedToWindow) return@excluirCrianca
+                        excluir.isEnabled = true; salvar.isEnabled = true
+                        res.onSuccess { abrirPerfil(); mostrarConfirmacao("Perfil excluído com sucesso!") }
+                            .onFailure { Toast.makeText(this, it.message ?: "Não foi possível excluir.", Toast.LENGTH_LONG).show() }
+                    }
+                }
+            }
+            p.addView(excluir)
+        }
+    }
+
+    private fun confirmarExclusao(nome: String, confirmar: () -> Unit) {
+        val dialog = android.app.Dialog(this)
+        val painel = coluna().apply {
+            background = arredondado(branco,24,Color.parseColor("#F4BCC8"))
+            gravity = Gravity.CENTER_HORIZONTAL
+            setPadding(dp(22),dp(16),dp(22),dp(16))
+        }
+        val vermelho = Color.parseColor("#C94557")
+        val icone = FrameLayout(this).apply {
+            background = arredondado(Color.parseColor("#FDE4E8"),40)
+            addView(IconeMenu("Excluir").apply { cor = vermelho },FrameLayout.LayoutParams(dp(30),dp(30),Gravity.CENTER))
+        }
+        painel.addView(icone,LinearLayout.LayoutParams(dp(54),dp(54)))
+        painel.addView(espaco(8))
+        painel.addView(texto("Excluir perfil?",21f,textoEscuro,true).apply { gravity = Gravity.CENTER })
+        painel.addView(espaco(6))
+        painel.addView(texto("O perfil de $nome será removido da conta. Deseja continuar?",14f,textoCinza).apply { gravity = Gravity.CENTER })
+        painel.addView(espaco(16))
+        val botoes = linha()
+        val cancelar = acao("Cancelar") { dialog.dismiss() }.apply {
+            background = arredondado(Color.parseColor("#E5F1FC"),14); setTextColor(azulTitulo)
+        }
+        val excluir = acao("Excluir") { dialog.dismiss(); confirmar() }.apply { background = arredondado(vermelho,14) }
+        botoes.addView(cancelar,LinearLayout.LayoutParams(0,dp(44),1f).apply { marginEnd = dp(8) })
+        botoes.addView(excluir,LinearLayout.LayoutParams(0,dp(44),1f))
+        painel.addView(botoes,LinearLayout.LayoutParams(-1,-2))
+        dialog.setContentView(painel)
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+        dialog.setCanceledOnTouchOutside(false)
+        dialog.show()
+        dialog.window?.setLayout(minOf(dp(365),resources.displayMetrics.widthPixels-dp(32)),-2)
+        dialog.window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+        dialog.window?.setDimAmount(0.45f)
     }
 
     private fun finalizarEdicao(p: LinearLayout, salvar: TextView, res: Result<Unit>) {
         if (isFinishing || isDestroyed || !p.isAttachedToWindow) return
         salvar.isEnabled = true
-        res.onSuccess { Toast.makeText(this, "Dados atualizados!", Toast.LENGTH_SHORT).show(); abrirPerfil() }
+        res.onSuccess { abrirPerfil(); mostrarConfirmacao("Alterações salvas com sucesso!") }
             .onFailure { Toast.makeText(this, it.message ?: "Não foi possível salvar.", Toast.LENGTH_LONG).show() }
     }
 
-    private fun abrirAtividades(c: ApiService.Crianca, id: String) {
-        val p = criarPagina("Perfil")
-        cabecalho(p, "Atividades de ${c.nomeUsuario.ifBlank { c.nomeCompleto }}", "Histórico registrado neste dispositivo.")
-        val (j,n,t) = HistoricoAtividades.resumo(this,id,c.id)
-        val resumo = linha().apply { gravity = Gravity.TOP }
-        listOf(Triple("$j", "Atividades", azulClaro), Triple("$n", "Etapas concluídas", amarelo), Triple("$t min", "Tempo em jogo", verde)).forEach { (v,l,cor) ->
-            resumo.addView(card(v,l,cor), LinearLayout.LayoutParams(0,-2,1f).apply { marginEnd = dp(5) })
+    // Aviso personalizado dentro da janela, sem depender de Toast customizado do sistema.
+    private fun mostrarConfirmacao(mensagem: String) {
+        val raiz = window.decorView.findViewById<FrameLayout>(android.R.id.content)
+        avisoAtual?.let { raiz.removeView(it) }
+        val aviso = texto("✓   $mensagem", 13f, Color.parseColor("#246A40"), true).apply {
+            gravity = Gravity.CENTER
+            background = arredondado(Color.parseColor("#DCF5E5"), 24, Color.parseColor("#A6DCB7"))
+            setPadding(dp(16),dp(11),dp(16),dp(11))
+            elevation = dp(7).toFloat()
+            alpha = 0f
+            translationY = dp(10).toFloat()
+            accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
         }
-        p.addView(resumo); tituloSecao(p,"Atividades recentes")
-        val registros = HistoricoAtividades.listar(this,id,c.id)
-        if (registros.isEmpty()) adicionarBloco(p, card("Ainda não há registros", "As atividades aparecerão aqui depois que a criança jogar."))
-        val formato = java.text.SimpleDateFormat("dd/MM/yyyy • HH:mm", java.util.Locale("pt","BR"))
-        registros.take(30).forEach { adicionarBloco(p, card(it.jogo, "${it.nivel} • ${formato.format(java.util.Date(it.data))}")) }
-        p.addView(acao("Voltar ao perfil") { abrirPerfil() })
+        avisoAtual = aviso
+        raiz.addView(aviso,FrameLayout.LayoutParams(-2,-2,Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).apply { bottomMargin = dp(12) })
+        aviso.animate().alpha(1f).translationY(0f).setDuration(180).start()
+        aviso.postDelayed({
+            aviso.animate().alpha(0f).setDuration(180).withEndAction {
+                raiz.removeView(aviso)
+                if(avisoAtual === aviso) avisoAtual = null
+            }.start()
+        },2400)
     }
 
     private inner class IconeMenu(private val nome: String) : View(this@TelaResponsavelActivity) {
-        var cor = branco
+        var cor = azulTitulo
         private val pincel = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
             style = android.graphics.Paint.Style.STROKE; strokeWidth = 1.7f; strokeCap = android.graphics.Paint.Cap.ROUND; strokeJoin = android.graphics.Paint.Join.ROUND
         }
@@ -810,6 +1097,21 @@ class TelaResponsavelActivity : Activity() {
             fun o(x:Float,y:Float,r:Float) = c.drawCircle(x,y,r,pincel)
             fun path(vararg v: Float) { val p = android.graphics.Path(); p.moveTo(v[0],v[1]); for(i in 2 until v.size step 2) p.lineTo(v[i],v[i+1]); c.drawPath(p,pincel) }
             when(nome) {
+                "Excluir" -> { path(6f,7f,7f,21f,17f,21f,18f,7f); l(4f,7f,20f,7f); path(9f,7f,9f,3f,15f,3f,15f,7f); l(10f,10f,10f,18f); l(14f,10f,14f,18f) }
+                "Crianças" -> { o(8f,7f,3f); o(17f,8f,2.6f); c.drawArc(2f,12f,14f,23f,180f,180f,false,pincel); c.drawArc(13f,13f,22f,22f,180f,180f,false,pincel) }
+                "Atividades" -> { c.drawRoundRect(3f,14f,7f,21f,1f,1f,pincel); c.drawRoundRect(10f,9f,14f,21f,1f,1f,pincel); c.drawRoundRect(17f,3f,21f,21f,1f,1f,pincel) }
+                "Relógio" -> { o(12f,12f,9f); path(12f,6f,12f,12f,16f,14f) }
+                "Estrela" -> {
+                    val pontos = android.graphics.Path()
+                    for(i in 0..9) {
+                        val a = -Math.PI/2 + i*Math.PI/5
+                        val r = if(i%2==0) 10f else 4.5f
+                        val x = 12f + r*kotlin.math.cos(a).toFloat()
+                        val y = 12f + r*kotlin.math.sin(a).toFloat()
+                        if(i==0) pontos.moveTo(x,y) else pontos.lineTo(x,y)
+                    }
+                    pontos.close(); c.drawPath(pontos,pincel)
+                }
                 "Perfil" -> { o(12f,7f,3.5f); c.drawArc(5f,13f,19f,25f,180f,180f,false,pincel) }
                 "Jogos" -> { c.drawRoundRect(3f,7f,21f,18f,5f,5f,pincel); l(6f,12f,11f,12f); l(8.5f,9.5f,8.5f,14.5f); o(16f,11f,0.6f); o(18f,14f,0.6f) }
                 "Sobre nós" -> { val p=android.graphics.Path(); p.moveTo(12f,20f); p.cubicTo(0f,12f,2f,3f,8f,5f); p.quadTo(11f,5f,12f,8f); p.quadTo(15f,3f,19f,5f); p.cubicTo(25f,9f,19f,16f,12f,20f); c.drawPath(p,pincel) }
@@ -839,7 +1141,9 @@ class TelaResponsavelActivity : Activity() {
                 "Identificando as Emoções",
                 "Com a ajuda da Bubba, a criança aprende a identificar expressões, reconhecer sentimentos e compreender suas emoções de maneira divertida.",
                 "girafafeliz",
-                verde
+                verde,
+                alturaImagem = 165,
+                proporcaoImagem = 0.48f
             ),
             17
         )
@@ -849,9 +1153,24 @@ class TelaResponsavelActivity : Activity() {
             cardHorizontal(
                 "Cinco Sentidos Mágicos",
                 "Atividades interativas que estimulam a percepção da visão, audição, olfato, paladar e tato.",
-                "cincosentidosmagicosazul",
+                "sentidosresp",
                 amarelo,
-                false
+                false,
+                alturaImagem = 165,
+                proporcaoImagem = 0.48f
+            ),
+            17
+        )
+
+        adicionarBloco(
+            pagina,
+            cardHorizontal(
+                "Prove na Imaginação",
+                "A criança explora diferentes alimentos e sabores por meio de brincadeiras que estimulam o paladar e a imaginação.",
+                "telaimaginacao",
+                Color.parseColor("#E5DDF9"),
+                alturaImagem = 165,
+                proporcaoImagem = 0.48f
             ),
             17
         )
@@ -861,8 +1180,11 @@ class TelaResponsavelActivity : Activity() {
             cardHorizontal(
                 "Respirando com o Dragão",
                 "Exercícios lúdicos de respiração que incentivam momentos de tranquilidade e autorregulação emocional.",
-                "rostodragao",
-                rosa
+                "dragaoresp",
+                rosa,
+                false,
+                alturaImagem = 165,
+                proporcaoImagem = 0.48f
             ),
             17
         )
@@ -933,7 +1255,7 @@ class TelaResponsavelActivity : Activity() {
 
         missao.addView(
             imagem(
-                "nossamissao",
+                "telajuntosresp",
                 205,
                 Color.TRANSPARENT
             ),
@@ -1110,10 +1432,10 @@ class TelaResponsavelActivity : Activity() {
 
         val painel = coluna().apply {
 
-            background = arredondado(branco, 18)
-            elevation = dp(3).toFloat()
+            background = arredondado(branco, 18, Color.parseColor("#D9E5F1"))
+            elevation = dp(6).toFloat()
 
-            minimumHeight = dp(185)
+            minimumHeight = dp(158)
 
             setPadding(
                 dp(11),
@@ -1128,13 +1450,13 @@ class TelaResponsavelActivity : Activity() {
         painel.addView(
             imagem(
                 nomeIcone,
-                43,
+                55,
                 corIcone,
                 true
             ),
             LinearLayout.LayoutParams(
-                dp(43),
-                dp(43)
+                dp(55),
+                dp(55)
             )
         )
 
@@ -1154,7 +1476,7 @@ class TelaResponsavelActivity : Activity() {
             painel,
             LinearLayout.LayoutParams(
                 0,
-                -2,
+                -1,
                 1f
             ).apply {
                 marginStart = dp(4)
@@ -1175,8 +1497,8 @@ class TelaResponsavelActivity : Activity() {
 
         val painel = coluna().apply {
 
-            background = arredondado(branco, 20)
-            elevation = dp(3).toFloat()
+            background = arredondado(branco, 20, Color.parseColor("#D9E5F1"))
+            elevation = dp(6).toFloat()
 
             gravity = Gravity.CENTER_HORIZONTAL
 
@@ -1187,19 +1509,19 @@ class TelaResponsavelActivity : Activity() {
                 dp(14)
             )
 
-            minimumHeight = dp(170)
+            minimumHeight = dp(156)
         }
 
         painel.addView(
             imagem(
                 foto,
-                78,
+                86,
                 azulClaro,
                 true
             ),
             LinearLayout.LayoutParams(
-                dp(78),
-                dp(78)
+                dp(86),
+                dp(86)
             )
         )
 
@@ -1228,7 +1550,7 @@ class TelaResponsavelActivity : Activity() {
             painel,
             LinearLayout.LayoutParams(
                 0,
-                -2,
+                -1,
                 1f
             ).apply {
                 marginStart = dp(5)
@@ -1651,7 +1973,7 @@ class TelaResponsavelActivity : Activity() {
             aberto = !aberto
 
             TransitionManager.beginDelayedTransition(
-                painel,
+                pagina,
                 AutoTransition().apply {
                     duration = 180
                 }

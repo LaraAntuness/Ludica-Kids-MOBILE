@@ -1,4 +1,3 @@
-
 package com.example.mobilejogos
 
 import android.os.Handler
@@ -568,6 +567,23 @@ object ApiService {
                 .put("cpf", crianca.cpf).put("nomeUsuario", crianca.nomeUsuario)
                 .put("dataNascimento", crianca.dataNascimento)
             requisicao("/criancas/$id/${crianca.id}", "PUT", corpo, token)
+            Unit
+        }, callback)
+    }
+    // Usa as rotas já existentes no servidor, sem alterar o backend.
+    fun adicionarCrianca(id: String, token: String, crianca: Crianca, callback: (Result<Unit>) -> Unit) {
+        executar({
+            val corpo = JSONObject().put("nomeCompleto", crianca.nomeCompleto)
+                .put("cpf", crianca.cpf).put("nomeUsuario", crianca.nomeUsuario)
+                .put("dataNascimento", crianca.dataNascimento)
+            requisicao("/criancas/$id", "POST", corpo, token)
+            Unit
+        }, callback)
+    }
+
+    fun excluirCrianca(id: String, token: String, idCrianca: String, callback: (Result<Unit>) -> Unit) {
+        executar({
+            requisicao("/criancas/$id/$idCrianca", "DELETE", token = token)
             Unit
         }, callback)
     }
