@@ -275,6 +275,12 @@ class TelaResponsavelActivity : Activity() {
     }
 
     private fun voltarInicio() {
+        val intent = android.content.Intent(this, TelaInicialActivity::class.java).apply {
+            flags = android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                    android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP
+            putExtra("retorno_area_responsavel", true)
+        }
+        startActivity(intent)
         finish()
     }
 
@@ -756,6 +762,17 @@ class TelaResponsavelActivity : Activity() {
         botaoCadastro(p, acao("Editar dados") { editarResponsavel(r, sessao) })
     }
 
+    private fun obterFotoCrianca(crianca: ApiService.Crianca): String {
+        val preferencias = getSharedPreferences("LudicaKids", MODE_PRIVATE)
+        val foto = preferencias.getString("fotoPerfil_${crianca.id}", "popupbubba")
+            ?: "popupbubba"
+        val avatares = setOf("popupbubba", "popupinverno", "popuppirata",
+            "popuplaco", "popupcowboy", "popupgraduacao", "popupaniversario",
+            "popupfada", "popupflores", "popupviking")
+        return if (foto in avatares && resources.getIdentifier(foto, "drawable", packageName) != 0)
+            foto else "popupbubba"
+    }
+
     private fun mostrarCriancas(p: LinearLayout, criancas: List<ApiService.Crianca>, sessao: Pair<String,String>) {
         p.addView(texto("Minhas crianças", 18f, azulTitulo, true)); p.addView(espaco(8))
         if (criancas.isEmpty()) p.addView(texto("Nenhuma criança cadastrada."))
@@ -764,7 +781,7 @@ class TelaResponsavelActivity : Activity() {
                 background = arredondado(Color.parseColor("#EDF5FD"), 17)
                 setPadding(dp(8),dp(8),dp(8),dp(8))
             }
-            bloco.addView(imagem("selobubbasorrindo",56,Color.parseColor("#BFE2FA"),true), LinearLayout.LayoutParams(dp(56),dp(56)))
+            bloco.addView(imagem(obterFotoCrianca(c),56,Color.parseColor("#BFE2FA"),true), LinearLayout.LayoutParams(dp(56),dp(56)))
             val info = coluna().apply {
                 setPadding(dp(10),0,dp(6),0)
                 addView(texto(c.nomeUsuario.ifBlank { c.nomeCompleto }, 15f, azulTitulo,true))
@@ -1133,7 +1150,7 @@ class TelaResponsavelActivity : Activity() {
             cardHorizontal(
                 "Identificando as Emoções",
                 "Com a ajuda da Bubba, a criança aprende a identificar expressões, reconhecer sentimentos e compreender suas emoções de maneira divertida.",
-                "telaimaginacao",
+                "emocoesresp",
                 verde,
                 alturaImagem = 165,
                 proporcaoImagem = 0.48f
@@ -1236,12 +1253,12 @@ class TelaResponsavelActivity : Activity() {
         missao.addView(
             imagem(
                 "telajuntosresp",
-                300,
+                205,
                 Color.TRANSPARENT
             ),
             LinearLayout.LayoutParams(
                 -1,
-                dp(300)
+                dp(205)
             )
         )
 
@@ -1392,9 +1409,9 @@ class TelaResponsavelActivity : Activity() {
         val importante = card(
             "Importante",
             "O LúdicaKids é uma ferramenta complementar de apoio ao desenvolvimento infantil e não substitui o acompanhamento de profissionais de saúde.",
-            Color.parseColor("#B3FFFFFF")
+            Color.parseColor("#B3FBE1E7")
         ).apply {
-            background = arredondado(Color.parseColor("#B3FFFFFF"), 20,
+            background = arredondado(Color.parseColor("#B3FBE1E7"), 20,
                 Color.parseColor("#A6C9EA"))
             elevation = dp(2).toFloat()
         }
@@ -1701,11 +1718,83 @@ class TelaResponsavelActivity : Activity() {
         }
 
         adicionarBloco(pagina, notificacoes)
+
+        tituloSecao(pagina, "Minha conta")
+        val conta = card(
+            "Remover perfil deste dispositivo",
+            "Encerre a sessão e volte à tela de entrada. Seu cadastro continuará salvo no servidor."
+        )
+        conta.addView(espaco(10))
+        conta.addView(acao("Excluir perfil deste dispositivo") {
+            confirmarSaidaConta()
+        }.apply {
+            background = arredondado(Color.parseColor("#C94557"), 14)
+        })
+        adicionarBloco(pagina, conta)
     }
 
     // ==========================================
     // FAQ COMPLETO
     // ==========================================
+
+    private fun confirmarSaidaConta() {
+        val dialog = android.app.Dialog(this)
+        val vermelho = Color.parseColor("#C94557")
+        val painel = coluna().apply {
+            background = arredondado(branco, 24, Color.parseColor("#F4BCC8"))
+            gravity = Gravity.CENTER_HORIZONTAL
+            setPadding(dp(22), dp(16), dp(22), dp(16))
+        }
+        val icone = FrameLayout(this).apply {
+            background = arredondado(Color.parseColor("#FDE4E8"), 40)
+            addView(IconeMenu("Excluir").apply { cor = vermelho },
+                FrameLayout.LayoutParams(dp(30), dp(30), Gravity.CENTER))
+        }
+        painel.addView(icone, LinearLayout.LayoutParams(dp(54), dp(54)))
+        painel.addView(espaco(8))
+        painel.addView(texto("Remover perfil?", 21f, textoEscuro, true).apply {
+            gravity = Gravity.CENTER
+        })
+        painel.addView(espaco(6))
+        painel.addView(texto("Você sairá da conta neste dispositivo. Seu cadastro não será excluído do servidor.", 14f, textoCinza).apply {
+            gravity = Gravity.CENTER
+        })
+        painel.addView(espaco(16))
+        val botoes = linha()
+        botoes.addView(acao("Cancelar") { dialog.dismiss() }.apply {
+            background = arredondado(azulClaro, 14)
+            setTextColor(azulTitulo)
+        }, LinearLayout.LayoutParams(0, dp(44), 1f).apply { marginEnd = dp(8) })
+        botoes.addView(acao("Confirmar") {
+            dialog.dismiss()
+            sairDaConta()
+        }.apply { background = arredondado(vermelho, 14) },
+            LinearLayout.LayoutParams(0, dp(44), 1f))
+        painel.addView(botoes, LinearLayout.LayoutParams(-1, -2))
+        dialog.setContentView(painel)
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+        dialog.setCanceledOnTouchOutside(false)
+        dialog.show()
+        dialog.window?.setLayout(minOf(dp(365), resources.displayMetrics.widthPixels - dp(32)), -2)
+        dialog.window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+        dialog.window?.setDimAmount(0.45f)
+    }
+
+    private fun sairDaConta() {
+        LudicaSessao.limpar(this)
+        LoginDialog.encerrarSessao()
+        getSharedPreferences("LudicaKids", MODE_PRIVATE).edit()
+            .putBoolean("usuarioLogado", false)
+            .remove("criancaSelecionada")
+            .remove("responsavelDaCriancaSelecionada")
+            .apply()
+        val intent = android.content.Intent(this, TelaInicialActivity::class.java).apply {
+            flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or
+                    android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK
+        }
+        startActivity(intent)
+        finish()
+    }
 
     private fun abrirFAQ() {
 
