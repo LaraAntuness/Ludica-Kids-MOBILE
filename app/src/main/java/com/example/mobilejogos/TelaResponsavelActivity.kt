@@ -208,7 +208,7 @@ class TelaResponsavelActivity : Activity() {
 
             val figura = ImageView(this).apply {
 
-                if (circular || nome.startsWith("selo")) {
+                if (circular || nome.startsWith("selo") || nome == "telajuntosresp") {
                     val bitmap = recortarSelo(idImagem)
                     if (bitmap != null) setImageBitmap(bitmap) else setImageResource(idImagem)
                 } else setImageResource(idImagem)
@@ -611,10 +611,10 @@ class TelaResponsavelActivity : Activity() {
 
     private fun adicionarPainelCadastro(pagina: LinearLayout): LinearLayout {
         val painel = painelPerfil().apply {
-            setPadding(dp(12), dp(9), dp(12), dp(10))
+            setPadding(dp(16), dp(14), dp(16), dp(14))
             elevation = dp(5).toFloat()
         }
-        pagina.addView(painel, LinearLayout.LayoutParams(larguraPerfil(470), -2).apply {
+        pagina.addView(painel, LinearLayout.LayoutParams(-1, -2).apply {
             gravity = Gravity.CENTER_HORIZONTAL
             bottomMargin = dp(8)
         })
@@ -709,23 +709,15 @@ class TelaResponsavelActivity : Activity() {
 
     private fun dadoPerfil(p: LinearLayout, rotulo: String, valor: String) {
         val caixa = coluna().apply {
-            background = arredondado(Color.parseColor("#EAF3FC"), 10,
+            background = arredondado(Color.parseColor("#EAF3FC"), 12,
                 Color.parseColor("#D4E4F4"))
-            setPadding(dp(10), dp(5), dp(10), dp(5))
-            addView(texto(rotulo, 10.5f, textoCinza, true).apply {
-                includeFontPadding = false
-                setLineSpacing(0f, 1f)
-            })
-            addView(espaco(3))
-            addView(texto(valor.ifBlank { "Não informado" }, 12.5f, textoEscuro, true).apply {
-                includeFontPadding = false
-                setLineSpacing(0f, 1f)
+            setPadding(dp(12), dp(9), dp(12), dp(9))
+            addView(texto(rotulo, 12f, textoCinza, true))
+            addView(texto(valor.ifBlank { "Não informado" }, 14f, textoEscuro, true).apply {
                 setTextIsSelectable(true)
             })
         }
-        p.addView(caixa, LinearLayout.LayoutParams(-1, -2).apply {
-            bottomMargin = dp(6)
-        })
+        adicionarBloco(p, caixa, 7)
     }
 
     // Duas colunas para reduzir o comprimento e a altura das barras.
@@ -752,12 +744,13 @@ class TelaResponsavelActivity : Activity() {
     }
 
     private fun mostrarResponsavel(p: LinearLayout, r: ApiService.Responsavel, sessao: Pair<String,String>) {
-        p.addView(texto("Dados do responsável", 16f, azulTitulo, true).apply {
+        p.addView(texto("Dados do responsável", 18f, azulTitulo, true).apply {
             includeFontPadding = false
         })
         p.addView(espaco(8))
         dadoPerfil(p, "Nome completo", r.nomeCompleto)
-        parDados(p, "E-mail" to r.email, "Celular" to r.celular)
+        dadoPerfil(p, "E-mail", r.email)
+        dadoPerfil(p, "Celular", r.celular)
         parDados(p, "CPF" to r.cpf, "RG" to r.rg)
         p.addView(espaco(3))
         botaoCadastro(p, acao("Editar dados") { editarResponsavel(r, sessao) })
@@ -1140,7 +1133,7 @@ class TelaResponsavelActivity : Activity() {
             cardHorizontal(
                 "Identificando as Emoções",
                 "Com a ajuda da Bubba, a criança aprende a identificar expressões, reconhecer sentimentos e compreender suas emoções de maneira divertida.",
-                "girafafeliz",
+                "telaimaginacao",
                 verde,
                 alturaImagem = 165,
                 proporcaoImagem = 0.48f
@@ -1156,19 +1149,6 @@ class TelaResponsavelActivity : Activity() {
                 "sentidosresp",
                 amarelo,
                 false,
-                alturaImagem = 165,
-                proporcaoImagem = 0.48f
-            ),
-            17
-        )
-
-        adicionarBloco(
-            pagina,
-            cardHorizontal(
-                "Prove na Imaginação",
-                "A criança explora diferentes alimentos e sabores por meio de brincadeiras que estimulam o paladar e a imaginação.",
-                "telaimaginacao",
-                Color.parseColor("#E5DDF9"),
                 alturaImagem = 165,
                 proporcaoImagem = 0.48f
             ),
@@ -1256,12 +1236,12 @@ class TelaResponsavelActivity : Activity() {
         missao.addView(
             imagem(
                 "telajuntosresp",
-                205,
+                300,
                 Color.TRANSPARENT
             ),
             LinearLayout.LayoutParams(
                 -1,
-                dp(205)
+                dp(300)
             )
         )
 
@@ -1335,7 +1315,8 @@ class TelaResponsavelActivity : Activity() {
                 "Bubba, a girafinha",
                 "Carinhosa, curiosa e acolhedora, a Bubba representa o cuidado que desejamos transmitir às crianças. Ela acompanha os pequenos em suas descobertas e aprendizados.",
                 "selobubbasorrindo",
-                amarelo
+                branco,
+                imagemEsquerda = true
             )
         )
 
@@ -1408,14 +1389,40 @@ class TelaResponsavelActivity : Activity() {
 
         adicionarBloco(pagina, card("Fale conosco", "E-mail: ludicakidsFatec@gmail.com\nTelefone: (11) 94724-6510"))
 
-        adicionarBloco(
-            pagina,
-            card(
-                "Importante",
-                "O LúdicaKids é uma ferramenta complementar de apoio ao desenvolvimento infantil e não substitui o acompanhamento de profissionais de saúde.",
-                rosa
-            )
-        )
+        val importante = card(
+            "Importante",
+            "O LúdicaKids é uma ferramenta complementar de apoio ao desenvolvimento infantil e não substitui o acompanhamento de profissionais de saúde.",
+            Color.parseColor("#B3FFFFFF")
+        ).apply {
+            background = arredondado(Color.parseColor("#B3FFFFFF"), 20,
+                Color.parseColor("#A6C9EA"))
+            elevation = dp(2).toFloat()
+        }
+        adicionarBloco(pagina, importante)
+        pulsarAviso(importante)
+
+    }
+
+    private fun pulsarAviso(view: View) {
+        val animacao = android.animation.ObjectAnimator.ofPropertyValuesHolder(
+            view,
+            android.animation.PropertyValuesHolder.ofFloat(View.SCALE_X, 1f, 1.012f),
+            android.animation.PropertyValuesHolder.ofFloat(View.SCALE_Y, 1f, 1.012f)
+        ).apply {
+            duration = 1800L
+            repeatCount = android.animation.ValueAnimator.INFINITE
+            repeatMode = android.animation.ValueAnimator.REVERSE
+            interpolator = android.view.animation.AccelerateDecelerateInterpolator()
+        }
+        view.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
+            override fun onViewAttachedToWindow(v: View) { animacao.start() }
+            override fun onViewDetachedFromWindow(v: View) {
+                animacao.cancel()
+                v.scaleX = 1f
+                v.scaleY = 1f
+            }
+        })
+        if (view.isAttachedToWindow) animacao.start()
     }
 
     // ==========================================
