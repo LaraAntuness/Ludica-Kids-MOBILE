@@ -1,85 +1,104 @@
 package com.example.mobilejogos
 
 import android.app.Activity
+import android.app.Dialog
 import android.content.Intent
 import android.content.pm.ActivityInfo
-import android.graphics.Canvas
 import android.graphics.Color
-import android.graphics.Movie
-import android.graphics.SurfaceTexture
 import android.graphics.Typeface
+import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.GradientDrawable
 import android.media.MediaPlayer
+import android.net.Uri
+import android.os.Build
 import android.os.Bundle
-import android.speech.tts.TextToSpeech
-import android.util.TypedValue
+import android.os.Handler
+import android.os.Looper
 import android.view.Gravity
-import android.view.Surface
-import android.view.TextureView
 import android.view.View
 import android.view.WindowManager
-import android.view.animation.OvershootInterpolator
-import android.widget.FrameLayout
-import android.widget.ImageView
-import android.widget.TextView
-import android.widget.Toast
+import android.widget.*
+import java.io.File
 import java.util.Locale
+import kotlin.math.ceil
 
-@Suppress("DEPRECATION")
 class RespirandoComDragaoActivity : Activity() {
 
-    private lateinit var root: FrameLayout
-    private lateinit var videoView: TextureView
-    private lateinit var solAnimado: SolAnimadoView
-    private lateinit var botaoIniciar: TextView
+    private lateinit var tela: FrameLayout
+    private lateinit var videoDragao: VideoView
 
-    private var popupAtual: FrameLayout? = null
+    private lateinit var textoRelogio: TextView
+    private lateinit var textoInstrucao: TextView
+    private lateinit var textoEtapa: TextView
 
-    private val larguraBase = 874f
-    private val alturaBase = 393f
+    private lateinit var botaoAcao: TextView
+    private lateinit var botaoInterromper: TextView
+    private lateinit var botaoPular: TextView
 
-    private var sx = 1f
-    private var sy = 1f
-    private var escala = 1f
+    private lateinit var painelRespiracao: LinearLayout
 
-    // VÍDEO E ÁUDIOS
+    private val handler = Handler(Looper.getMainLooper())
 
-    private var videoPlayer: MediaPlayer? = null
+    // ÁUDIOS
+
+    private var musicaFundo: MediaPlayer? = null
+    private var audioNarracao: MediaPlayer? = null
     private var audioClique: MediaPlayer? = null
+    private var playerVideo: MediaPlayer? = null
 
-    private var superficieVideo: Surface? = null
-
-    // NARRADOR
-
-    private var narrador: TextToSpeech? = null
-
-    private var vozDisponivel = false
-    private var narracaoPendente = false
-
-    // VOLUME DA VOZ DA IA
-
-    private val volumeNarracao = 0.65f
+    private var popupAtual: Dialog? = null
+    private var botaoOuvir: TextView? = null
 
     // CONTROLE DO JOGO
 
     private var videoPreparado = false
-    private var jogoIniciado = false
-    private var jogoFinalizado = false
-    private var telaAtiva = false
-    private var iniciarPendente = false
-    private var retomandoVideo = false
-    private var instrucoesExibidas = false
-    private var popupInstrucaoAberto = false
+    private var etapaAtual = 0
+    private var etapaExecutando = false
+
+    private var aguardandoBusca = false
+    private var iniciarAposBusca = false
+
     private var saindo = false
+    private var telaAtiva = false
+    private var sessaoConcluida = false
 
-    private var posicaoSalvaVideo = 0
+    private var caminhoVideo: Uri? = null
 
-    // =====================================================
-    // INICIAR ACTIVITY
-    // =====================================================
+    // TEMPOS DA RESPIRAÇÃO 4-7-8
+
+    private val inicioEtapas = intArrayOf(
+        0,
+        4000,
+        11000
+    )
+
+    private val fimEtapas = intArrayOf(
+        4000,
+        11000,
+        19000
+    )
+
+    private val duracaoEtapas = intArrayOf(
+        4,
+        7,
+        8
+    )
+
+    // VOLUMES DOS ÁUDIOS
+
+    private val volumeFundo = 0.35f
+    private val volumeFundoNarracao = 0.10f
+    private val volumeNarracao = 0.65f
+    private val volumeClique = 0.55f
+
+    // CORES
+
+    private val azul = Color.parseColor("#65B9E7")
+    private val azulEscuro = Color.parseColor("#357DA5")
+    private val verde = Color.parseColor("#B5E187")
+    private val amarelo = Color.parseColor("#FFE39A")
 
     override fun onCreate(savedInstanceState: Bundle?) {
-
         super.onCreate(savedInstanceState)
 
         requestedOrientation =
@@ -90,1657 +109,1715 @@ class RespirandoComDragaoActivity : Activity() {
             WindowManager.LayoutParams.FLAG_FULLSCREEN
         )
 
-        ocultarBarras()
+        window.addFlags(
+            WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
+        )
 
-        root = FrameLayout(this).apply {
+        esconderBarras()
 
-            setBackgroundColor(
-                Color.rgb(191, 225, 246)
-            )
+        criarTela()
 
-            clipChildren = false
-            clipToPadding = false
-        }
-
-        setContentView(root)
-
-        configurarNarrador()
-
-        root.post {
-
-            if (!isFinishing && !isDestroyed) {
-
-                montarTela()
-            }
-        }
+        mostrarPopupInicial()
     }
 
-    // =====================================================
-    // TELA CHEIA
-    // =====================================================
+    private fun esconderBarras() {
 
-    private fun ocultarBarras() {
-
-        window.decorView.systemUiVisibility =
-
-            View.SYSTEM_UI_FLAG_FULLSCREEN or
-                    View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
-                    View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY or
-                    View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
-                    View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or
-                    View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+        window.decorView.systemUiVisibility = (
+                View.SYSTEM_UI_FLAG_FULLSCREEN
+                        or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                        or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                )
     }
 
-    override fun onWindowFocusChanged(
-        hasFocus: Boolean
-    ) {
+    // LOCALIZAR ÁUDIOS NA PASTA RAW
 
-        super.onWindowFocusChanged(hasFocus)
+    private fun localizarAudio(nome: String): Int {
 
-        if (hasFocus) {
-
-            ocultarBarras()
-        }
+        return resources.getIdentifier(
+            nome,
+            "raw",
+            packageName
+        )
     }
 
-    // =====================================================
-    // MONTAR TELA DO DRAGÃO
-    // =====================================================
+    // MÚSICA DE FUNDO CONTÍNUA
 
-    private fun montarTela() {
+    private fun iniciarMusicaFundo() {
 
-        root.removeAllViews()
+        if (saindo) return
 
-        sx = root.width / larguraBase
-        sy = root.height / alturaBase
+        try {
 
-        escala = minOf(sx, sy)
+            if (musicaFundo == null) {
 
-        // =================================================
-        // VÍDEO DO DRAGÃO
-        // =================================================
+                val idAudio = localizarAudio(
+                    "fundodragao"
+                )
 
-        videoView = TextureView(this)
+                if (idAudio == 0) {
 
-        root.addView(
-            videoView,
-            FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.MATCH_PARENT
-            )
-        )
+                    Toast.makeText(
+                        this,
+                        "Áudio fundodragao não encontrado.",
+                        Toast.LENGTH_SHORT
+                    ).show()
 
-        configurarVideo()
-
-        // =================================================
-        // SOL ANIMADO
-        // =================================================
-
-        solAnimado = SolAnimadoView()
-
-        adicionarView(
-            solAnimado,
-            744, 10, 120, 120
-        )
-
-        // =================================================
-        // BOTÃO VOLTAR
-        // =================================================
-
-        val voltar = adicionarImagem(
-            "botaoretornoazul",
-            19, 25, 50, 50
-        )
-
-        voltar.contentDescription =
-            "Voltar para a tela geral dos jogos"
-
-        voltar.isClickable = true
-        voltar.isFocusable = true
-
-        voltar.isSoundEffectsEnabled = false
-
-        voltar.setOnClickListener {
-
-            voltarTela()
-        }
-
-        // =================================================
-        // SOMBRA DO BOTÃO INICIAR
-        // =================================================
-
-        val sombraBotao = View(this).apply {
-
-            background = criarFundo(
-                Color.rgb(105, 165, 209),
-                Color.rgb(105, 165, 209),
-                23f,
-                Color.TRANSPARENT,
-                0f
-            )
-
-            tag = "sombraIniciar"
-        }
-
-        adicionarView(
-            sombraBotao,
-            332, 178, 210, 58
-        )
-
-        // =================================================
-        // BOTÃO INICIAR PERSONALIZADO
-        // =================================================
-
-        botaoIniciar = criarTexto(
-            "▶  Iniciar",
-            25f,
-            Color.rgb(60, 115, 155)
-        )
-
-        botaoIniciar.background = criarFundo(
-            Color.rgb(230, 247, 255),
-            Color.rgb(165, 218, 245),
-            23f,
-            Color.rgb(117, 181, 224),
-            2.5f
-        )
-
-        botaoIniciar.isClickable = true
-        botaoIniciar.isFocusable = true
-        botaoIniciar.isSoundEffectsEnabled = false
-
-        botaoIniciar.contentDescription =
-            "Iniciar exercício de respiração"
-
-        adicionarView(
-            botaoIniciar,
-            332, 172, 210, 58
-        )
-
-        botaoIniciar.setOnClickListener {
-
-            tocarSomClique()
-
-            pararNarracao()
-
-            iniciarJogo()
-        }
-
-        botaoIniciar.scaleX = 0.8f
-        botaoIniciar.scaleY = 0.8f
-
-        botaoIniciar.animate()
-            .scaleX(1f)
-            .scaleY(1f)
-            .setDuration(500L)
-            .setInterpolator(
-                OvershootInterpolator(1.3f)
-            )
-            .start()
-
-        // =================================================
-        // ABRIR POP-UP AUTOMATICAMENTE
-        // =================================================
-
-        if (!instrucoesExibidas && telaAtiva) {
-
-            mostrarPopupInstrucoes()
-        }
-    }
-
-    // =====================================================
-    // CONFIGURAR NARRADOR
-    // =====================================================
-
-    private fun configurarNarrador() {
-
-        narrador = TextToSpeech(this) { resultado ->
-
-            root.post {
-
-                if (
-                    isFinishing ||
-                    isDestroyed ||
-                    saindo
-                ) {
-
-                    return@post
+                    return
                 }
 
-                if (resultado == TextToSpeech.SUCCESS) {
+                val player = MediaPlayer.create(
+                    this,
+                    idAudio
+                )
 
-                    val configuracao =
-                        narrador?.setLanguage(
-                            Locale("pt", "BR")
-                        )
+                if (player != null) {
 
-                    vozDisponivel =
-                        configuracao != null &&
-                                configuracao >=
-                                TextToSpeech.LANG_AVAILABLE
+                    player.isLooping = true
 
-                    // VELOCIDADE DA NARRAÇÃO
+                    player.setVolume(
+                        volumeFundo,
+                        volumeFundo
+                    )
 
-                    narrador?.setSpeechRate(0.90f)
-
-                    // TOM NATURAL DA VOZ
-
-                    narrador?.setPitch(1.0f)
-
-                    if (
-                        vozDisponivel &&
-                        narracaoPendente &&
-                        telaAtiva &&
-                        popupInstrucaoAberto &&
-                        !jogoIniciado
-                    ) {
-
-                        tocarNarracao()
-                    }
-
-                } else {
-
-                    vozDisponivel = false
+                    musicaFundo = player
                 }
             }
+
+            if (musicaFundo?.isPlaying != true) {
+
+                musicaFundo?.start()
+            }
+
+        } catch (e: Exception) {
+
+            Toast.makeText(
+                this,
+                "Não foi possível carregar a música.",
+                Toast.LENGTH_SHORT
+            ).show()
         }
     }
 
-    // =====================================================
-    // NARRAÇÃO EXPLICATIVA COM VOLUME REDUZIDO
-    // =====================================================
+    // DIMINUIR A MÚSICA DURANTE A NARRAÇÃO
 
-    private fun tocarNarracao() {
+    private fun diminuirMusicaFundo() {
+
+        musicaFundo?.setVolume(
+            volumeFundoNarracao,
+            volumeFundoNarracao
+        )
+    }
+
+    // RESTAURAR O VOLUME NORMAL
+
+    private fun restaurarMusicaFundo() {
+
+        musicaFundo?.setVolume(
+            volumeFundo,
+            volumeFundo
+        )
+    }
+
+    private fun pausarMusicaFundo() {
+
+        try {
+
+            if (musicaFundo?.isPlaying == true) {
+
+                musicaFundo?.pause()
+            }
+
+        } catch (_: Exception) {
+        }
+    }
+
+    private fun encerrarMusicaFundo() {
+
+        try {
+
+            musicaFundo?.release()
+
+        } catch (_: Exception) {
+        }
+
+        musicaFundo = null
+    }
+
+    // NARRAÇÃO OPCIONAL
+
+    private fun ouvirInstrucoes() {
 
         if (
-            !telaAtiva ||
             saindo ||
-            !popupInstrucaoAberto
+            popupAtual?.isShowing != true ||
+            botaoOuvir == null
         ) return
 
-        if (!vozDisponivel) {
+        if (audioNarracao?.isPlaying == true) {
 
-            narracaoPendente = true
+            pararNarracao()
 
             return
         }
 
-        narracaoPendente = false
-
-        val mensagem =
-            "Olá, amiguinho! " +
-                    "Vamos respirar com o dragão? " +
-                    "Inspire devagar pelo nariz. " +
-                    "E solte o ar lentamente pela boca. " +
-                    "Acompanhe o dragão. " +
-                    "Vamos começar?"
-
-        // VOLUME REDUZIDO PARA 65%
-
-        val parametrosAudio = Bundle().apply {
-
-            putFloat(
-                TextToSpeech.Engine.KEY_PARAM_VOLUME,
-                volumeNarracao
-            )
-        }
-
-        narrador?.speak(
-            mensagem,
-            TextToSpeech.QUEUE_FLUSH,
-            parametrosAudio,
-            "instrucoes_dragao"
-        )
-    }
-
-    // =====================================================
-    // PARAR NARRAÇÃO
-    // =====================================================
-
-    private fun pararNarracao() {
-
-        narracaoPendente = false
-
-        narrador?.stop()
-    }
-
-    // =====================================================
-    // CONFIGURAR VÍDEO
-    // =====================================================
-
-    private fun configurarVideo() {
-
-        videoView.surfaceTextureListener =
-
-            object : TextureView.SurfaceTextureListener {
-
-                override fun onSurfaceTextureAvailable(
-                    texture: SurfaceTexture,
-                    width: Int,
-                    height: Int
-                ) {
-
-                    prepararVideo(texture)
-                }
-
-                override fun onSurfaceTextureSizeChanged(
-                    texture: SurfaceTexture,
-                    width: Int,
-                    height: Int
-                ) {
-                }
-
-                override fun onSurfaceTextureDestroyed(
-                    texture: SurfaceTexture
-                ): Boolean {
-
-                    salvarPosicaoVideo()
-
-                    liberarVideo()
-
-                    return true
-                }
-
-                override fun onSurfaceTextureUpdated(
-                    texture: SurfaceTexture
-                ) {
-                }
-            }
-
-        if (videoView.isAvailable) {
-
-            videoView.surfaceTexture?.let {
-
-                prepararVideo(it)
-            }
-        }
-    }
-
-    // =====================================================
-    // PREPARAR VÍDEO
-    // =====================================================
-
-    private fun prepararVideo(
-        texture: SurfaceTexture
-    ) {
-
-        liberarVideo()
-
         try {
 
-            val surface = Surface(texture)
+            pararNarracao()
 
-            superficieVideo = surface
+            val idAudio = localizarAudio(
+                "instrucoes_dragao"
+            )
 
-            val player = MediaPlayer()
+            if (idAudio == 0) {
 
-            videoPlayer = player
+                Toast.makeText(
+                    this,
+                    "Áudio de instruções não encontrado.",
+                    Toast.LENGTH_SHORT
+                ).show()
 
-            assets.openFd("videodragao.mp4").use {
-
-                player.setDataSource(
-                    it.fileDescriptor,
-                    it.startOffset,
-                    it.length
-                )
+                return
             }
 
-            player.setSurface(surface)
+            val player = MediaPlayer.create(
+                this,
+                idAudio
+            ) ?: return
+
+            audioNarracao = player
+
+            diminuirMusicaFundo()
+
+            player.setVolume(
+                volumeNarracao,
+                volumeNarracao
+            )
 
             player.isLooping = false
 
-            player.setVolume(
-                1f,
-                1f
+            botaoOuvir?.text = "Parar áudio"
+
+            player.setOnCompletionListener {
+
+                if (audioNarracao === player) {
+
+                    pararNarracao()
+                }
+            }
+
+            player.setOnErrorListener { _, _, _ ->
+
+                pararNarracao()
+
+                true
+            }
+
+            player.start()
+
+        } catch (e: Exception) {
+
+            pararNarracao()
+
+            Toast.makeText(
+                this,
+                "Não foi possível reproduzir a narração.",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+    }
+
+    private fun pararNarracao() {
+
+        try {
+
+            audioNarracao?.release()
+
+        } catch (_: Exception) {
+        }
+
+        audioNarracao = null
+
+        restaurarMusicaFundo()
+
+        botaoOuvir?.text =
+            "🔊 Ouvir instruções"
+    }
+
+    // CRIAÇÃO DA TELA PRINCIPAL
+
+    private fun criarTela() {
+
+        tela = FrameLayout(this).apply {
+
+            clipChildren = true
+
+            clipToPadding = true
+
+            setBackgroundColor(
+                Color.parseColor("#DDF3FF")
+            )
+        }
+
+        setContentView(tela)
+
+        // VÍDEO EM TELA INTEIRA
+
+        videoDragao = object :
+            VideoView(this@RespirandoComDragaoActivity) {
+
+            override fun onMeasure(
+                widthMeasureSpec: Int,
+                heightMeasureSpec: Int
+            ) {
+
+                setMeasuredDimension(
+                    View.MeasureSpec.getSize(
+                        widthMeasureSpec
+                    ),
+                    View.MeasureSpec.getSize(
+                        heightMeasureSpec
+                    )
+                )
+            }
+        }
+
+        tela.addView(
+            videoDragao,
+            FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                Gravity.CENTER
+            )
+        )
+
+        // AJUSTAR O VÍDEO AO TAMANHO DA TELA
+
+        tela.addOnLayoutChangeListener {
+                _, esquerda, topo, direita, baixo,
+                antigaEsquerda, antigoTopo,
+                antigaDireita, antigoBaixo ->
+
+            val largura = direita - esquerda
+            val altura = baixo - topo
+
+            val larguraAntiga =
+                antigaDireita - antigaEsquerda
+
+            val alturaAntiga =
+                antigoBaixo - antigoTopo
+
+            if (
+                largura != larguraAntiga ||
+                altura != alturaAntiga
+            ) {
+
+                playerVideo?.let {
+
+                    ajustarVideoTelaInteira(it)
+                }
+            }
+        }
+
+        // BOTÃO VOLTAR
+
+        val botaoVoltar = ImageButton(this).apply {
+
+            setImageResource(
+                R.drawable.botaoretornoazul
             )
 
-            player.setVideoScalingMode(
-                MediaPlayer.VIDEO_SCALING_MODE_SCALE_TO_FIT
+            background =
+                ColorDrawable(Color.TRANSPARENT)
+
+            scaleType =
+                ImageView.ScaleType.FIT_CENTER
+
+            setPadding(0, 0, 0, 0)
+
+            contentDescription = "Voltar"
+        }
+
+        val parametrosVoltar =
+            FrameLayout.LayoutParams(
+                dp(50),
+                dp(50)
+            ).apply {
+
+                gravity =
+                    Gravity.TOP or Gravity.START
+
+                topMargin = dp(12)
+                leftMargin = dp(15)
+            }
+
+        tela.addView(
+            botaoVoltar,
+            parametrosVoltar
+        )
+
+        botaoVoltar.setOnClickListener {
+
+            tocarClique()
+
+            voltarTela()
+        }
+
+        // RELÓGIO
+
+        val painelRelogio = LinearLayout(this).apply {
+
+            orientation = LinearLayout.VERTICAL
+
+            gravity = Gravity.CENTER
+
+            background = fundoArredondado(
+                Color.WHITE,
+                24,
+                azul,
+                3
             )
 
-            // VÍDEO CARREGADO
+            elevation = dp(5).toFloat()
 
-            player.setOnPreparedListener {
+            setPadding(
+                dp(8),
+                dp(5),
+                dp(8),
+                dp(5)
+            )
+        }
+
+        val tituloRelogio = TextView(this).apply {
+
+            text = "TEMPO"
+
+            textSize = 12f
+
+            setTextColor(azulEscuro)
+
+            typeface = Typeface.DEFAULT_BOLD
+
+            gravity = Gravity.CENTER
+        }
+
+        textoRelogio = TextView(this).apply {
+
+            text = "04"
+
+            textSize = 38f
+
+            setTextColor(azulEscuro)
+
+            typeface = Typeface.DEFAULT_BOLD
+
+            gravity = Gravity.CENTER
+
+            includeFontPadding = false
+        }
+
+        val segundos = TextView(this).apply {
+
+            text = "segundos"
+
+            textSize = 11f
+
+            setTextColor(azulEscuro)
+
+            gravity = Gravity.CENTER
+        }
+
+        painelRelogio.addView(tituloRelogio)
+        painelRelogio.addView(textoRelogio)
+        painelRelogio.addView(segundos)
+
+        val parametrosRelogio =
+            FrameLayout.LayoutParams(
+                dp(100),
+                dp(105)
+            ).apply {
+
+                gravity =
+                    Gravity.TOP or Gravity.END
+
+                topMargin = dp(15)
+                rightMargin = dp(20)
+            }
+
+        tela.addView(
+            painelRelogio,
+            parametrosRelogio
+        )
+
+        // PAINEL DE INSTRUÇÕES
+
+        painelRespiracao =
+            LinearLayout(this).apply {
+
+                orientation =
+                    LinearLayout.VERTICAL
+
+                gravity = Gravity.CENTER
+
+                background = fundoArredondado(
+                    Color.WHITE,
+                    24,
+                    azul,
+                    3
+                )
+
+                elevation = dp(5).toFloat()
+
+                setPadding(
+                    dp(12),
+                    dp(8),
+                    dp(12),
+                    dp(8)
+                )
+            }
+
+        textoEtapa = TextView(this).apply {
+
+            text = "Etapa 1 de 3"
+
+            textSize = 12f
+
+            gravity = Gravity.CENTER
+
+            setTextColor(azulEscuro)
+
+            typeface = Typeface.DEFAULT_BOLD
+        }
+
+        textoInstrucao = TextView(this).apply {
+
+            text = "Vamos puxar o ar?"
+
+            textSize = 18f
+
+            gravity = Gravity.CENTER
+
+            setTextColor(azulEscuro)
+
+            typeface = Typeface.DEFAULT_BOLD
+        }
+
+        // BOTÃO DE AÇÃO
+
+        botaoAcao = criarBotao(
+            "Puxar o ar",
+            azul
+        )
+
+        botaoAcao.setOnClickListener {
+
+            if (
+                !etapaExecutando &&
+                !aguardandoBusca &&
+                videoPreparado &&
+                !sessaoConcluida
+            ) {
+
+                tocarClique()
+
+                iniciarEtapa()
+            }
+        }
+
+        // PULAR ETAPA DE SEGURAR O AR
+
+        botaoPular = TextView(this).apply {
+
+            text = "Pular esta etapa"
+
+            textSize = 13f
+
+            gravity = Gravity.CENTER
+
+            setTextColor(azulEscuro)
+
+            setPadding(
+                0,
+                dp(8),
+                0,
+                dp(4)
+            )
+
+            visibility = View.GONE
+
+            setOnClickListener {
 
                 if (
-                    videoPlayer !== player ||
-                    saindo
+                    etapaAtual == 1 &&
+                    !aguardandoBusca
                 ) {
 
-                    return@setOnPreparedListener
+                    tocarClique()
+
+                    etapaExecutando = false
+
+                    iniciarAposBusca = false
+
+                    handler.removeCallbacks(
+                        atualizarRelogio
+                    )
+
+                    videoDragao.pause()
+
+                    prepararEtapa(2)
                 }
+            }
+        }
+
+        // PARAR EXERCÍCIO
+
+        botaoInterromper = TextView(this).apply {
+
+            text = "Parar exercício"
+
+            textSize = 13f
+
+            gravity = Gravity.CENTER
+
+            setTextColor(azulEscuro)
+
+            setPadding(
+                0,
+                dp(7),
+                0,
+                dp(4)
+            )
+
+            visibility = View.GONE
+
+            setOnClickListener {
+
+                tocarClique()
+
+                interromperSessao()
+            }
+        }
+
+        painelRespiracao.addView(textoEtapa)
+        painelRespiracao.addView(textoInstrucao)
+        painelRespiracao.addView(botaoAcao)
+        painelRespiracao.addView(botaoPular)
+        painelRespiracao.addView(botaoInterromper)
+
+        val parametrosPainel =
+            FrameLayout.LayoutParams(
+                dp(280),
+                FrameLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+
+                gravity =
+                    Gravity.BOTTOM or Gravity.END
+
+                bottomMargin = dp(15)
+                rightMargin = dp(20)
+            }
+
+        tela.addView(
+            painelRespiracao,
+            parametrosPainel
+        )
+
+        botaoAcao.isEnabled = false
+
+        botaoAcao.alpha = 0.5f
+    }
+
+    // AJUSTAR VÍDEO SEM BORDAS
+
+    private fun ajustarVideoTelaInteira(
+        player: MediaPlayer
+    ) {
+
+        tela.post {
+
+            if (
+                saindo ||
+                playerVideo !== player
+            ) return@post
+
+            val larguraTela = tela.width
+            val alturaTela = tela.height
+
+            val larguraVideo = player.videoWidth
+            val alturaVideo = player.videoHeight
+
+            if (
+                larguraTela > 0 &&
+                alturaTela > 0 &&
+                larguraVideo > 0 &&
+                alturaVideo > 0
+            ) {
+
+                val escala = maxOf(
+                    larguraTela.toFloat() / larguraVideo,
+                    alturaTela.toFloat() / alturaVideo
+                )
+
+                val novaLargura =
+                    ceil(larguraVideo * escala).toInt()
+
+                val novaAltura =
+                    ceil(alturaVideo * escala).toInt()
+
+                videoDragao.layoutParams =
+                    FrameLayout.LayoutParams(
+                        novaLargura,
+                        novaAltura,
+                        Gravity.CENTER
+                    )
+            }
+        }
+    }
+
+    // CARREGAR VÍDEO DA PASTA ASSETS
+
+    private fun configurarVideo() {
+
+        videoPreparado = false
+
+        aguardandoBusca = false
+
+        try {
+
+            if (caminhoVideo == null) {
+
+                val arquivoVideo = File(
+                    cacheDir,
+                    "videodragao.mp4"
+                )
+
+                assets.open(
+                    "videodragao.mp4"
+                ).use { entrada ->
+
+                    arquivoVideo.outputStream().use { saida ->
+
+                        entrada.copyTo(saida)
+                    }
+                }
+
+                caminhoVideo =
+                    Uri.fromFile(arquivoVideo)
+            }
+
+            videoDragao.setOnPreparedListener { player ->
+
+                if (
+                    saindo ||
+                    !telaAtiva
+                ) return@setOnPreparedListener
+
+                playerVideo = player
+
+                player.isLooping = false
+
+                // VÍDEO SEM ÁUDIO PRÓPRIO
+
+                player.setVolume(
+                    0f,
+                    0f
+                )
 
                 videoPreparado = true
 
-                when {
+                ajustarVideoTelaInteira(player)
 
-                    jogoIniciado -> {
+                player.setOnSeekCompleteListener {
 
-                        player.seekTo(
-                            posicaoSalvaVideo
+                    if (
+                        saindo ||
+                        !telaAtiva ||
+                        playerVideo !== player
+                    ) return@setOnSeekCompleteListener
+
+                    aguardandoBusca = false
+
+                    if (
+                        iniciarAposBusca &&
+                        etapaExecutando
+                    ) {
+
+                        iniciarAposBusca = false
+
+                        videoDragao.start()
+
+                        handler.removeCallbacks(
+                            atualizarRelogio
                         )
 
-                        if (telaAtiva) {
-
-                            player.start()
-
-                            retomandoVideo = false
-
-                            if (::solAnimado.isInitialized) {
-
-                                solAnimado.invalidate()
-                            }
-
-                        } else {
-
-                            retomandoVideo = true
-                        }
-                    }
-
-                    iniciarPendente && telaAtiva -> {
-
-                        iniciarJogo()
-                    }
-
-                    jogoFinalizado -> {
-
-                        player.seekTo(
-                            (player.duration - 1)
-                                .coerceAtLeast(0)
+                        handler.post(
+                            atualizarRelogio
                         )
-                    }
 
-                    else -> {
+                    } else {
 
-                        player.seekTo(1)
+                        atualizarDisponibilidadeBotao()
                     }
+                }
+
+                if (!sessaoConcluida) {
+
+                    posicionarVideo(
+                        inicioEtapas[etapaAtual],
+                        false
+                    )
                 }
             }
 
             // FINAL DO VÍDEO
 
-            player.setOnCompletionListener {
+            videoDragao.setOnCompletionListener {
 
                 if (
-                    jogoIniciado &&
-                    !jogoFinalizado &&
+                    etapaExecutando &&
+                    etapaAtual == 2 &&
                     !saindo
                 ) {
 
-                    finalizarJogo()
+                    finalizarSessao()
+
+                } else if (etapaExecutando) {
+
+                    interromperSessao()
                 }
             }
 
-            // ERRO NO VÍDEO
-
-            player.setOnErrorListener { _, _, _ ->
+            videoDragao.setOnErrorListener { _, _, _ ->
 
                 videoPreparado = false
-                jogoIniciado = false
-                iniciarPendente = false
 
-                liberarVideo()
+                etapaExecutando = false
 
-                if (::botaoIniciar.isInitialized) {
+                aguardandoBusca = false
 
-                    exibirBotaoIniciar()
-                }
+                iniciarAposBusca = false
+
+                playerVideo = null
+
+                handler.removeCallbacks(
+                    atualizarRelogio
+                )
+
+                botaoAcao.isEnabled = false
+
+                botaoInterromper.visibility =
+                    View.VISIBLE
 
                 Toast.makeText(
                     this,
                     "Não foi possível reproduzir o vídeo.",
-                    Toast.LENGTH_SHORT
+                    Toast.LENGTH_LONG
                 ).show()
 
                 true
             }
 
-            player.prepareAsync()
+            videoDragao.setVideoURI(
+                caminhoVideo
+            )
 
-        } catch (_: Exception) {
+        } catch (e: Exception) {
 
-            liberarVideo()
-
-            iniciarPendente = false
+            videoPreparado = false
 
             Toast.makeText(
                 this,
-                "Verifique o arquivo videodragao.mp4",
-                Toast.LENGTH_SHORT
+                "Vídeo não encontrado na pasta assets.",
+                Toast.LENGTH_LONG
             ).show()
         }
     }
 
-    // =====================================================
-    // POP-UP DE INSTRUÇÕES
-    // =====================================================
+    // POSICIONAR O VÍDEO
 
-    private fun mostrarPopupInstrucoes() {
+    private fun posicionarVideo(
+        tempo: Int,
+        reproduzir: Boolean
+    ) {
 
-        if (
-            popupAtual != null ||
-            saindo ||
-            isFinishing
-        ) return
-
-        instrucoesExibidas = true
-
-        val popup = criarPopup(
-            largura = 480,
-            altura = 325
-        )
-
-        popupInstrucaoAberto = true
-
-        // =================================================
-        // CÍRCULO ATRÁS DO DRAGÃO
-        // =================================================
-
-        val circulo = View(this).apply {
-
-            background = criarFundo(
-                Color.rgb(223, 242, 255),
-                Color.rgb(202, 229, 247),
-                60f,
-                Color.TRANSPARENT,
-                0f
-            )
-        }
-
-        colocarNoPopup(
-            popup,
-            circulo,
-            194, 12, 92, 92
-        )
-
-        // =================================================
-        // ROSTINHO DO DRAGÃO
-        // =================================================
-
-        val dragao = criarImagem(
-            "rostodragao"
-        )
-
-        colocarNoPopup(
-            popup,
-            dragao,
-            185, 6, 110, 105
-        )
-
-        dragao.scaleX = 0.4f
-        dragao.scaleY = 0.4f
-
-        dragao.animate()
-            .scaleX(1f)
-            .scaleY(1f)
-            .setDuration(550L)
-            .setInterpolator(
-                OvershootInterpolator(1.5f)
-            )
-            .start()
-
-        // =================================================
-        // ESTRELINHAS DECORATIVAS
-        // =================================================
-
-        colocarNoPopup(
-            popup,
-            criarTexto(
-                "✦",
-                27f,
-                Color.rgb(240, 199, 112)
-            ),
-            135, 24, 35, 40
-        )
-
-        colocarNoPopup(
-            popup,
-            criarTexto(
-                "✧",
-                24f,
-                Color.rgb(163, 189, 229)
-            ),
-            310, 62, 35, 35
-        )
-
-        // =================================================
-        // TÍTULO DO POP-UP
-        // =================================================
-
-        val titulo = criarTexto(
-            "Vamos respirar juntos?",
-            28f,
-            Color.rgb(87, 145, 190)
-        )
-
-        colocarNoPopup(
-            popup,
-            titulo,
-            15, 111, 450, 40
-        )
-
-        // =================================================
-        // MENSAGEM EXPLICATIVA
-        // =================================================
-
-        val mensagem = criarTexto(
-            "Inspire devagar pelo nariz.\n" +
-                    "Solte o ar lentamente pela boca.",
-            19f,
-            Color.rgb(94, 126, 150),
-            false
-        )
-
-        colocarNoPopup(
-            popup,
-            mensagem,
-            20, 156, 440, 65
-        )
-
-        val complemento = criarTexto(
-            "Vamos relaxar juntos!",
-            18f,
-            Color.rgb(107, 157, 192)
-        )
-
-        colocarNoPopup(
-            popup,
-            complemento,
-            20, 224, 440, 28
-        )
-
-        // =================================================
-        // BOTÃO OUVIR NOVAMENTE
-        // =================================================
-
-        val botaoAudio = criarTexto(
-            "🔊",
-            25f,
-            Color.rgb(87, 145, 190)
-        )
-
-        botaoAudio.background = criarFundo(
-            Color.rgb(230, 246, 255),
-            Color.rgb(195, 226, 247),
-            20f,
-            Color.rgb(155, 199, 229),
-            2f
-        )
-
-        botaoAudio.contentDescription =
-            "Ouvir instruções novamente"
-
-        botaoAudio.isClickable = true
-        botaoAudio.isFocusable = true
-        botaoAudio.isSoundEffectsEnabled = false
-
-        colocarNoPopup(
-            popup,
-            botaoAudio,
-            30, 265, 55, 45
-        )
-
-        botaoAudio.setOnClickListener {
-
-            botaoAudio.animate()
-                .scaleX(0.90f)
-                .scaleY(0.90f)
-                .setDuration(90L)
-                .withEndAction {
-
-                    botaoAudio.animate()
-                        .scaleX(1f)
-                        .scaleY(1f)
-                        .setDuration(130L)
-                        .start()
-                }
-                .start()
-
-            tocarNarracao()
-        }
-
-        // =================================================
-        // BOTÃO VAMOS COMEÇAR
-        // =================================================
-
-        val botaoComecar = criarTexto(
-            "Vamos começar!",
-            23f,
-            Color.rgb(60, 115, 155)
-        )
-
-        botaoComecar.background = criarFundo(
-            Color.rgb(220, 242, 255),
-            Color.rgb(165, 218, 245),
-            22f,
-            Color.rgb(117, 181, 224),
-            2f
-        )
-
-        botaoComecar.isClickable = true
-        botaoComecar.isFocusable = true
-        botaoComecar.isSoundEffectsEnabled = false
-
-        colocarNoPopup(
-            popup,
-            botaoComecar,
-            100, 265, 350, 45
-        )
-
-        botaoComecar.setOnClickListener {
-
-            pararNarracao()
-
-            tocarSomClique()
-
-            fecharPopup()
-
-            iniciarJogo()
-        }
-
-        // NARRAÇÃO AUTOMÁTICA
-
-        tocarNarracao()
-    }
-
-    // =====================================================
-    // INICIAR EXERCÍCIO
-    // =====================================================
-
-    private fun iniciarJogo() {
+        val player = playerVideo ?: return
 
         if (
-            jogoIniciado ||
-            saindo ||
-            isFinishing
+            !videoPreparado ||
+            saindo
         ) return
 
-        if (!videoPreparado || !telaAtiva) {
+        aguardandoBusca = true
 
-            iniciarPendente = true
+        iniciarAposBusca = reproduzir
 
-            return
-        }
+        botaoAcao.isEnabled = false
 
-        val player = videoPlayer ?: return
-
-        iniciarPendente = false
-        jogoIniciado = true
-        jogoFinalizado = false
-
-        posicaoSalvaVideo = 0
-
-        pararNarracao()
-
-        fecharPopup()
-
-        ocultarBotaoIniciar()
+        botaoAcao.alpha = 0.5f
 
         try {
 
-            player.seekTo(0)
+            if (
+                Build.VERSION.SDK_INT >=
+                Build.VERSION_CODES.O
+            ) {
 
-            player.start()
+                player.seekTo(
+                    tempo.toLong(),
+                    MediaPlayer.SEEK_CLOSEST
+                )
 
-            solAnimado.invalidate()
+            } else {
 
-        } catch (_: Exception) {
+                player.seekTo(tempo)
+            }
 
-            jogoIniciado = false
+        } catch (e: Exception) {
 
-            exibirBotaoIniciar()
+            aguardandoBusca = false
+
+            iniciarAposBusca = false
+
+            etapaExecutando = false
+
+            botaoAcao.visibility =
+                View.VISIBLE
+
+            atualizarDisponibilidadeBotao()
 
             Toast.makeText(
                 this,
-                "Não foi possível iniciar o exercício.",
+                "Não foi possível iniciar a etapa.",
                 Toast.LENGTH_SHORT
             ).show()
         }
     }
 
-    // =====================================================
-    // SOL ANIMADO SINCRONIZADO COM O VÍDEO
-    // =====================================================
+    private fun atualizarDisponibilidadeBotao() {
 
-    private inner class SolAnimadoView : View(
-        this@RespirandoComDragaoActivity
-    ) {
+        val disponivel =
+            videoPreparado &&
+                    !aguardandoBusca &&
+                    !etapaExecutando &&
+                    !sessaoConcluida &&
+                    !saindo
 
-        private var movie: Movie? = null
+        botaoAcao.isEnabled = disponivel
 
-        init {
+        botaoAcao.alpha =
+            if (disponivel) 1f else 0.5f
+    }
 
-            setLayerType(
-                View.LAYER_TYPE_SOFTWARE,
-                null
+    // PREPARAR CADA ETAPA
+
+    private fun prepararEtapa(etapa: Int) {
+
+        if (
+            saindo ||
+            etapa !in 0..2
+        ) return
+
+        handler.removeCallbacks(
+            atualizarRelogio
+        )
+
+        etapaAtual = etapa
+
+        etapaExecutando = false
+
+        iniciarAposBusca = false
+
+        sessaoConcluida = false
+
+        if (videoPreparado) {
+
+            videoDragao.pause()
+        }
+
+        // MÚSICA CONTINUA TOCANDO
+
+        textoEtapa.text =
+            "Etapa ${etapa + 1} de 3"
+
+        textoRelogio.text =
+            String.format(
+                Locale.getDefault(),
+                "%02d",
+                duracaoEtapas[etapa]
             )
 
-            isClickable = false
-            isFocusable = false
+        botaoAcao.visibility =
+            View.VISIBLE
 
-            try {
+        botaoInterromper.visibility =
+            View.VISIBLE
 
-                assets.open("soldragao.gif").use {
+        botaoPular.visibility =
+            if (etapa == 1) View.VISIBLE
+            else View.GONE
 
-                    movie = Movie.decodeStream(it)
-                }
+        when (etapa) {
 
-            } catch (_: Exception) {
+            0 -> {
+
+                textoInstrucao.text =
+                    "Vamos puxar o ar?"
+
+                botaoAcao.text =
+                    "Puxar o ar"
+
+                alterarCorPainel(azul)
+            }
+
+            1 -> {
+
+                textoInstrucao.text =
+                    "Respire normalmente até estar pronto."
+
+                botaoAcao.text =
+                    "Segurar o ar"
+
+                alterarCorPainel(amarelo)
+            }
+
+            2 -> {
+
+                textoInstrucao.text =
+                    "Pode soltar o ar. Toque para continuar."
+
+                botaoAcao.text =
+                    "Soltar o ar"
+
+                alterarCorPainel(verde)
             }
         }
 
-        override fun onDraw(canvas: Canvas) {
+        if (videoPreparado) {
 
-            super.onDraw(canvas)
+            posicionarVideo(
+                inicioEtapas[etapa],
+                false
+            )
 
-            val gif = movie ?: return
+        } else {
+
+            atualizarDisponibilidadeBotao()
+        }
+    }
+
+    // INICIAR AÇÃO SOMENTE AO CLICAR
+
+    private fun iniciarEtapa() {
+
+        if (
+            !videoPreparado ||
+            etapaExecutando ||
+            aguardandoBusca ||
+            saindo ||
+            !telaAtiva
+        ) return
+
+        pararNarracao()
+
+        etapaExecutando = true
+
+        botaoAcao.isEnabled = false
+
+        botaoAcao.visibility =
+            View.GONE
+
+        botaoInterromper.visibility =
+            View.VISIBLE
+
+        when (etapaAtual) {
+
+            0 -> {
+
+                textoInstrucao.text =
+                    "Inspire pelo nariz!"
+            }
+
+            1 -> {
+
+                textoInstrucao.text =
+                    "Segure o ar, sem forçar!"
+            }
+
+            2 -> {
+
+                textoInstrucao.text =
+                    "Solte o ar devagar pela boca!"
+            }
+        }
+
+        posicionarVideo(
+            inicioEtapas[etapaAtual],
+            true
+        )
+    }
+
+    // RELÓGIO SINCRONIZADO
+
+    private val atualizarRelogio = object : Runnable {
+
+        override fun run() {
 
             if (
-                gif.width() <= 0 ||
-                gif.height() <= 0
+                !etapaExecutando ||
+                aguardandoBusca ||
+                saindo ||
+                !telaAtiva
             ) return
 
-            val duracaoGif = gif.duration()
-                .coerceAtLeast(1)
+            val tempoAtual =
+                videoDragao.currentPosition
 
-            val player = videoPlayer
+            val tempoFinal =
+                fimEtapas[etapaAtual]
 
-            var progresso = 0f
+            val restante =
+                (tempoFinal - tempoAtual)
+                    .coerceAtLeast(0)
 
-            if (
-                videoPreparado &&
-                player != null
-            ) {
+            val segundosRestantes =
+                ceil(restante / 1000.0)
+                    .toInt()
+                    .coerceIn(
+                        0,
+                        duracaoEtapas[etapaAtual]
+                    )
 
-                try {
+            textoRelogio.text =
+                String.format(
+                    Locale.getDefault(),
+                    "%02d",
+                    segundosRestantes
+                )
 
-                    val duracaoVideo =
-                        player.duration.coerceAtLeast(1)
+            if (tempoAtual >= tempoFinal) {
 
-                    progresso = (
+                finalizarEtapa()
 
-                            player.currentPosition.toFloat() /
-                                    duracaoVideo
+            } else {
 
-                            ).coerceIn(0f, 1f)
-
-                } catch (_: Exception) {
-                }
-            }
-
-            if (
-                !jogoIniciado &&
-                !jogoFinalizado
-            ) {
-
-                progresso = 0f
-            }
-
-            if (jogoFinalizado) {
-
-                progresso = 1f
-            }
-
-            val tempoGif = (
-
-                    progresso * (duracaoGif - 1)
-
-                    ).toInt()
-
-            gif.setTime(tempoGif)
-
-            val escalaGif = minOf(
-
-                width.toFloat() / gif.width(),
-
-                height.toFloat() / gif.height()
-            )
-
-            val posX = (
-
-                    width - gif.width() * escalaGif
-
-                    ) / 2f
-
-            val posY = (
-
-                    height - gif.height() * escalaGif
-
-                    ) / 2f
-
-            canvas.save()
-
-            canvas.translate(
-                posX,
-                posY
-            )
-
-            canvas.scale(
-                escalaGif,
-                escalaGif
-            )
-
-            gif.draw(
-                canvas,
-                0f,
-                0f
-            )
-
-            canvas.restore()
-
-            if (
-                jogoIniciado &&
-                telaAtiva
-            ) {
-
-                postInvalidateOnAnimation()
+                handler.postDelayed(
+                    this,
+                    30
+                )
             }
         }
     }
 
-    // =====================================================
-    // FINALIZAR EXERCÍCIO
-    // =====================================================
+    // FINALIZAR ETAPA
 
-    private fun finalizarJogo() {
+    private fun finalizarEtapa() {
 
         if (
-            jogoFinalizado ||
+            !etapaExecutando ||
             saindo
         ) return
 
-        jogoFinalizado = true
-        jogoIniciado = false
+        etapaExecutando = false
 
-        if (::solAnimado.isInitialized) {
+        iniciarAposBusca = false
 
-            solAnimado.invalidate()
-        }
+        handler.removeCallbacks(
+            atualizarRelogio
+        )
 
-        if (telaAtiva) {
+        videoDragao.pause()
 
-            mostrarPopupVitoria()
+        textoRelogio.text = "00"
+
+        // MÚSICA NÃO É INTERROMPIDA
+
+        if (etapaAtual == 2) {
+
+            finalizarSessao()
+
+        } else {
+
+            prepararEtapa(
+                etapaAtual + 1
+            )
         }
     }
 
-    // =====================================================
-    // POP-UP DE PARABÉNS
-    // =====================================================
+    // FINALIZAR SESSÃO
 
-    private fun mostrarPopupVitoria() {
+    private fun finalizarSessao() {
 
         if (
-            popupAtual != null ||
-            saindo
+            saindo ||
+            sessaoConcluida
         ) return
 
-        val popup = criarPopup(
-            largura = 500,
-            altura = 280
+        etapaExecutando = false
+
+        sessaoConcluida = true
+
+        iniciarAposBusca = false
+
+        handler.removeCallbacks(
+            atualizarRelogio
         )
 
-        val girafinha = criarImagem(
-            "logoinferior"
+        videoDragao.pause()
+
+        textoRelogio.text = "00"
+
+        textoInstrucao.text =
+            "Muito bem!"
+
+        textoEtapa.text =
+            "Sessão concluída"
+
+        botaoAcao.visibility =
+            View.GONE
+
+        botaoPular.visibility =
+            View.GONE
+
+        botaoInterromper.visibility =
+            View.GONE
+
+        mostrarPopupFinal()
+    }
+
+    // INTERROMPER EXERCÍCIO
+
+    private fun interromperSessao() {
+
+        etapaExecutando = false
+
+        iniciarAposBusca = false
+
+        aguardandoBusca = false
+
+        sessaoConcluida = false
+
+        handler.removeCallbacks(
+            atualizarRelogio
         )
 
-        colocarNoPopup(
-            popup,
-            girafinha,
-            195, 0, 110, 95
+        pararNarracao()
+
+        videoDragao.stopPlayback()
+
+        playerVideo = null
+
+        videoPreparado = false
+
+        prepararEtapa(0)
+
+        mostrarPopupInicial()
+
+        if (
+            telaAtiva &&
+            !saindo
+        ) {
+
+            configurarVideo()
+        }
+    }
+
+    // POP-UP INICIAL
+
+    private fun mostrarPopupInicial() {
+
+        if (
+            saindo ||
+            isFinishing
+        ) return
+
+        pararNarracao()
+
+        popupAtual?.dismiss()
+
+        val dialog = Dialog(this)
+
+        popupAtual = dialog
+
+        val conteudo = criarConteudoPopup()
+
+        adicionarDragao(
+            conteudo,
+            75
         )
 
-        girafinha.scaleX = 0f
-        girafinha.scaleY = 0f
-
-        girafinha.animate()
-            .scaleX(1f)
-            .scaleY(1f)
-            .setDuration(550L)
-            .setInterpolator(
-                OvershootInterpolator(1.5f)
+        conteudo.addView(
+            criarTitulo(
+                "Vamos respirar juntos?"
             )
-            .start()
-
-        // ESTRELINHAS
-
-        colocarNoPopup(
-            popup,
-            criarTexto(
-                "✦",
-                28f,
-                Color.rgb(240, 199, 112)
-            ),
-            100, 30, 40, 40
         )
 
-        colocarNoPopup(
-            popup,
-            criarTexto(
-                "✦",
-                28f,
-                Color.rgb(240, 199, 112)
-            ),
-            360, 30, 40, 40
+        conteudo.addView(
+            criarMensagem(
+                "Toque nos botões e acompanhe o dragão!\n\n" +
+                        "Inspire por 4 segundos.\n" +
+                        "Segure por 7 segundos, se conseguir.\n" +
+                        "Solte o ar por 8 segundos.\n\n" +
+                        "Respire normalmente sempre que precisar."
+            )
         )
 
-        // TÍTULO
+        // BOTÃO OUVIR INSTRUÇÕES
 
-        colocarNoPopup(
-            popup,
-            criarTexto(
-                "Parabéns!",
-                34f,
-                Color.rgb(108, 155, 199)
-            ),
-            20, 92, 460, 42
+        val ouvir = criarBotao(
+            "🔊 Ouvir instruções",
+            amarelo
         )
 
-        // MENSAGEM
+        botaoOuvir = ouvir
 
-        colocarNoPopup(
-            popup,
-            criarTexto(
-                "Você respirou com o dragão!\n" +
-                        "Muito bem, pequeno explorador!",
-                20f,
-                Color.rgb(94, 126, 150)
-            ),
-            20, 140, 460, 60
+        ouvir.setOnClickListener {
+
+            ouvirInstrucoes()
+        }
+
+        conteudo.addView(ouvir)
+
+        // BOTÃO COMEÇAR
+
+        val iniciar = criarBotao(
+            "Vamos começar!",
+            verde
         )
 
-        // =================================================
-        // BOTÃO VOLTAR PARA TELA GERAL DOS JOGOS
-        // =================================================
+        iniciar.setOnClickListener {
 
-        val voltar = criarTexto(
-            "← Voltar",
-            22f,
-            Color.rgb(75, 125, 165)
+            tocarClique()
+
+            pararNarracao()
+
+            dialog.dismiss()
+
+            popupAtual = null
+
+            botaoOuvir = null
+
+            prepararEtapa(0)
+        }
+
+        conteudo.addView(iniciar)
+
+        // BOTÃO VOLTAR
+
+        val sair = criarBotao(
+            "Voltar",
+            azul
         )
 
-        voltar.background = criarFundo(
-            Color.rgb(222, 242, 255),
-            Color.rgb(180, 220, 245),
-            22f,
-            Color.rgb(145, 193, 224),
-            2f
-        )
+        sair.setOnClickListener {
 
-        voltar.isClickable = true
-        voltar.isFocusable = true
-        voltar.isSoundEffectsEnabled = false
-
-        colocarNoPopup(
-            popup,
-            voltar,
-            30, 215, 205, 48
-        )
-
-        voltar.setOnClickListener {
+            tocarClique()
 
             voltarTela()
         }
 
-        // =================================================
-        // BOTÃO REPETIR
-        // =================================================
+        conteudo.addView(sair)
 
-        val repetir = criarTexto(
-            "Repetir ↻",
-            22f,
-            Color.rgb(77, 133, 100)
+        exibirDialog(
+            dialog,
+            conteudo
+        )
+    }
+
+    // POP-UP FINAL
+
+    private fun mostrarPopupFinal() {
+
+        if (
+            saindo ||
+            isFinishing
+        ) return
+
+        pararNarracao()
+
+        popupAtual?.dismiss()
+
+        botaoOuvir = null
+
+        val dialog = Dialog(this)
+
+        popupAtual = dialog
+
+        val conteudo = criarConteudoPopup()
+
+        adicionarDragao(
+            conteudo,
+            80
         )
 
-        repetir.background = criarFundo(
-            Color.rgb(225, 249, 228),
-            Color.rgb(178, 225, 185),
-            22f,
-            Color.rgb(145, 205, 160),
-            2f
+        val estrelas = TextView(this).apply {
+
+            text = "★ ★ ★"
+
+            textSize = 32f
+
+            gravity = Gravity.CENTER
+
+            setTextColor(
+                Color.parseColor("#F5BD40")
+            )
+        }
+
+        conteudo.addView(estrelas)
+
+        conteudo.addView(
+            criarTitulo("Parabéns!")
         )
 
-        repetir.isClickable = true
-        repetir.isFocusable = true
-        repetir.isSoundEffectsEnabled = false
-
-        colocarNoPopup(
-            popup,
-            repetir,
-            265, 215, 205, 48
+        conteudo.addView(
+            criarMensagem(
+                "Você completou a sessão com o dragão!\n" +
+                        "Que tal brincar novamente?"
+            )
         )
 
-        repetir.setOnClickListener {
+        // BOTÃO REINICIAR
 
-            tocarSomClique()
+        val reiniciar = criarBotao(
+            "Iniciar sessão novamente",
+            verde
+        )
 
-            fecharPopup()
+        reiniciar.setOnClickListener {
 
-            repetirJogo()
+            tocarClique()
+
+            dialog.dismiss()
+
+            popupAtual = null
+
+            sessaoConcluida = false
+
+            prepararEtapa(0)
+
+            if (!videoPreparado) {
+
+                configurarVideo()
+            }
+        }
+
+        conteudo.addView(reiniciar)
+
+        // BOTÃO SAIR
+
+        val sair = criarBotao(
+            "Sair",
+            azul
+        )
+
+        sair.setOnClickListener {
+
+            tocarClique()
+
+            dialog.dismiss()
+
+            voltarTela()
+        }
+
+        conteudo.addView(sair)
+
+        exibirDialog(
+            dialog,
+            conteudo
+        )
+    }
+
+    // IMAGEM DO DRAGÃO
+
+    private fun adicionarDragao(
+        conteudo: LinearLayout,
+        tamanho: Int
+    ) {
+
+        val dragao = ImageView(this).apply {
+
+            setImageResource(
+                R.drawable.rostodragao
+            )
+
+            scaleType =
+                ImageView.ScaleType.FIT_CENTER
+        }
+
+        conteudo.addView(
+            dragao,
+            LinearLayout.LayoutParams(
+                dp(tamanho),
+                dp(tamanho)
+            )
+        )
+    }
+
+    // CORES DAS ETAPAS
+
+    private fun alterarCorPainel(cor: Int) {
+
+        painelRespiracao.background =
+            fundoArredondado(
+                Color.WHITE,
+                24,
+                cor,
+                3
+            )
+
+        botaoAcao.background =
+            fundoArredondado(
+                cor,
+                18
+            )
+
+        textoRelogio.setTextColor(
+            when (etapaAtual) {
+
+                1 -> Color.parseColor("#B28B30")
+
+                2 -> Color.parseColor("#589E45")
+
+                else -> azulEscuro
+            }
+        )
+    }
+
+    // DESIGN DOS POP-UPS
+
+    private fun criarConteudoPopup(): LinearLayout {
+
+        return LinearLayout(this).apply {
+
+            orientation =
+                LinearLayout.VERTICAL
+
+            gravity =
+                Gravity.CENTER
+
+            background =
+                fundoArredondado(
+                    Color.parseColor("#FFFDF9"),
+                    28,
+                    azul,
+                    4
+                )
+
+            setPadding(
+                dp(20),
+                dp(12),
+                dp(20),
+                dp(12)
+            )
         }
     }
 
-    // =====================================================
-    // REPETIR EXERCÍCIO
-    // =====================================================
+    private fun criarTitulo(
+        mensagem: String
+    ): TextView {
 
-    private fun repetirJogo() {
+        return TextView(this).apply {
 
-        jogoIniciado = false
-        jogoFinalizado = false
+            text = mensagem
 
-        posicaoSalvaVideo = 0
+            textSize = 24f
 
-        fecharPopup()
+            gravity = Gravity.CENTER
 
-        iniciarJogo()
+            typeface = Typeface.DEFAULT_BOLD
+
+            setTextColor(azulEscuro)
+
+            setPadding(
+                0,
+                dp(4),
+                0,
+                dp(5)
+            )
+        }
     }
 
-    // =====================================================
-    // CRIAR FUNDO DOS POP-UPS
-    // =====================================================
+    private fun criarMensagem(
+        mensagem: String
+    ): TextView {
 
-    private fun criarPopup(
-        largura: Int,
-        altura: Int
-    ): FrameLayout {
+        return TextView(this).apply {
 
-        fecharPopup()
+            text = mensagem
 
-        // FUNDO ESCURECIDO
+            textSize = 15f
 
-        val camada = FrameLayout(this).apply {
+            gravity = Gravity.CENTER
 
-            setBackgroundColor(
-                Color.argb(110, 35, 55, 75)
+            setTextColor(
+                Color.parseColor("#555555")
             )
 
+            setPadding(
+                0,
+                dp(4),
+                0,
+                dp(10)
+            )
+        }
+    }
+
+    private fun criarBotao(
+        titulo: String,
+        cor: Int
+    ): TextView {
+
+        return TextView(this).apply {
+
+            text = titulo
+
+            textSize = 16f
+
+            gravity = Gravity.CENTER
+
+            typeface = Typeface.DEFAULT_BOLD
+
+            setTextColor(
+                Color.parseColor("#355568")
+            )
+
+            background =
+                fundoArredondado(
+                    cor,
+                    18
+                )
+
             isClickable = true
+
             isFocusable = true
 
-            elevation = 30f * escala
+            layoutParams =
+                LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    dp(44)
+                ).apply {
+
+                    topMargin = dp(7)
+                }
+
+            elevation = dp(2).toFloat()
+        }
+    }
+
+    private fun exibirDialog(
+        dialog: Dialog,
+        conteudo: View
+    ) {
+
+        val scroll = ScrollView(this).apply {
+
+            isFillViewport = true
+
+            isVerticalScrollBarEnabled = false
+
+            addView(conteudo)
         }
 
-        popupAtual = camada
+        dialog.setContentView(scroll)
 
-        root.addView(
-            camada,
-            FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.MATCH_PARENT
+        dialog.setCancelable(false)
+
+        dialog.show()
+
+        dialog.window?.setBackgroundDrawable(
+            ColorDrawable(Color.TRANSPARENT)
+        )
+
+        val larguraTela =
+            resources.displayMetrics.widthPixels
+
+        val alturaTela =
+            resources.displayMetrics.heightPixels
+
+        dialog.window?.setLayout(
+            dp(375).coerceAtMost(
+                (larguraTela * 0.9f).toInt()
+            ),
+            dp(430).coerceAtMost(
+                (alturaTela * 0.94f).toInt()
             )
         )
 
-        // CAIXA AZUL PASTEL
-
-        val popup = FrameLayout(this).apply {
-
-            background = criarFundo(
-                Color.rgb(255, 255, 255),
-                Color.rgb(228, 244, 255),
-                28f,
-                Color.rgb(158, 204, 235),
-                3f
-            )
-
-            elevation = 12f * escala
-
-            isClickable = true
-        }
-
-        camada.addView(
-            popup,
-            FrameLayout.LayoutParams(
-
-                (largura * sx)
-                    .toInt()
-                    .coerceAtLeast(1),
-
-                (altura * sy)
-                    .toInt()
-                    .coerceAtLeast(1),
-
-                Gravity.CENTER
-            )
+        dialog.window?.addFlags(
+            WindowManager.LayoutParams.FLAG_DIM_BEHIND
         )
 
-        // ANIMAÇÃO DO POP-UP
+        dialog.window?.setDimAmount(0.55f)
 
-        camada.alpha = 0f
-
-        camada.animate()
-            .alpha(1f)
-            .setDuration(200L)
-            .start()
-
-        popup.scaleX = 0.7f
-        popup.scaleY = 0.7f
-        popup.alpha = 0f
-
-        popup.animate()
-            .alpha(1f)
-            .scaleX(1f)
-            .scaleY(1f)
-            .setDuration(450L)
-            .setInterpolator(
-                OvershootInterpolator(1.1f)
-            )
-            .start()
-
-        return popup
+        dialog.window?.decorView?.systemUiVisibility =
+            window.decorView.systemUiVisibility
     }
 
-    // =====================================================
-    // FECHAR POP-UP
-    // =====================================================
+    // SOM DOS CLIQUES
 
-    private fun fecharPopup() {
-
-        if (popupInstrucaoAberto) {
-
-            pararNarracao()
-        }
-
-        popupInstrucaoAberto = false
-
-        popupAtual?.let {
-
-            it.animate().cancel()
-
-            root.removeView(it)
-        }
-
-        popupAtual = null
-    }
-
-    // =====================================================
-    // OCULTAR BOTÃO INICIAR
-    // =====================================================
-
-    private fun ocultarBotaoIniciar() {
-
-        if (::botaoIniciar.isInitialized) {
-
-            botaoIniciar.visibility = View.GONE
-        }
-
-        root.findViewWithTag<View>(
-            "sombraIniciar"
-        )?.visibility = View.GONE
-    }
-
-    // =====================================================
-    // EXIBIR BOTÃO INICIAR
-    // =====================================================
-
-    private fun exibirBotaoIniciar() {
-
-        if (::botaoIniciar.isInitialized) {
-
-            botaoIniciar.visibility = View.VISIBLE
-        }
-
-        root.findViewWithTag<View>(
-            "sombraIniciar"
-        )?.visibility = View.VISIBLE
-    }
-
-    // =====================================================
-    // SOM DE CLIQUE
-    // =====================================================
-
-    private fun tocarSomClique() {
-
-        liberarSomClique()
+    private fun tocarClique() {
 
         try {
 
-            val id = resources.getIdentifier(
-                "clique_suave",
-                "raw",
-                packageName
+            audioClique?.release()
+
+            audioClique = null
+
+            val idAudio = localizarAudio(
+                "clique_suave"
             )
 
-            if (id == 0) return
+            if (idAudio == 0) return
 
             val player = MediaPlayer.create(
-                applicationContext,
-                id
+                this,
+                idAudio
             ) ?: return
 
             audioClique = player
 
             player.setVolume(
-                0.45f,
-                0.45f
+                volumeClique,
+                volumeClique
             )
 
             player.setOnCompletionListener {
 
                 if (audioClique === player) {
 
-                    liberarSomClique()
+                    audioClique = null
+
+                    player.release()
                 }
-            }
-
-            player.setOnErrorListener { _, _, _ ->
-
-                if (audioClique === player) {
-
-                    liberarSomClique()
-                }
-
-                true
             }
 
             player.start()
 
         } catch (_: Exception) {
-
-            liberarSomClique()
         }
     }
 
-    private fun liberarSomClique() {
-
-        val player = audioClique
-
-        audioClique = null
-
-        player?.let {
-
-            try {
-
-                it.setOnCompletionListener(null)
-
-                it.setOnErrorListener(null)
-
-                it.release()
-
-            } catch (_: Exception) {
-            }
-        }
-    }
-
-    // =====================================================
-    // SOM DO BOTÃO DE RETORNO
-    // =====================================================
-
-    private fun tocarSomRetorno() {
-
-        var player: MediaPlayer? = null
-
-        try {
-
-            val id = resources.getIdentifier(
-                "clique_suave",
-                "raw",
-                packageName
-            )
-
-            if (id == 0) return
-
-            player = MediaPlayer.create(
-                applicationContext,
-                id
-            )
-
-            player?.setVolume(
-                0.45f,
-                0.45f
-            )
-
-            player?.setOnCompletionListener {
-
-                it.release()
-            }
-
-            player?.setOnErrorListener { mp, _, _ ->
-
-                mp.release()
-
-                true
-            }
-
-            player?.start()
-
-        } catch (_: Exception) {
-
-            player?.release()
-        }
-    }
-
-    // =====================================================
-    // CRIAR TEXTOS
-    // =====================================================
-
-    private fun criarTexto(
-        conteudo: String,
-        tamanho: Float,
-        cor: Int,
-        negrito: Boolean = true
-    ): TextView {
-
-        return TextView(this).apply {
-
-            text = conteudo
-
-            setTextColor(cor)
-
-            setTextSize(
-                TypedValue.COMPLEX_UNIT_PX,
-                tamanho * escala
-            )
-
-            gravity = Gravity.CENTER
-
-            includeFontPadding = false
-
-            typeface = Typeface.create(
-
-                "sans-serif-rounded",
-
-                if (negrito) {
-
-                    Typeface.BOLD
-
-                } else {
-
-                    Typeface.NORMAL
-                }
-            )
-        }
-    }
-
-    // =====================================================
-    // CRIAR FUNDOS ARREDONDADOS
-    // =====================================================
-
-    private fun criarFundo(
-        corInicio: Int,
-        corFim: Int,
-        raio: Float,
-        corBorda: Int,
-        espessura: Float
-    ): GradientDrawable {
-
-        return GradientDrawable(
-
-            GradientDrawable.Orientation.TOP_BOTTOM,
-
-            intArrayOf(
-                corInicio,
-                corFim
-            )
-
-        ).apply {
-
-            cornerRadius =
-                raio * escala
-
-            if (espessura > 0f) {
-
-                setStroke(
-
-                    (espessura * escala)
-                        .toInt()
-                        .coerceAtLeast(1),
-
-                    corBorda
-                )
-            }
-        }
-    }
-
-    // =====================================================
-    // CRIAR IMAGEM
-    // =====================================================
-
-    private fun criarImagem(
-        nome: String
-    ): ImageView {
-
-        return ImageView(this).apply {
-
-            val id = resources.getIdentifier(
-                nome,
-                "drawable",
-                packageName
-            )
-
-            if (id != 0) {
-
-                setImageResource(id)
-            }
-
-            scaleType =
-                ImageView.ScaleType.FIT_CENTER
-        }
-    }
-
-    // =====================================================
-    // ADICIONAR IMAGEM À TELA
-    // =====================================================
-
-    private fun adicionarImagem(
-        nome: String,
-        x: Int,
-        y: Int,
-        largura: Int,
-        altura: Int
-    ): ImageView {
-
-        val imagem = criarImagem(nome)
-
-        adicionarView(
-            imagem,
-            x, y, largura, altura
-        )
-
-        return imagem
-    }
-
-    // =====================================================
-    // TAMANHOS E POSIÇÕES
-    // =====================================================
-
-    private fun parametros(
-        x: Int,
-        y: Int,
-        largura: Int,
-        altura: Int
-    ): FrameLayout.LayoutParams {
-
-        return FrameLayout.LayoutParams(
-
-            (largura * sx)
-                .toInt()
-                .coerceAtLeast(1),
-
-            (altura * sy)
-                .toInt()
-                .coerceAtLeast(1)
-
-        ).apply {
-
-            leftMargin =
-                (x * sx).toInt()
-
-            topMargin =
-                (y * sy).toInt()
-        }
-    }
-
-    private fun adicionarView(
-        view: View,
-        x: Int,
-        y: Int,
-        largura: Int,
-        altura: Int
-    ) {
-
-        root.addView(
-            view,
-            parametros(
-                x, y, largura, altura
-            )
-        )
-    }
-
-    private fun colocarNoPopup(
-        popup: FrameLayout,
-        view: View,
-        x: Int,
-        y: Int,
-        largura: Int,
-        altura: Int
-    ) {
-
-        popup.addView(
-            view,
-            parametros(
-                x, y, largura, altura
-            )
-        )
-    }
-
-    // =====================================================
-    // SALVAR POSIÇÃO DO VÍDEO
-    // =====================================================
-
-    private fun salvarPosicaoVideo() {
-
-        if (videoPreparado) {
-
-            try {
-
-                posicaoSalvaVideo =
-                    videoPlayer?.currentPosition ?: 0
-
-            } catch (_: Exception) {
-            }
-        }
-    }
-
-    // =====================================================
-    // VOLTAR PARA TELA INICIAL GERAL DOS JOGOS
-    // =====================================================
+    // VOLTAR PARA TELA GERAL DOS JOGOS
 
     private fun voltarTela() {
 
-        if (
-            saindo ||
-            isFinishing
-        ) return
+        if (saindo) return
 
         saindo = true
 
+        etapaExecutando = false
+
+        iniciarAposBusca = false
+
+        handler.removeCallbacksAndMessages(null)
+
         pararNarracao()
 
-        liberarVideo()
+        encerrarMusicaFundo()
 
-        liberarSomClique()
+        popupAtual?.dismiss()
 
-        tocarSomRetorno()
+        videoDragao.stopPlayback()
+
+        playerVideo = null
 
         val intent = Intent(
             this,
@@ -1756,51 +1833,76 @@ class RespirandoComDragaoActivity : Activity() {
         finish()
     }
 
-    // =====================================================
-    // BOTÃO VOLTAR DO CELULAR
-    // =====================================================
+    // FUNDOS ARREDONDADOS
+
+    private fun fundoArredondado(
+        cor: Int,
+        raio: Int,
+        corBorda: Int = Color.TRANSPARENT,
+        tamanhoBorda: Int = 0
+    ): GradientDrawable {
+
+        return GradientDrawable().apply {
+
+            setColor(cor)
+
+            cornerRadius =
+                dp(raio).toFloat()
+
+            if (tamanhoBorda > 0) {
+
+                setStroke(
+                    dp(tamanhoBorda),
+                    corBorda
+                )
+            }
+        }
+    }
+
+    private fun dp(valor: Int): Int {
+
+        return (
+                valor *
+                        resources.displayMetrics.density
+                ).toInt()
+    }
 
     override fun onBackPressed() {
 
         voltarTela()
     }
 
-    // =====================================================
-    // PAUSAR AO SAIR DA TELA
-    // =====================================================
-
     override fun onPause() {
+
+        super.onPause()
 
         telaAtiva = false
 
+        handler.removeCallbacks(
+            atualizarRelogio
+        )
+
         pararNarracao()
 
-        retomandoVideo = false
+        pausarMusicaFundo()
 
-        salvarPosicaoVideo()
+        etapaExecutando = false
 
-        try {
+        iniciarAposBusca = false
 
-            if (
-                jogoIniciado &&
-                videoPreparado &&
-                videoPlayer?.isPlaying == true
-            ) {
+        aguardandoBusca = false
 
-                retomandoVideo = true
+        videoPreparado = false
 
-                videoPlayer?.pause()
-            }
+        videoDragao.stopPlayback()
 
-        } catch (_: Exception) {
+        playerVideo = null
+
+        if (!sessaoConcluida) {
+
+            etapaAtual = 0
         }
-
-        super.onPause()
     }
-
-    // =====================================================
-    // RETOMAR EXERCÍCIO
-    // =====================================================
 
     override fun onResume() {
 
@@ -1808,109 +1910,47 @@ class RespirandoComDragaoActivity : Activity() {
 
         telaAtiva = true
 
-        ocultarBarras()
+        esconderBarras()
 
-        if (saindo) return
+        if (!saindo) {
 
-        if (
-            ::botaoIniciar.isInitialized &&
-            !instrucoesExibidas
-        ) {
+            iniciarMusicaFundo()
 
-            mostrarPopupInstrucoes()
+            if (!sessaoConcluida) {
 
-        } else if (popupInstrucaoAberto) {
+                prepararEtapa(0)
 
-            tocarNarracao()
-        }
+                if (popupAtual?.isShowing != true) {
 
-        if (
-            iniciarPendente &&
-            videoPreparado
-        ) {
-
-            iniciarJogo()
-        }
-
-        if (
-            retomandoVideo &&
-            jogoIniciado &&
-            videoPreparado
-        ) {
-
-            try {
-
-                videoPlayer?.start()
-
-                solAnimado.invalidate()
-
-            } catch (_: Exception) {
+                    mostrarPopupInicial()
+                }
             }
 
-            retomandoVideo = false
-        }
-
-        if (
-            jogoFinalizado &&
-            popupAtual == null
-        ) {
-
-            mostrarPopupVitoria()
+            configurarVideo()
         }
     }
-
-    // =====================================================
-    // LIBERAR VÍDEO
-    // =====================================================
-
-    private fun liberarVideo() {
-
-        videoPreparado = false
-
-        val player = videoPlayer
-
-        videoPlayer = null
-
-        player?.let {
-
-            try {
-
-                it.setOnPreparedListener(null)
-
-                it.setOnCompletionListener(null)
-
-                it.setOnErrorListener(null)
-
-                it.release()
-
-            } catch (_: Exception) {
-            }
-        }
-
-        superficieVideo?.release()
-
-        superficieVideo = null
-    }
-
-    // =====================================================
-    // LIBERAR TODOS OS RECURSOS
-    // =====================================================
 
     override fun onDestroy() {
 
+        etapaExecutando = false
+
         saindo = true
+
+        handler.removeCallbacksAndMessages(null)
+
+        popupAtual?.dismiss()
 
         pararNarracao()
 
-        narrador?.shutdown()
+        audioClique?.release()
 
-        narrador = null
+        audioClique = null
 
-        vozDisponivel = false
+        encerrarMusicaFundo()
 
-        liberarVideo()
+        videoDragao.stopPlayback()
 
-        liberarSomClique()
+        playerVideo = null
 
         super.onDestroy()
     }
